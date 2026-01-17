@@ -1,0 +1,227 @@
+---
+description: "Next.js App Router patterns, Server Components, Client Components, and Metadata API"
+globs: ["**/*.tsx", "**/hooks/**/*.ts"]
+alwaysApply: false
+---
+
+## React 19 + Next.js
+
+- **DO NOT import React from 'react'** - React 19 does not require React import for JSX
+- **Use only types from React**: `import type { FC, PropsWithChildren } from 'react'`
+- **Always use functional components**
+
+## Server Components vs Client Components
+
+### Server Components (Default)
+
+- **Default in Next.js App Router** - all components are Server Components by default
+- **No 'use client' directive** - runs on server, no client JavaScript
+- **Can directly access backend** - databases, APIs, file system
+- **Cannot use hooks** - useState, useEffect, etc.
+- **Cannot use browser APIs** - window, localStorage, etc.
+- **Best for**: Static content, data fetching, SEO
+
+```typescript
+// app/page.tsx - Server Component (default)
+export default async function Page() {
+    const data = await fetch('https://api.example.com/data');
+    return <div>{data.title}</div>;
+}
+```
+
+### Client Components
+
+- **Add 'use client' directive** at the top of the file
+- **Can use hooks** - useState, useEffect, event handlers
+- **Can use browser APIs** - window, localStorage, etc.
+- **Best for**: Interactivity, forms, animations
+
+```typescript
+// components/InteractiveButton.tsx
+'use client';
+
+import { useState } from 'react';
+
+export const InteractiveButton = () => {
+    const [count, setCount] = useState(0);
+    return <button onClick={() => setCount(count + 1)}>{count}</button>;
+};
+```
+
+## Functions and Components
+
+### Pages (Next.js App Router)
+
+- **Use arrow functions with `export default`** - consistent with other components, better tree-shaking
+- **Pages can be async** for Server Components
+- **Separate declaration and export** for better consistency
+
+```typescript
+// app/page.tsx - Page (arrow function)
+const HomePage = async () => {
+    const data = await fetchData();
+    return <div>{data}</div>;
+};
+
+export default HomePage;
+
+// app/about/page.tsx - Page
+const AboutPage = () => {
+    return <div>About</div>;
+};
+
+export default AboutPage;
+```
+
+### Client Components
+
+- **Use arrow functions with named exports** - better for tree-shaking and autocomplete
+- **Type with `FC<PropsType>`** for better TypeScript support
+- **Named exports** preferred over default exports
+
+```typescript
+// shared/ui/Button.tsx - Client Component
+'use client';
+
+export const Button: FC<ButtonProps> = ({ children, ...props }) => {
+    return <button {...props}>{children}</button>;
+};
+
+// NOT: export default function Button() { ... }
+```
+
+### Server Components (Non-Pages)
+
+- **Can use function declarations or arrow functions**
+- **Named exports** preferred for reusability
+
+```typescript
+// components/ServerCard.tsx - Server Component
+export const ServerCard = async ({ data }: Props) => {
+    const processed = await processData(data);
+    return <div>{processed}</div>;
+};
+```
+
+### Export Rules Summary
+
+- **Pages (`app/**/page.tsx`)**: `const Page = () => {}; export default Page` - arrow functions for consistency
+- **Client Components**: `export const Component: FC<Props> = () => {}` - arrow functions with named exports
+- **Server Components (non-pages)**: `export const Component = async () => {}` - arrow functions with named exports
+- **Arrow functions everywhere** - better tree-shaking, no hoisting issues, consistent code style
+- **Default exports** only for Next.js pages, layouts, and special files (error.tsx, loading.tsx, etc.)
+- **Named exports** for all reusable components (better tree-shaking, autocomplete)
+
+## Component Architecture
+
+- **Components should be maximally presentational** (UI only)
+- **Extract logic to hooks** for Client Components
+- **Use Server Components for data fetching** when possible
+- **Hook should be in file `useComponentName.ts`** in the same folder
+
+### Example Structure
+
+```
+ComponentName/
+  ├── ComponentName.tsx (or index.tsx)
+  ├── ComponentName.test.tsx
+  └── useComponentName.ts (if Client Component)
+```
+
+## Pages (App Router)
+
+- **Pages are Server Components by default** in `app/` directory
+- **File-based routing**: `app/page.tsx` = `/`, `app/about/page.tsx` = `/about`
+- **Dynamic routes**: `app/blog/[id]/page.tsx` = `/blog/:id`
+- **Layouts**: `app/layout.tsx` wraps all pages
+- **Route groups**: `app/(marketing)/about/page.tsx` for organization
+
+### Example Structures
+
+```typescript
+// app/page.tsx - Home page (Server Component)
+export default async function HomePage() {
+    const data = await fetchData();
+    return <div>{data}</div>;
+}
+
+// app/blog/[id]/page.tsx - Dynamic route
+export default async function BlogPost({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const post = await getPost(id);
+    return <article>{post.content}</article>;
+}
+```
+
+## Metadata API
+
+- **Export `metadata` object** for SEO in Server Components
+- **Use `generateMetadata` function** for dynamic metadata
+- **Metadata is automatically added to HTML** - no manual head tags needed
+
+### Example
+
+```typescript
+// app/page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Home',
+    description: 'Welcome to our site',
+    openGraph: {
+        title: 'Home',
+        description: 'Welcome to our site'
+    }
+};
+
+export default function HomePage() {
+    return <div>...</div>;
+}
+
+// app/blog/[id]/page.tsx - Dynamic metadata
+export async function generateMetadata({ params }): Promise<Metadata> {
+    const { id } = await params;
+    const post = await getPost(id);
+    return {
+        title: post.title,
+        description: post.description
+    };
+}
+```
+
+## Hooks Organization
+
+- **Hooks organized by domain** in `hooks/` for better scalability
+- **Each hook in its domain folder** with tests alongside
+- **Tests next to hook files** (`hookName.test.ts`) - except dev-only utilities
+- **Direct imports** (no `index.ts` re-exports) for optimal tree-shaking
+- **Group related hooks by domain** (i18n, user, api, etc.)
+
+### Example Structure
+
+```
+hooks/
+  ├── i18n/
+  │   └── useI18nReload.ts       # Dev-only HMR hook (no tests)
+  ├── user/
+  │   ├── useUserProfile.ts
+  │   └── useUserProfile.test.ts
+  └── api/
+      ├── useApiQuery.ts
+      └── useApiQuery.test.ts
+```
+
+## Dynamic Imports
+
+- **Use `next/dynamic`** for code splitting
+- **Lazy load heavy components** to reduce initial bundle size
+- **Use `ssr: false`** for client-only components
+
+```typescript
+import dynamic from 'next/dynamic';
+
+const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+    loading: () => <p>Loading...</p>,
+    ssr: false
+});
+```

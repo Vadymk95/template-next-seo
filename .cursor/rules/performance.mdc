@@ -1,0 +1,86 @@
+---
+description: "Performance optimization patterns for Next.js and React components"
+globs: ["**/*.tsx", "**/hooks/**/*.ts", "**/app/**/*.tsx"]
+alwaysApply: false
+---
+
+## Performance Optimization
+
+### React Optimizations
+
+- **Use `React.memo`** for components that re-render frequently with same props
+- **Use `useMemo`** for expensive computations (filtering/sorting large arrays, complex calculations)
+  - For arrays with more than 100 elements or heavy calculations: implement useMemo
+  - Don't memoize small arrays (2-3 elements) or simple operations - it's overhead
+- **Use `useCallback`** when passing functions as props to memoized child components
+  - Only if child component is wrapped in `React.memo`
+  - If unsure, ask before implementing
+- **Leverage TanStack Query caching** for data fetching
+- **Don't optimize prematurely** - performance optimizations should be based on actual needs
+
+### Next.js Optimizations
+
+- **Use Server Components by default** - reduces client bundle size
+- **Use `next/dynamic`** for code splitting heavy components
+- **Use `next/image`** for automatic image optimization
+- **Use `generateStaticParams`** for static generation when possible
+- **Use `revalidate`** for ISR (Incremental Static Regeneration)
+- **Lazy load** client components that are not immediately needed
+
+### Code Splitting
+
+```typescript
+// Lazy load heavy component
+import dynamic from 'next/dynamic';
+
+const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+    loading: () => <p>Loading...</p>,
+    ssr: false // If component doesn't need SSR
+});
+```
+
+### Image Optimization
+
+```typescript
+import Image from 'next/image';
+
+<Image
+    src="/image.jpg"
+    alt="Description"
+    width={800}
+    height={600}
+    priority // For above-the-fold images
+/>
+```
+
+### Static Generation
+
+```typescript
+// app/blog/[id]/page.tsx
+export async function generateStaticParams() {
+    const posts = await fetchPosts();
+    return posts.map((post) => ({
+        id: post.id
+    }));
+}
+
+export default async function BlogPost({ params }: Props) {
+    const { id } = await params;
+    const post = await getPost(id);
+    return <article>{post.content}</article>;
+}
+```
+
+### ISR (Incremental Static Regeneration)
+
+```typescript
+// Revalidate every 60 seconds
+export const revalidate = 60;
+
+export default async function Page() {
+    const data = await fetch('https://api.example.com/data', {
+        next: { revalidate: 60 }
+    });
+    return <div>{data}</div>;
+}
+```

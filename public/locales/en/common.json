@@ -1,0 +1,41 @@
+{
+    "button": {
+        "submit": "Submit",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "previous": "Previous",
+        "tryAgain": "Try again",
+        "reloadPage": "Reload page",
+        "goBackHome": "Go back home",
+        "reset": "Reset"
+    },
+    "loading": "Loading...",
+    "error": {
+        "generic": "Something went wrong"
+    },
+    "success": "Success",
+    "navigation": {
+        "home": "Home",
+        "about": "About",
+        "contact": "Contact"
+    },
+    "form": {
+        "name": "Name",
+        "email": "Email",
+        "enterName": "Enter your name",
+        "enterEmail": "Enter your email",
+        "submitting": "Submitting...",
+        "submittedSuccessfully": "Form submitted successfully!"
+    },
+    "page": {
+        "exampleForm": {
+            "title": "Example Form",
+            "description": "This is an example form using React Hook Form, Zod validation, and Server Actions."
+        }
+    }
+}

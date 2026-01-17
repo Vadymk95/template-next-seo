@@ -1,0 +1,107 @@
+---
+description: "Error handling patterns, ErrorBoundary, and async operations for Next.js"
+globs: ["**/*.ts", "**/*.tsx", "**/hooks/**/*.ts", "**/app/**/*.tsx"]
+alwaysApply: false
+---
+
+## Error Handling
+
+- **Always handle errors**
+- **Use ErrorBoundary** for Client Components (create in `components/common/ErrorBoundary`)
+- **Use `error.tsx`** for route-level error handling in Next.js App Router
+- **ErrorBoundary includes ARIA attributes** (`role="alert"`, `aria-live="assertive"`), recovery buttons, and error monitoring hooks
+- **Show clear error messages** to users
+- **Technical error details** only visible in dev mode (production-safe)
+- **Handle loading and error states** in TanStack Query
+
+## Next.js Error Handling
+
+### Route-Level Errors (`error.tsx`)
+
+- **Create `error.tsx`** in route segment for error handling
+- **Automatically catches errors** in Server and Client Components
+- **Must be Client Component** - use 'use client' directive
+
+```typescript
+// app/dashboard/error.tsx
+'use client';
+
+export default function Error({
+    error,
+    reset
+}: {
+    error: Error & { digest?: string };
+    reset: () => void;
+}) {
+    return (
+        <div>
+            <h2>Something went wrong!</h2>
+            <button onClick={() => reset()}>Try again</button>
+        </div>
+    );
+}
+```
+
+### Global Error Boundary
+
+- **Create `app/error.tsx`** for global error handling
+- **Catches errors** in root layout and pages
+
+### ErrorBoundary for Client Components
+
+- **Wrap components** that may throw errors:
+  ```typescript
+  <ErrorBoundary>
+    <YourComponent />
+  </ErrorBoundary>
+  ```
+
+### Features
+
+- ARIA attributes (`role="alert"`, `aria-live="assertive"`)
+- Recovery buttons (Try again, Reload page)
+- Error monitoring hooks (Sentry, LogRocket ready)
+- Technical details only visible in development
+
+## Async Error Handling
+
+### Server Components
+
+```typescript
+// app/blog/[id]/page.tsx
+export default async function BlogPost({ params }: Props) {
+    try {
+        const { id } = await params;
+        const post = await getPost(id);
+        return <article>{post.content}</article>;
+    } catch (error) {
+        // Error will be caught by error.tsx
+        throw error;
+    }
+}
+```
+
+### Client Components
+
+```typescript
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+
+export const PostList = () => {
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['posts'],
+        queryFn: fetchPosts
+    });
+
+    if (error) {
+        return <div>Error: {error.message}</div>;
+    }
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
+
+    return <div>{data.map(...)}</div>;
+};
+```

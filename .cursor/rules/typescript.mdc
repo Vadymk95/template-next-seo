@@ -1,0 +1,40 @@
+---
+description: "TypeScript typing, types, and interfaces conventions"
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+## TypeScript Typing
+
+- **Always type everything** - variables, functions, props, hooks
+- **Avoid `any`** - linter does not allow `any` usage
+- **Use `unknown`** if type is truly unknown, then narrow via type guards
+- **Use `type`** for type aliases, `interface` for extensible structures
+
+## Type Organization
+
+- **Search for existing types** in `types/` (if exists)
+- **Use types from constants** when available
+- **If type doesn't exist** - create it in `types/index.ts` or next to usage
+- **Always check existing type structure** before creating new types
+
+## Next.js Specific Types
+
+- **Page props**: Use `Promise<{ param: string }>` for params in Next.js 15+
+- **Metadata**: Use `Metadata` type from `next`
+- **Route handlers**: Use `NextRequest`, `NextResponse` from `next/server`
+
+```typescript
+// Page props
+type Props = {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+// Metadata
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Page Title'
+};
+```

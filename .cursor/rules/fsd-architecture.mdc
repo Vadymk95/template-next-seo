@@ -1,0 +1,120 @@
+---
+description: 'Feature-Sliced Design (FSD) architecture rules and validation'
+globs: ['**/*.ts', '**/*.tsx']
+alwaysApply: true
+---
+
+## Feature-Sliced Design (FSD) Architecture
+
+The project uses **Feature-Sliced Design** architecture for maximum scalability.
+
+### Layer Structure
+
+```
+app → features → entities → shared
+```
+
+**Import Rule:** Layers can only import from layers below them.
+
+- **app** - topmost layer, application initialization
+- **features** - business features, use entities and shared
+- **entities** - business entities, use only shared
+- **shared** - base layer, reusable code
+
+### Project Structure
+
+```
+shared/          # Reusable code
+  ui/            # UI components (Shadcn)
+  lib/           # Utilities and configs
+  types/         # Shared TypeScript types
+  constants/     # Shared constants
+  api/           # API client (if needed)
+
+entities/        # Business entities
+  user/          # User entity
+    model/       # Types, interfaces
+    store/       # Zustand store
+    api/         # Entity-specific API (if needed)
+
+features/        # Features (isolated)
+  example-form/  # Example form feature
+    ui/          # Feature UI components
+    model/       # Business logic, schemas
+    api/         # Feature-specific API (if needed)
+
+hooks/           # Custom hooks (by domain)
+  user/          # User domain hooks
+  api/           # API hooks
+
+app/             # Next.js App Router
+  api/           # API routes (by domain)
+  actions/       # Server Actions (by domain)
+  [routes]/      # Pages
+```
+
+### Import Rules
+
+#### ✅ Correct
+
+```typescript
+// features/example-form/ui/ExampleForm.tsx
+import { Button } from '@/shared/ui'; // ✅ shared
+import { useUserStore } from '@/entities/user'; // ✅ entities
+```
+
+```typescript
+// app/example-form/page.tsx
+import { ExampleForm } from '@/features/example-form'; // ✅ features
+```
+
+#### ❌ Incorrect
+
+```typescript
+// features/product/ui/ProductCard.tsx
+import { UserCard } from '@/features/user/ui/UserCard'; // ❌ features → features
+```
+
+**Rule:** Features should not import each other directly. Use shared components or pass through props.
+
+### Segments
+
+Each slice can contain segments:
+
+- **ui/** - UI components
+- **model/** - Business logic, types, schemas
+- **api/** - API calls (if needed)
+- **lib/** - Feature utilities (if needed)
+
+### Public API
+
+Each feature/entity should export only what's needed through `index.ts`:
+
+```typescript
+// features/example-form/index.ts
+export { ExampleForm } from './ui';
+export type { ExampleFormData } from './model/types';
+```
+
+### Architecture Validation
+
+**After each code change:**
+
+1. ✅ Check that imports follow FSD rules
+2. ✅ Ensure features don't import each other
+3. ✅ Verify shared code is in `shared/`
+4. ✅ Verify entities are isolated
+5. ✅ Run `npm run lint` - should have no errors
+6. ✅ Run `npm run format:check` - should have no formatting errors
+
+### Automatic Validation
+
+**Before commit:**
+
+```bash
+npm run lint          # ESLint check
+npm run format:check  # Prettier check
+npm test             # Tests
+```
+
+All checks must pass without errors or warnings.

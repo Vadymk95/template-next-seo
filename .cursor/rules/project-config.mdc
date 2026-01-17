@@ -1,0 +1,113 @@
+---
+description: 'Next.js project configuration, accessibility, SEO, and internationalization'
+alwaysApply: true
+---
+
+## Project Configuration
+
+### Technology Stack
+
+- **Next.js**: Next.js 15+ with App Router
+- **React**: React 19 with automatic JSX runtime
+- **State Management**: Zustand for global state, TanStack Query for server state
+- **TypeScript**: Strict mode with `@/*` path aliases
+- **Routing**: Next.js App Router (file-based)
+- **Styling**: Tailwind CSS + Shadcn UI
+- **Testing**: Vitest + Testing Library
+
+## Project Structure
+
+### Folders and Files
+
+- **App Router** in `app/`:
+    - `layout.tsx` - Root layout
+    - `page.tsx` - Pages (file-based routing)
+    - `providers.tsx` - Client providers (QueryClient, etc.)
+    - `loading.tsx` - Loading UI
+    - `error.tsx` - Error UI
+    - `not-found.tsx` - 404 page
+- **Shared** in `shared/`:
+    - `ui/` - Shadcn UI primitives (button, input, card, etc.)
+    - `lib/` - Utilities and configs (queryClient, utils, i18n, etc.)
+    - `types/` - Shared TypeScript types
+    - `constants/` - Shared constants
+- **Entities** in `entities/` (business entities, each in its own folder with store/model)
+- **Features** in `features/` (isolated features with ui/model/api segments)
+- **Hooks** in `hooks/` (organized by domain)
+
+## SEO Configuration
+
+- **Metadata API** - Export `metadata` object in pages/layouts
+- **Dynamic Metadata** - Use `generateMetadata` function
+- **Sitemap** - `app/sitemap.ts` for automatic sitemap generation
+- **Robots.txt** - `app/robots.ts` for robots.txt configuration
+- **Open Graph** - Configured in metadata
+- **Structured Data** - Add via `metadata.other['application/ld+json']`
+
+### Example
+
+```typescript
+// app/page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Home',
+    description: 'Welcome',
+    openGraph: {
+        title: 'Home',
+        description: 'Welcome'
+    }
+};
+```
+
+## Accessibility
+
+- **Use semantic HTML tags**
+- **Add ARIA attributes** where needed (e.g., `role="status"`, `aria-live="polite"` for loading states)
+- **Use `role="alert"` and `aria-live="assertive"`** for critical messages (errors)
+- **Ensure keyboard navigation**
+- **Use shadcn/ui components** which include accessibility features
+- **Don't overuse ARIA** - prefer semantic HTML first
+
+## Internationalization (i18n)
+
+- **i18n included by default** with production-ready configuration
+- **Lazy Loading**: Translations loaded from `/public/locales/{lng}/{ns}.json` via HTTP
+- **Caching**: Built-in i18next caching prevents redundant downloads
+- **Language Detection**: Automatically detects language from localStorage → browser → fallback 'en'
+- **Namespace Structure**: `common` (UI elements), `errors` (API/HTTP/validation errors), page-specific namespaces
+- **Initial Load**: Loads `common`, `errors`, and current page namespace on mount
+- **Lazy Loading**: Feature namespaces are loaded on demand when components use them
+
+### Structure
+
+```
+public/locales/
+  en/
+    common.json    # UI elements, buttons, general phrases
+    errors.json    # API/HTTP/validation errors
+    home.json      # HomePage-specific content
+```
+
+### Usage in Components
+
+```typescript
+// Client Component
+'use client';
+
+import { useTranslation } from 'react-i18next';
+
+const { t } = useTranslation(['common', 'home']);
+return <h1>{t('home:title')}</h1>;
+```
+
+### Adding a New Language
+
+1. Create `public/locales/{lng}/` directory (e.g., `public/locales/uk/`)
+2. Copy JSON files from `en/` and translate
+3. Add language to `SUPPORTED_LANGUAGES` in `shared/lib/i18n/constants.ts`
+
+### Adding a New Namespace
+
+1. Create `public/locales/en/{namespace}.json`
+2. Load namespace when needed: `useTranslation(['common', 'namespace'])`

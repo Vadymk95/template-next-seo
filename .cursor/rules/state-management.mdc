@@ -1,0 +1,100 @@
+---
+description: "Zustand stores and TanStack Query patterns for Next.js"
+globs: ["**/store/**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+## State Management
+
+- **Use Zustand** for global client state management (stores in `store/`)
+- **Each store should be in its own folder** with tests alongside (e.g., `store/user/userStore.ts` + `userStore.test.ts`)
+- **Use `createSelectors` utility** from `store/utils/createSelectors.ts` for auto-selectors
+- **Store exports both regular selector and auto-selector**: `useStore((state) => state.value)` or `useStore.use.value()`
+- **Use TanStack Query** for server state and data fetching
+- **Configure QueryClient** in `lib/queryClient.ts` using `createQueryClient()` helper
+- **Keep local state in components** when possible, use Zustand for shared state
+- **Client Components only** - Zustand stores must be used in Client Components ('use client')
+
+## Store Structure
+
+- **Modular store pattern**: Each domain has its own store folder
+- **Tests next to store files** (`storeName.test.ts`)
+- **Direct imports** (no `index.ts` re-exports) for optimal tree-shaking
+- **Store-related files** (types, utils) can be added to the same folder when needed
+
+### Example Structure
+
+```
+store/
+  ├── user/
+  │   ├── userStore.ts
+  │   └── userStore.test.ts
+  ├── settings/
+  │   ├── settingsStore.ts
+  │   └── settingsStore.test.ts
+  └── utils/
+      └── createSelectors.ts
+```
+
+### Example Usage
+
+```typescript
+// store/user/userStore.ts
+'use client';
+
+import { create } from 'zustand';
+import { createSelectors } from '../utils/createSelectors';
+
+const useUserStoreBase = create(...);
+export const useUserStore = createSelectors(useUserStoreBase);
+
+// Import directly
+import { useUserStore } from '@/store/user/userStore';
+
+// In Client Component
+'use client';
+
+export const UserProfile = () => {
+    const username = useUserStore.use.username();
+    // or
+    const username = useUserStore((state) => state.username);
+    return <div>{username}</div>;
+};
+```
+
+## TanStack Query in Next.js
+
+- **Provider in `app/providers.tsx`** - wraps app with QueryClientProvider
+- **Server Components**: Use `fetch` directly or Server Actions
+- **Client Components**: Use `useQuery`, `useMutation` hooks
+- **Server-side data fetching**: Use async Server Components
+
+### Server Component Data Fetching
+
+```typescript
+// app/blog/[id]/page.tsx - Server Component
+export default async function BlogPost({ params }: Props) {
+    const { id } = await params;
+    const post = await fetch(`https://api.example.com/posts/${id}`).then(r => r.json());
+    return <article>{post.content}</article>;
+}
+```
+
+### Client Component Data Fetching
+
+```typescript
+// components/PostList.tsx - Client Component
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+
+export const PostList = () => {
+    const { data, isLoading } = useQuery({
+        queryKey: ['posts'],
+        queryFn: () => fetch('/api/posts').then(r => r.json())
+    });
+
+    if (isLoading) return <div>Loading...</div>;
+    return <div>{data.map(post => <div key={post.id}>{post.title}</div>)}</div>;
+};
+```

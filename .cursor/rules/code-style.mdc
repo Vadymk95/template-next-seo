@@ -1,0 +1,82 @@
+---
+description: 'Code style, formatting, file structure, and naming conventions for Next.js'
+globs: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
+alwaysApply: true
+---
+
+## Code Formatting
+
+- **Use Prettier configuration** from the project (`trailingComma: 'none'`, `singleQuote: true`, `printWidth: 100`, `tabWidth: 4`)
+- **Follow ESLint rules** configured in `.eslintrc.json`
+- **Use 4 spaces** for indentation
+- **Always end files** with an empty line
+
+## Comments
+
+- **Comments only in English**
+- **Comments only for complex logic** that requires explanation
+- Example of acceptable comment:
+    ```typescript
+    // Complex algorithm that requires explanation
+    // Handles edge cases and specific business logic
+    const processData = (data: string) => { ... }
+    ```
+
+## Imports
+
+- **Use path aliases**: `@/components`, `@/lib`, `@/store`, `@/hooks`
+- **Group imports**: external libraries first, then internal
+- **Use `import type`** for types
+- **Follow import order rules** from ESLint config (categories separated by empty lines)
+
+## Project Structure
+
+### Folders and Files
+
+- **App Router** in `app/`:
+    - `layout.tsx` - Layouts (Server Components by default)
+    - `page.tsx` - Pages (Server Components by default)
+    - `loading.tsx` - Loading UI
+    - `error.tsx` - Error UI
+    - `not-found.tsx` - 404 page
+    - `route.ts` - API routes
+- **Components** in `components/`:
+    - `ui/` - UI primitives (Shadcn UI components)
+    - `common/` - Common components (ErrorBoundary, etc.)
+    - `features/` - Feature components
+- **Hooks** in `hooks/` (organized by domain)
+- **Store** in `store/` (Zustand stores, each in its own folder with tests)
+- **Lib** in `lib/` (queryClient, utils, i18n, etc.)
+- **Types** in `types/` (if exists)
+- **Constants** in `constants/` (if exists)
+
+## Accessibility
+
+- **Use semantic HTML tags**
+- **Add ARIA attributes** where needed (e.g., `role="status"`, `aria-live="polite"` for loading states)
+- **Use `role="alert"` and `aria-live="assertive"`** for critical messages (errors)
+- **Ensure keyboard navigation**
+- **Use shadcn/ui components** which include accessibility features
+- **Don't overuse ARIA** - prefer semantic HTML first
+
+### Naming Conventions
+
+- **Components**: PascalCase (`ComponentName`)
+- **Component files**: PascalCase or kebab-case (follow existing style)
+- **Hooks**: camelCase with `use` prefix (`useComponentName`)
+- **Constants**: UPPER_SNAKE_CASE (`STATUS`, `ROUTES_PATH`)
+- **Types**: PascalCase (`ComponentProps`, `StatusType`)
+- **Routes**: File-based routing, no route constants needed
+
+## Code Quality
+
+- **Write code professionally**: Production-ready, maintainable code
+- **Prefer more code over complex constructions**: Better readability is more important than fewer lines
+- **Code should be understandable**: Any developer should be able to understand the code without deep knowledge
+
+## Server vs Client Components
+
+- **Default to Server Components** - use 'use client' only when needed
+- **Server Components**: Data fetching, static content, SEO
+- **Client Components**: Interactivity, hooks, browser APIs
+- **Mark Client Components** with 'use client' directive at the top

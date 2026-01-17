@@ -1,0 +1,170 @@
+---
+description: "Next.js App Router file-based routing patterns"
+globs: ["**/app/**/*.tsx", "**/app/**/*.ts"]
+alwaysApply: false
+---
+
+## Next.js App Router
+
+- **File-based routing** - files in `app/` directory automatically become routes
+- **No router configuration needed** - Next.js handles routing automatically
+- **Server Components by default** - all pages are Server Components unless marked with 'use client'
+
+## Route Structure
+
+### Basic Routes
+
+```
+app/
+  ├── page.tsx              # Route: /
+  ├── about/
+  │   └── page.tsx          # Route: /about
+  └── blog/
+      ├── page.tsx          # Route: /blog
+      └── [id]/
+          └── page.tsx      # Route: /blog/:id
+```
+
+### Special Files
+
+- **`layout.tsx`** - Shared layout for route segment and children
+- **`loading.tsx`** - Loading UI (Suspense boundary)
+- **`error.tsx`** - Error UI (Error Boundary)
+- **`not-found.tsx`** - 404 page
+- **`template.tsx`** - Re-renders on navigation (unlike layout)
+- **`route.ts`** - API route handler
+
+## Dynamic Routes
+
+- **Single parameter**: `app/blog/[id]/page.tsx`
+- **Multiple parameters**: `app/shop/[category]/[product]/page.tsx`
+- **Catch-all**: `app/docs/[...slug]/page.tsx`
+- **Optional catch-all**: `app/shop/[[...slug]]/page.tsx`
+
+### Accessing Params
+
+```typescript
+// app/blog/[id]/page.tsx
+type Props = {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default async function BlogPost({ params, searchParams }: Props) {
+    const { id } = await params;
+    const { category } = await searchParams;
+    // ...
+}
+```
+
+## Route Groups
+
+- **Organize routes** without affecting URL structure
+- **Syntax**: `(groupName)/route/page.tsx`
+- **Useful for**: Organizing by feature, applying different layouts
+
+```
+app/
+  ├── (marketing)/
+  │   ├── about/
+  │   │   └── page.tsx      # Route: /about
+  │   └── contact/
+  │       └── page.tsx      # Route: /contact
+  └── (dashboard)/
+      ├── settings/
+      │   └── page.tsx      # Route: /settings
+      └── profile/
+          └── page.tsx     # Route: /profile
+```
+
+## Layouts
+
+- **Nested layouts** - each folder can have its own `layout.tsx`
+- **Layouts persist** across navigation (unlike templates)
+- **Root layout** in `app/layout.tsx` wraps entire app
+
+```typescript
+// app/layout.tsx - Root layout
+export default function RootLayout({
+    children
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <html lang="en">
+            <body>
+                <Header />
+                {children}
+                <Footer />
+            </body>
+        </html>
+    );
+}
+
+// app/dashboard/layout.tsx - Nested layout
+export default function DashboardLayout({
+    children
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <DashboardSidebar />
+            {children}
+        </div>
+    );
+}
+```
+
+## Metadata and SEO
+
+- **Export `metadata` object** in page or layout
+- **Use `generateMetadata`** for dynamic metadata
+- **Metadata is server-rendered** - perfect for SEO
+
+```typescript
+// app/page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Home',
+    description: 'Welcome',
+    openGraph: {
+        title: 'Home',
+        description: 'Welcome'
+    }
+};
+```
+
+## Navigation
+
+- **Use `next/link`** for client-side navigation
+- **Use `useRouter`** from `next/navigation` for programmatic navigation
+- **Server Components**: Use `<Link>` for navigation
+
+```typescript
+// Client Component
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+export const Navigation = () => {
+    const router = useRouter();
+
+    return (
+        <nav>
+            <Link href="/about">About</Link>
+            <button onClick={() => router.push('/contact')}>Contact</button>
+        </nav>
+    );
+};
+```
+
+## Route Organization Best Practices
+
+- **Group by feature** using route groups: `(feature)/routes/`
+- **Use layouts** for shared UI across routes
+- **Keep pages simple** - extract complex logic to components
+- **Use Server Components** when possible for better performance
+- **Lazy load** heavy components with `next/dynamic`
