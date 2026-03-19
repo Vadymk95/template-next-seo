@@ -5,6 +5,7 @@ import { useEffect, useState, type FC, type ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import i18n, { i18nInitPromise } from '@/shared/lib/i18n';
+import { logger } from '@/shared/lib/logger';
 import { createQueryClient } from '@/shared/lib/queryClient';
 import { reportWebVitals, reportWebVitalsToConsole } from '@/shared/lib/web-vitals';
 import { Loading } from '@/shared/ui';
@@ -22,7 +23,10 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
                 try {
                     await i18nInitPromise;
                 } catch (error) {
-                    console.error('[i18n] Failed to initialize:', error);
+                    logger.error(
+                        '[providers] i18n init failed',
+                        error instanceof Error ? error : new Error(String(error))
+                    );
                 }
             }
             if (i18n.isInitialized && i18n.hasResourceBundle(i18n.language, 'common')) {

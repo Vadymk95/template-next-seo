@@ -1,0 +1,129 @@
+---
+description: 'Main autonomous execution engine. Orchestrates all other rules.'
+globs: ['**/*']
+alwaysApply: true
+priority: 100
+---
+
+# Agent Pipeline — Principal Autonomy Engine
+
+> Defines the **process**. Quality standards live in domain rules (`workflow.mdc`, `fsd-architecture.mdc`, etc.). Pipeline enforces them — never bypass it.
+
+---
+
+## Phase 1: Deep Discovery (mandatory)
+
+Before any reasoning about implementation:
+
+1. **Brain Scan**: Read `.cursor/brain/MAP.md` (routes, data flows, wiring).
+2. **Risk Detection**: Read `.cursor/brain/SKELETONS.md` — custom webpack, RSC boundary, i18n, SEO.
+3. **Context Gathering**: Find existing patterns in `app/`, `features/`, `entities/`, `shared/`.
+4. **Scope Declaration**: Clear **In-scope / Out-of-scope** list.
+5. **Explicit declaration**: State scope + SKELETONS zones touched (or "none"). Do not code before this.
+
+> **Gate**: If task touches a SKELETONS zone — flag risk and propose mitigation before Phase 2.
+
+---
+
+## Phase 2: Architectural Simulation
+
+### Inference-Time Scaling
+
+- Use `sequential-thinking` with `totalThoughts >= 3` for tasks > 3 steps.
+- Include **adversarial analysis**: what breaks SEO, caching, or RSC boundaries?
+
+### Architectural Critique
+
+1. **FSD / imports**: Respect `app` → `features` → `entities` → `shared` direction; use `@/*` only.
+2. **Next.js boundary**: Server Components by default; add `'use client'` only where hooks or browser APIs are required. No client stores in RSC files.
+3. **State**: Zustand for client-global UI/domain; TanStack Query for server/async data; do not duplicate sources of truth.
+4. **Tech debt**: Avoid magic strings and implicit API shapes.
+5. **Ghost Principle**: Every change must be necessary; no drive-by refactors.
+
+### Solver-Verifier (mental test cases)
+
+- 1–2 traces per non-trivial function: happy path + edge case.
+- If a trace fails — revise the plan before coding.
+
+> **Gate**: For tasks **> 10 lines** or touching **stores / API / Server Actions** — wait for approval (**workflow.mdc**). Minor fixes (< 10 lines): proceed with brief notice.
+
+---
+
+## Phase 3: TDD-First Execution
+
+### Business logic (`entities`, `shared/lib`, hooks)
+
+1. State requirements → **Red** (failing test) → **Green** → **Refactor**.
+
+### UI
+
+- Implement with existing patterns → verify with Testing Library where valuable.
+
+### Iteration
+
+- **1–2 files** per batch; verify between batches.
+- Surgical edits; match local style (4 spaces in this repo).
+
+### Per-file checklist
+
+- [ ] `@/*` imports, no stray `../../`
+- [ ] No hardcoded user strings — i18n
+- [ ] `logger.error` (or project pattern) with context — not bare `console.error(e)`
+- [ ] No stray `console.log`
+
+---
+
+## Phase 4: Autonomous Verification Loop
+
+### 4.1 Automated checks
+
+```bash
+npm run lint
+npm run format:check
+npx tsc --noEmit
+npm test
+npm run build   # webpack; required if next.config webpack splitChunks changed
+```
+
+### 4.2 On failure
+
+Root-cause first; then fix; re-run the full loop.
+
+### 4.3 Manual pass
+
+- RSC vs client boundaries for touched files
+- SEO routes (`sitemap`, `robots`, metadata) if URLs or env changed
+- Logging/resilience: see **`resilience.mdc`** (`logger`, no silent `catch`)
+
+### 4.4 Diff self-review
+
+Plan alignment, ghost principle, regression on callers.
+
+---
+
+## Phase 5: Brain Auto-Sync
+
+| File            | When to update                       |
+| --------------- | ------------------------------------ |
+| `MAP.md`        | Routes, actions, stores, major flows |
+| `DECISIONS.md`  | New pattern or intentional trade-off |
+| `SKELETONS.md`  | New risk or mitigated zone           |
+| `DICTIONARY.md` | New domain term / acronym            |
+
+If nothing applies: **"Brain sync: none needed."**
+
+---
+
+## Phase 6: Confidence Declaration
+
+End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
+
+---
+
+## Anti-patterns (FORBIDDEN)
+
+- Skipping Phase 1
+- Batches > 2 files without verification
+- Patching lint/types without root-cause analysis
+- Finishing without Brain sync declaration
+- `next build` / webpack behavior changes without updating **DECISIONS** / **SKELETONS**

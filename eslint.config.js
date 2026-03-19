@@ -46,7 +46,7 @@ export default defineConfig([
                     groups: ['builtin', 'external', 'internal', ['parent', 'sibling', 'index']],
                     pathGroups: [
                         {
-                            pattern: 'tailwindcss/**',
+                            pattern: '@tailwindcss/**',
                             group: 'external',
                             position: 'before'
                         },

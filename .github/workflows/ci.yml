@@ -1,26 +1,33 @@
 name: CI
 
 on:
-    push:
-        branches: [main, master, develop]
     pull_request:
+        branches: [main, master, develop]
+    push:
         branches: [main, master, develop]
 
 jobs:
-    lint-and-format:
-        name: Lint & Format Check
+    validate:
         runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [24.x]
+
         steps:
             - uses: actions/checkout@v4
 
-            - name: Setup Node.js
+            - name: Use Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v4
               with:
-                  node-version: '24'
+                  node-version: ${{ matrix.node-version }}
                   cache: 'npm'
 
             - name: Install dependencies
               run: npm ci
+
+            - name: Audit dependencies
+              run: npm audit --audit-level=moderate
 
             - name: Run ESLint
               run: npm run lint
@@ -28,79 +35,21 @@ jobs:
             - name: Check Prettier formatting
               run: npm run format:check
 
-    type-check:
-        name: TypeScript Type Check
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: 'npm'
-
-            - name: Install dependencies
-              run: npm ci
-
-            - name: Run TypeScript type check
+            - name: TypeScript check
               run: npx tsc --noEmit
-
-    test:
-        name: Run Tests
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: 'npm'
-
-            - name: Install dependencies
-              run: npm ci
 
             - name: Run tests
               run: npm test
 
-    build:
-        name: Build Application
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: 'npm'
-
-            - name: Install dependencies
-              run: npm ci
-
             - name: Cache Next.js build
-              id: cache-nextjs
               uses: actions/cache@v4
               with:
                   path: .next/cache
                   key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/next.config.*') }}
                   restore-keys: |
                       ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
-                      ${{ runner.os }}-nextjs-
 
-            - name: Verify cache
-              run: |
-                  if [ "${{ steps.cache-nextjs.outputs.cache-hit }}" == "true" ]; then
-                      echo "✅ Next.js cache restored"
-                  else
-                      echo "ℹ️ No cache found"
-                  fi
-
-            - name: Build application
+            - name: Production build
               run: npm run build
               env:
-                  ANALYZE: false
-
-            - name: Check bundle sizes
-              run: npm run build 2>&1 | grep -E "First Load JS" || true
+                  ANALYZE: 'false'

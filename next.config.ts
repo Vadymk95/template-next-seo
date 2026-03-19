@@ -1,11 +1,21 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import bundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
+
+const __rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true'
 });
 
 const nextConfig: NextConfig = {
+    // Pin tracing/Turbopack root so a parent monorepo lockfile does not steal the workspace root
+    outputFileTracingRoot: __rootDir,
+    turbopack: {
+        root: __rootDir
+    },
     reactStrictMode: true,
     poweredByHeader: false,
     // Exclude dev routes from production build
@@ -14,31 +24,6 @@ const nextConfig: NextConfig = {
             '/dev/**': ['app/dev/**']
         }
     }),
-    async headers() {
-        return [
-            {
-                source: '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2|ttf|otf|eot)$).*)',
-                headers: [
-                    {
-                        key: 'X-DNS-Prefetch-Control',
-                        value: 'on'
-                    },
-                    {
-                        key: 'X-Frame-Options',
-                        value: 'DENY'
-                    },
-                    {
-                        key: 'X-XSS-Protection',
-                        value: '1; mode=block'
-                    },
-                    {
-                        key: 'Referrer-Policy',
-                        value: 'strict-origin-when-cross-origin'
-                    }
-                ]
-            }
-        ];
-    },
     images: {
         formats: ['image/avif', 'image/webp'],
         remotePatterns: [],
@@ -68,18 +53,6 @@ const nextConfig: NextConfig = {
             process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false
     },
     webpack: (config, { isServer, dev }) => {
-        // Exclude dev routes from production client bundle
-        if (!isServer && !dev) {
-            // Remove dev routes from entry points
-            if (config.entry && typeof config.entry === 'object') {
-                Object.keys(config.entry).forEach((key) => {
-                    if (key.includes('/dev/')) {
-                        delete config.entry[key];
-                    }
-                });
-            }
-        }
-
         if (!isServer && !dev) {
             const originalSplitChunks = config.optimization?.splitChunks;
             config.optimization = {
@@ -109,7 +82,7 @@ const nextConfig: NextConfig = {
                         },
                         stateVendor: {
                             name: 'state-vendor',
-                            test: /[\\/]node_modules[\\/](zustand|@tanstack[\\/]react-query)[\\/]/,
+                            test: /[\\/]node_modules[\\/](zustand|@tanstack[\\/](react-query|query-core))[\\/]/,
                             priority: 30,
                             reuseExistingChunk: true,
                             enforce: true

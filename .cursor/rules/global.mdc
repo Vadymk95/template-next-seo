@@ -1,0 +1,23 @@
+---
+description: 'Global Engineering Standards & Intelligence Protocol'
+globs: ['**/*']
+alwaysApply: true
+priority: 95
+---
+
+# Global Standards — template-next-seo
+
+## Pipeline Initialization (CRITICAL)
+
+- **Any task MUST begin** with the protocol in **`agent-pipeline.mdc`** (Priority 100).
+- Phases: Discovery → Simulation → TDD Execution → Verification → Brain Sync → Confidence.
+
+## Intelligence & Context
+
+- **Reasoning**: Use `sequential-thinking` for multi-step work; `context7` for library docs.
+- **Authority**: `.cursor/brain/` (**MAP**, **DECISIONS**, **SKELETONS**, **DICTIONARY**) — keep in sync when behavior or contracts change.
+- **Standards**: `engineering-standards.mdc`, `resilience.mdc`, `commit-command.mdc` — enterprise-quality bar on top of FSD rules.
+- **Stack**: TypeScript strict, **Next.js 16 App Router**, React 19, Tailwind v4.
+- **Quality**: Minimal diff; no magic strings — constants or i18n. Prefer `@/*` imports over `../../`.
+- **Hygiene**: AI metadata and specs live under **`.cursor/`**, not project root.
+- **Git**: Conventional commits; subject line ≤ 96 characters; English, imperative mood.

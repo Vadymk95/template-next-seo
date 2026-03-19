@@ -1,85 +1,109 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-// Simple in-memory rate limiting (for production use Redis)
+import { buildContentSecurityPolicy, CSP_NONCE_HEADER } from '@/shared/lib/cspHeader';
+import { checkRateLimit } from '@/shared/lib/rateLimit';
+import { getUpstashRatelimit } from '@/shared/lib/upstashRateLimit';
+
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests per minute
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 100;
+
+function generateNonce(): string {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]!);
+    }
+    return btoa(binary);
+}
 
 function getRateLimitKey(request: NextRequest): string {
     const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-    return ip;
+    return forwarded ? forwarded.split(',')[0]!.trim() : 'unknown';
 }
 
-function checkRateLimit(key: string): boolean {
-    const now = Date.now();
-    const record = rateLimitMap.get(key);
-
-    if (!record || now > record.resetTime) {
-        rateLimitMap.set(key, {
-            count: 1,
-            resetTime: now + RATE_LIMIT_WINDOW
-        });
-        return true;
-    }
-
-    if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
-        return false;
-    }
-
-    record.count++;
-    return true;
-}
-
-export function middleware(request: NextRequest) {
-    // Rate limiting for API routes
-    if (request.nextUrl.pathname.startsWith('/api/')) {
-        const key = getRateLimitKey(request);
-        if (!checkRateLimit(key)) {
-            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-        }
-    }
-
-    const pathname = request.nextUrl.pathname;
-    // Skip static files without applying headers
-    if (
+function isAssetPath(pathname: string): boolean {
+    return (
         pathname.startsWith('/_next/static') ||
         pathname.startsWith('/_next/image') ||
-        pathname.match(/\.(css|js|woff|woff2|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico|avif)$/i)
-    ) {
+        /\.(css|js|woff|woff2|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico|avif)$/i.test(pathname)
+    );
+}
+
+function applySecurityHeaders(response: NextResponse, requestNonce: string, isDev: boolean): void {
+    response.headers.set('X-DNS-Prefetch-Control', 'on');
+    response.headers.set(
+        'Content-Security-Policy',
+        buildContentSecurityPolicy(requestNonce, isDev)
+    );
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+
+    if (process.env.NODE_ENV === 'production') {
+        response.headers.set(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains; preload'
+        );
+    }
+}
+
+async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse | null> {
+    if (!request.nextUrl.pathname.startsWith('/api/')) {
+        return null;
+    }
+
+    const key = getRateLimitKey(request);
+    const upstash = getUpstashRatelimit();
+
+    if (upstash) {
+        const { success } = await upstash.limit(key);
+        if (!success) {
+            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        }
+        return null;
+    }
+
+    const now = Date.now();
+    if (!checkRateLimit(rateLimitMap, key, now, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS)) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
+    return null;
+}
+
+export async function middleware(request: NextRequest) {
+    const pathname = request.nextUrl.pathname;
+
+    if (isAssetPath(pathname)) {
         return NextResponse.next();
     }
 
-    // Security headers
-    const response = NextResponse.next();
-
-    // Content Security Policy
-    response.headers.set(
-        'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
-    );
-
-    // X-Frame-Options
-    response.headers.set('X-Frame-Options', 'DENY');
-
-    // Referrer-Policy
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-    // Permissions-Policy
-    response.headers.set(
-        'Permissions-Policy',
-        'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-    );
-
-    // Strict-Transport-Security (HSTS) - only in production
-    if (process.env.NODE_ENV === 'production') {
-        response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    const rateResponse = await enforceApiRateLimit(request);
+    if (rateResponse) {
+        return rateResponse;
     }
 
-    // X-XSS-Protection (legacy but still useful)
-    response.headers.set('X-XSS-Protection', '1; mode=block');
+    if (process.env.NODE_ENV === 'production' && pathname.startsWith('/dev')) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    const nonce = generateNonce();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(CSP_NONCE_HEADER, nonce);
+
+    const response = NextResponse.next({
+        request: { headers: requestHeaders }
+    });
+
+    applySecurityHeaders(response, nonce, isDev);
 
     return response;
 }

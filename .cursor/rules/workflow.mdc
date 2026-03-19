@@ -63,7 +63,7 @@ alwaysApply: true
 ### Before Committing
 
 - **ALWAYS check files before committing and pushing**
-- Run linting: `npm run lint` or `next lint`
+- Run linting: `npm run lint` (`eslint . --max-warnings 0`)
 - Run formatting check: `npm run format:check` or `prettier --check .`
 - Run tests: `npm test` or `vitest run`
 - Fix any errors or warnings before committing

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
 
+import { CSP_NONCE_HEADER } from '@/shared/lib/cspHeader';
 import { Footer, Header } from '@/shared/ui';
 
 import './globals.css';
@@ -44,9 +46,17 @@ export const metadata: Metadata = {
     }
 };
 
-const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
+const RootLayout = async ({ children }: Readonly<{ children: React.ReactNode }>) => {
+    const headerList = await headers();
+    const nonce = headerList.get(CSP_NONCE_HEADER) ?? '';
+
     return (
-        <html lang="en" className={`${inter.variable} dark i18n-loading`}>
+        <html
+            lang="en"
+            className={`${inter.variable} dark i18n-loading`}
+            suppressHydrationWarning
+            nonce={nonce}
+        >
             <body>
                 <PreconnectResources />
                 <Providers>

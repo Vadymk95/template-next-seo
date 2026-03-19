@@ -8,10 +8,10 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ### Core Stack
 
-- **Next.js 15+** with App Router
+- **Next.js 16** with App Router
 - **React 19** with automatic JSX runtime
 - **TypeScript** strict mode
-- **Tailwind CSS** + Shadcn UI
+- **Tailwind CSS v4** (PostCSS + `app/globals.css` theme tokens) + Shadcn-style UI in `shared/ui/`
 - **Zustand** for client-side state management
 - **TanStack Query** for server state management
 - **i18next** for internationalization
@@ -39,7 +39,7 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ### Developer Experience
 
-- ✅ **13 Cursor rules** - comprehensive development guidelines
+- ✅ **Cursor rules** - pipeline + FSD, testing, and workflow (see `.cursor/rules/`)
 - ✅ **ESLint Flat Config** - modern linting setup
 - ✅ **Prettier** - code formatting
 - ✅ **Husky hooks** - pre-commit and commit-msg validation
@@ -88,6 +88,19 @@ npm run build
 # Start production server
 npm start
 ```
+
+### Build & lint notes (Next 16)
+
+- **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React Query and related libs). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
+- **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
+- **Enterprise verification**: **`npm run verify:enterprise`** runs lint → format → TypeScript → tests → production build (same spirit as CI). **`npm run bench:verify`** runs the same steps and prints **per-step durations** for local benchmarking.
+
+### Security (production)
+
+- **CSP**: per-request **nonce** + **`strict-dynamic`** for `script-src` (development keeps relaxed rules for HMR). Nonce is set in **`middleware`** and passed to **`app/layout.tsx`** via the `x-nonce` request header.
+- **Headers**: HSTS (**`preload`** — [submit the domain](https://hstspreload.org/) before relying on preload in browsers), **COOP** / **CORP**, frame protections, Permissions-Policy — all from **`middleware`** (single source).
+- **Rate limiting**: set **`UPSTASH_REDIS_REST_URL`** and **`UPSTASH_REDIS_REST_TOKEN`** (see **`.env.example`**) for **sliding-window** limits shared across regions; otherwise **in-memory** fallback (edge isolate).
+- **`/dev/*`**: returns **404 in production** (no webpack entry hacks).
 
 ## 📁 Project Structure (FSD)
 

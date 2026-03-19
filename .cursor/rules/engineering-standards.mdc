@@ -1,0 +1,33 @@
+---
+description: 'TypeScript, naming, constants, file-size discipline (enterprise)'
+globs: ['**/*.{ts,tsx}']
+alwaysApply: false
+priority: 88
+---
+
+# Engineering Standards
+
+## 1. Type Safety
+
+- **`any` is forbidden** — use `unknown` + narrowing.
+- **Component props**: explicit interface / type; export types used outside the file.
+- **Type-only imports**: `import type { … }` where applicable.
+- **App Router page props**: `params` and `searchParams` are **async** — use `await` in **async** Server Components and route handlers.
+
+## 2. Style & Naming
+
+- **Indentation**: 4 spaces (match repo).
+- **Components**: `PascalCase`; hooks `useCamelCase`; files for components follow existing folder convention.
+- **Exports**: named exports except Next.js default page/layout/route handlers.
+- **Comments**: English, single-line `//` only when logic is non-obvious; avoid JSDoc noise on trivial helpers.
+
+## 3. Constants
+
+- No magic strings/numbers for domain values — `shared/constants/` or slice-local `model/constants.ts`.
+- Prefer `as const` + derived types over loose enums.
+
+## 4. Size & Dependencies (new code)
+
+- **Ghost principle**: new files should stay **under ~200 LOC**; split into hooks or `shared/lib/` when growing.
+- **Explicit inputs**: cross-slice logic accepts data via parameters; avoid hidden globals.
+- **Legacy files**: match existing style when editing; do not expand legacy anti-patterns in new code.
