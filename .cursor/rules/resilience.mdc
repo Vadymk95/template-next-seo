@@ -1,0 +1,29 @@
+---
+description: 'Errors, logging, resilience (no silent failures)'
+globs: ['**/*.{ts,tsx}', '**/app/**/*.ts', '**/app/**/*.tsx']
+alwaysApply: false
+priority: 92
+---
+
+# Resilience
+
+## 1. Logging & errors
+
+- **Structured logging**: use `shared/lib/logger` (`logger.error`, `logger.warn`, …) with a clear message prefix, e.g. `[ModuleName] operation: reason`.
+- **Avoid**: bare `console.error(e)` without context; silent `catch {}`; `catch (error: any)` without narrowing.
+
+## 2. Next.js App Router
+
+- **Route errors**: use segment `error.tsx` where recovery matters; expose `reset()` when UX requires retry.
+- **Client risk**: wrap unstable client subtrees with `ErrorBoundary` where appropriate; meaningful `role="alert"` on fatal UI.
+
+## 3. Async & Query
+
+- **TanStack Query**: handle `isError` / `error`; do not assume `data` is defined after loading.
+- **Server Actions**: validate input (e.g. Zod); return typed errors; never leak internal stack traces to clients.
+
+## 4. Anti-patterns
+
+- ❌ Swallowing errors without logging.
+- ❌ `useEffect` with missing deps when values are used (fix deps or justify).
+- ❌ Logging without module/context — must be diagnosable in production JSON logs.

@@ -1,0 +1,17 @@
+---
+description: 'Commit flow: workflow §2, header ≤96 chars, commitlint'
+globs: ['**/*']
+alwaysApply: false
+priority: 90
+---
+
+# Commit Command
+
+When the user asks for a commit (e.g. **Commit** or `/commit`):
+
+1. Read **§ Git Commits** in `.cursor/rules/workflow.mdc`.
+2. **Subject line ≤ 96 characters** (commitlint).
+3. Format: `type(scope): subject` — English, imperative. Types from `commitlint.config.mjs`: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. No `Co-authored-by`.
+4. **Pre-flight**: `npm run lint`, `npm run format:check`, `npx tsc --noEmit`, `npm test` pass (and `npm run build` if build-affecting changes).
+
+Do not suggest a message until §2 is satisfied and length is verified.
