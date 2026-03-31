@@ -28,6 +28,7 @@
         "build:webpack": "next build --webpack",
         "start": "next start",
         "lint": "eslint . --max-warnings 0",
+        "type-check": "tsc --noEmit",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "lint:staged": "lint-staged",
@@ -97,6 +98,9 @@
     "lint-staged": {
         "*.{ts,tsx,js,jsx}": [
             "eslint --fix",
+            "prettier --write"
+        ],
+        "*.{json,md,yml,yaml}": [
             "prettier --write"
         ]
     }
