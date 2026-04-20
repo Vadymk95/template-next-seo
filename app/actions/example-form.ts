@@ -1,18 +1,46 @@
 'use server';
 
-import { z } from 'zod';
-
 import { exampleFormSchema } from '@/features/example-form/model/schema';
+import { logger } from '@/shared/lib/logger';
 
-export async function exampleFormAction(formData: FormData) {
-    try {
-        const rawData = {
-            name: formData.get('name'),
-            email: formData.get('email')
+export type ExampleFormActionSuccess = {
+    success: true;
+    message: string;
+    data: { name: string; email: string };
+};
+
+export type ExampleFormActionFailure = {
+    success: false;
+    fieldErrors?: Record<string, string>;
+    error?: string;
+};
+
+export async function exampleFormAction(
+    formData: FormData
+): Promise<ExampleFormActionSuccess | ExampleFormActionFailure> {
+    const rawData = {
+        name: formData.get('name'),
+        email: formData.get('email')
+    };
+
+    const parsed = exampleFormSchema.safeParse(rawData);
+
+    if (!parsed.success) {
+        const fieldErrors: Record<string, string> = {};
+        for (const issue of parsed.error.issues) {
+            const key = issue.path[0];
+            if (typeof key === 'string' && !fieldErrors[key]) {
+                fieldErrors[key] = issue.message;
+            }
+        }
+        return {
+            success: false,
+            fieldErrors
         };
+    }
 
-        // Validate data
-        const validatedData = exampleFormSchema.parse(rawData);
+    try {
+        const validatedData = parsed.data;
 
         // Simulate processing
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -22,15 +50,11 @@ export async function exampleFormAction(formData: FormData) {
             message: 'Form submitted successfully',
             data: validatedData
         };
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return {
-                success: false,
-                error: 'Validation failed',
-                errors: error.issues
-            };
-        }
-
+    } catch (err) {
+        logger.error(
+            '[example-form-action] submit failed',
+            err instanceof Error ? err : new Error(String(err))
+        );
         return {
             success: false,
             error: 'An unexpected error occurred'

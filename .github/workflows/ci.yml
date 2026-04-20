@@ -24,7 +24,7 @@ jobs:
                   cache: 'npm'
 
             - name: Install dependencies
-              run: npm ci
+              run: npm ci --ignore-scripts
 
             - name: Audit dependencies
               run: npm audit --audit-level=moderate
@@ -53,3 +53,11 @@ jobs:
               run: npm run build
               env:
                   ANALYZE: 'false'
+
+            - name: Install Playwright Chromium
+              run: npx playwright install --with-deps chromium
+
+            - name: End-to-end tests
+              run: npm run test:e2e
+              env:
+                  CI: 'true'

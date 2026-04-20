@@ -1,0 +1,59 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["react", "typescript"],
+    "env": {
+        "browser": true,
+        "es2022": true
+    },
+    "rules": {
+        "no-debugger": "error",
+        "no-console": "warn",
+        "eqeqeq": "error",
+        "no-var": "error",
+        "prefer-const": "error",
+        "no-unused-vars": "error",
+        "react/jsx-no-target-blank": "error",
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "warn",
+        "react/jsx-key": "error",
+        "react/no-danger": "error",
+        "react/no-direct-mutation-state": "error",
+        "react/no-unknown-property": "error",
+        "react/no-string-refs": "error"
+    },
+    "overrides": [
+        {
+            "files": [
+                "**/*.{test,spec}.{ts,tsx}",
+                "shared/lib/test-utils/**/*.{ts,tsx}",
+                "e2e/**/*.ts"
+            ],
+            "rules": {
+                "no-console": "off",
+                "no-unused-vars": "off"
+            }
+        },
+        {
+            "files": ["scripts/**/*.{js,mjs}", "middleware.ts"],
+            "rules": {
+                "no-console": "off"
+            }
+        },
+        {
+            "files": ["shared/lib/logger.ts", "shared/lib/web-vitals.ts"],
+            "rules": {
+                "no-console": "off"
+            }
+        }
+    ],
+    "ignorePatterns": [
+        ".next/**",
+        "dist/**",
+        "node_modules/**",
+        "coverage/**",
+        "public/mockServiceWorker.js",
+        "**/*.d.ts",
+        "playwright-report/**",
+        "test-results/**"
+    ]
+}

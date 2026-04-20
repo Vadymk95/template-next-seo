@@ -7,20 +7,27 @@ alwaysApply: true
 ## Code Formatting
 
 - **Use Prettier configuration** from the project (`trailingComma: 'none'`, `singleQuote: true`, `printWidth: 100`, `tabWidth: 4`)
-- **Follow ESLint rules** configured in `.eslintrc.json`
+- **Follow ESLint + Oxlint** — `npm run lint` runs **oxlint** (`.oxlintrc.json`) then **eslint** (`eslint.config.js`): Next core-web-vitals + TypeScript, `eslint-plugin-oxlint`, `eslint-plugin-import-x`, `eslint-plugin-react`, type-aware strict rules, Prettier via `eslint-plugin-prettier/recommended`; `@/` imports, no `FC`, console only in logger / web-vitals / allowed paths
 - **Use 4 spaces** for indentation
 - **Always end files** with an empty line
 
 ## Comments
 
-- **Comments only in English**
-- **Comments only for complex logic** that requires explanation
-- Example of acceptable comment:
-    ```typescript
-    // Complex algorithm that requires explanation
-    // Handles edge cases and specific business logic
-    const processData = (data: string) => { ... }
-    ```
+**Use `/** \*/` JSDoc only on exported public contracts\*\* when any of these applies:
+
+- Describes an external API shape or data source (include the endpoint/URL)
+- Has non-obvious behaviour worth a usage example
+- References external data that must be kept in sync (document when/where to update)
+
+**Use `//` inside function bodies** — explain _why_ or non-obvious constraints only:
+
+```typescript
+// crm doesn't accept back the date format it sends — convert before posting
+```
+
+- **NEVER** use `/** */` for local helpers, computed getters, or unexported code
+- **NEVER** restate the code (`// fetch data`, `// set loading`, `// return result`)
+- **NEVER** add `// TODO` without a ticket reference or specific action item
 
 ## Imports
 

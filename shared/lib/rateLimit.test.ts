@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { checkRateLimit, pruneAndCapRateLimitMap, type RateLimitRecord } from './rateLimit';
+import { checkRateLimit, pruneAndCapRateLimitMap, type RateLimitRecord } from './rateLimitCore';
 
 describe('pruneAndCapRateLimitMap', () => {
     let map: Map<string, RateLimitRecord>;
@@ -15,6 +15,12 @@ describe('pruneAndCapRateLimitMap', () => {
         pruneAndCapRateLimitMap(map, 150);
         expect(map.has('a')).toBe(false);
         expect(map.has('b')).toBe(true);
+    });
+
+    it('keeps entries when now equals resetTime (strictly greater prunes)', () => {
+        map.set('a', { count: 1, resetTime: 100 });
+        pruneAndCapRateLimitMap(map, 100);
+        expect(map.has('a')).toBe(true);
     });
 
     it('evicts oldest resetTime when over maxKeys', () => {

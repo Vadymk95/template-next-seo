@@ -4,7 +4,10 @@ import { HomePageClient } from './HomePageClient';
 
 export const metadata: Metadata = {
     title: 'Home',
-    description: 'Welcome to React Enterprise Foundation'
+    description: 'Welcome to React Enterprise Foundation',
+    alternates: {
+        canonical: '/'
+    }
 };
 
 // ISR: Revalidate every hour

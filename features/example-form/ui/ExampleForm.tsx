@@ -1,27 +1,31 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { FC } from 'react';
+import { useState, type FunctionComponent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { exampleFormAction } from '@/app/actions/example-form';
+import { exampleFormSchema, type ExampleFormSchema } from '@/features/example-form/model/schema';
 import { Button, Input } from '@/shared/ui';
 
-import { exampleFormSchema, type ExampleFormSchema } from '../model/schema';
-
-export const ExampleForm: FC = () => {
+export const ExampleForm: FunctionComponent = () => {
     const { t } = useTranslation(['common', 'errors']);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
     const {
         register,
         handleSubmit,
         formState: { errors, isSubmitting },
-        reset
+        reset,
+        setError,
+        clearErrors
     } = useForm<ExampleFormSchema>({
         resolver: zodResolver(exampleFormSchema)
     });
 
     const onSubmit = async (data: ExampleFormSchema) => {
+        clearErrors();
+        setSubmitSuccess(false);
         const formData = new FormData();
         formData.append('name', data.name);
         formData.append('email', data.email);
@@ -30,14 +34,36 @@ export const ExampleForm: FC = () => {
 
         if (result.success) {
             reset();
-            alert(t('common:form.submittedSuccessfully'));
-        } else {
-            alert(`${t('errors:validation.failed')}: ${result.error}`);
+            setSubmitSuccess(true);
+            return;
+        }
+
+        if (result.fieldErrors) {
+            for (const [field, message] of Object.entries(result.fieldErrors)) {
+                if (field === 'name' || field === 'email') {
+                    setError(field, { message });
+                }
+            }
+        }
+        if (result.error) {
+            setError('root.serverError', { message: result.error });
+        } else if (!result.fieldErrors || Object.keys(result.fieldErrors).length === 0) {
+            setError('root.serverError', { message: t('errors:validation.failed') });
         }
     };
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            {submitSuccess && (
+                <p className="text-sm text-muted-foreground" role="status">
+                    {t('common:form.submittedSuccessfully')}
+                </p>
+            )}
+            {errors.root?.serverError && (
+                <p className="text-sm text-destructive" role="alert">
+                    {errors.root.serverError.message}
+                </p>
+            )}
             <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-medium">
                     {t('common:form.name')}

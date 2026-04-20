@@ -8,6 +8,7 @@ describe('buildContentSecurityPolicy', () => {
         expect(csp).toContain("'unsafe-eval'");
         expect(csp).not.toContain('strict-dynamic');
         expect(csp).not.toContain('upgrade-insecure-requests');
+        expect(csp).toContain('report-to csp-endpoint');
     });
 
     it('uses nonce and strict-dynamic in production', () => {
@@ -16,5 +17,6 @@ describe('buildContentSecurityPolicy', () => {
         expect(csp).toContain("'nonce-testNonce'");
         expect(csp).not.toContain("'unsafe-eval'");
         expect(csp).toContain('upgrade-insecure-requests');
+        expect(csp).toContain('report-to csp-endpoint');
     });
 });

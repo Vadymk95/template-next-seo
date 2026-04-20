@@ -4,7 +4,10 @@ import { ExampleFormPageClient } from './ExampleFormPageClient';
 
 export const metadata: Metadata = {
     title: 'Example Form',
-    description: 'Example form with Server Actions and validation'
+    description: 'Example form with Server Actions and validation',
+    alternates: {
+        canonical: '/example-form'
+    }
 };
 
 // ISR: Revalidate every 30 minutes

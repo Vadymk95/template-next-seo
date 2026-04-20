@@ -6,6 +6,8 @@ import type { NextConfig } from 'next';
 
 const __rootDir = path.dirname(fileURLToPath(import.meta.url));
 
+const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
 const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true'
 });
@@ -32,18 +34,17 @@ const nextConfig: NextConfig = {
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384]
     },
     experimental: {
+        serverActions: {
+            allowedOrigins: [appOrigin],
+            bodySizeLimit: '1mb'
+        },
+        webVitalsAttribution: ['LCP', 'INP', 'CLS'],
         optimizePackageImports: [
-            'lucide-react',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-label',
             'zustand',
-            '@tanstack/react-query',
             'react-i18next',
             'i18next',
             'i18next-browser-languagedetector',
             'i18next-http-backend',
-            'react-hook-form',
             '@hookform/resolvers',
             'zod'
         ]

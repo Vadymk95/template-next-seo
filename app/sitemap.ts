@@ -1,9 +1,12 @@
 import type { MetadataRoute } from 'next';
 
+import { getAppBaseUrl } from '@/shared/lib/env';
+
 const sitemap = (): MetadataRoute.Sitemap => {
+    const base = getAppBaseUrl();
     return [
         {
-            url: 'https://yourdomain.com',
+            url: `${base}/`,
             lastModified: new Date(),
             changeFrequency: 'weekly',
             priority: 1

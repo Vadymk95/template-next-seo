@@ -22,7 +22,8 @@ export function buildContentSecurityPolicy(nonce: string, isDevelopment: boolean
         "base-uri 'self'",
         "form-action 'self'",
         "frame-ancestors 'none'",
-        "object-src 'none'"
+        "object-src 'none'",
+        'report-to csp-endpoint'
     ];
 
     if (!isDevelopment) {

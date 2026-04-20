@@ -15,6 +15,18 @@
 - When the repo sits under a parent folder with another lockfile, Next may pick the wrong workspace root.
 - **Mitigation:** `next.config.ts` sets **`outputFileTracingRoot`** and **`turbopack.root`** to the package directory (`import.meta.url`).
 
+## ESLint + Oxlint (strict, template-1 parity)
+
+- **Oxlint:** CLI `oxlint` + `.oxlintrc.json` — fast first pass (react + typescript plugins, core JS rules). `npm run lint` runs **`lint:oxlint` then `eslint`**. Overrides for tests, e2e, scripts, middleware, logger/web-vitals (no-console off where intentional).
+- **ESLint base:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`, TanStack Query flat preset, then **`eslint-plugin-oxlint` `flat/all`** (disables ESLint rules already covered by oxlint so custom severities win).
+- **Imports:** **`eslint-plugin-import-x`** + `eslint-import-resolver-typescript` via `import-x/resolver-next` — `import-x/order`, `import-x/no-cycle`, recommended import-x rules.
+- **React:** **`eslint-plugin-react`** — flat recommended + `jsx-runtime`, plus `react/no-array-index-key`, `no-unstable-nested-components`, `jsx-no-useless-fragment`, `self-closing-comp`; `react/prop-types` off (TypeScript).
+- **Type-aware strictness:** `parserOptions.projectService` + `@typescript-eslint/no-floating-promises`, `no-misused-promises` with **`checksVoidReturn.attributes: false`** (React event/async handlers), `no-import-type-side-effects`, `switch-exhaustiveness-check`.
+- **Imports / style:** `no-restricted-imports` — no `FC`; parent-relative `../` banned in favor of `@/`.
+- **Prettier in ESLint:** **`eslint-plugin-prettier/recommended`** (last config block) so `prettier/prettier` runs as an ESLint rule.
+- **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.
+- **Not enabled:** `func-style: expression` globally — Next idioms use `export async function` for routes, middleware, and Server Actions; enabling would fight the framework.
+
 ## ESLint & TypeScript majors (hold)
 
 - **ESLint 9.x** — `eslint-plugin-react-hooks` (v5/v7) peers stop at ESLint **9**; ESLint **10** forces peer conflicts or `legacy-peer-deps`.
@@ -31,7 +43,25 @@
 
 ## Security headers (single source)
 
-- **Decision:** route security headers (CSP, HSTS, frame options, etc.) live only in **`app/middleware.ts`**. **`next.config.ts`** no longer duplicates subset headers — avoids drift and conflicting values.
+- **Decision:** route security headers (CSP, HSTS, frame options, Reporting-Endpoints, etc.) live only in **`middleware.ts`** at the repo root (Next convention). **`next.config.ts`** no longer duplicates subset headers — avoids drift and conflicting values.
+- **CSP violation reporting:** `Content-Security-Policy` includes `report-to csp-endpoint`; **`Reporting-Endpoints: csp-endpoint="/api/csp-report"`**; POST handler at **`app/api/csp-report/route.ts`** logs payloads. **`X-XSS-Protection`** removed (deprecated; CSP replaces it).
+
+## Server Actions rate limiting
+
+- **Decision:** the same **`enforceApiRateLimit`** logic as **`/api/*`** applies when the request carries the **`next-action`** header (Server Action POSTs), so action endpoints share the in-memory / Upstash quota.
+
+## Public app URL (SEO)
+
+- **`NEXT_PUBLIC_APP_URL`** is validated in **`shared/lib/env.ts`** (Zod) and drives **`metadataBase`**, sitemap URLs, and robots `sitemap` in production.
+
+## `server-only` vs Edge middleware
+
+- **`shared/lib/rateLimit.ts`** re-exports **`./rateLimitCore`** behind **`import 'server-only'`** for Node server imports. **Edge middleware** and **Vitest** import **`rateLimitCore.ts`** directly because the `server-only` package does not run in those bundles. **`shared/lib/index.ts`** no longer re-exports rate-limit helpers to avoid pulling `server-only` into client barrels.
+
+## Next.js `experimental` (16.x)
+
+- **`experimental.serverActions`:** `allowedOrigins` from **`NEXT_PUBLIC_APP_URL`** (fallback `http://localhost:3000`), **`bodySizeLimit: '1mb'`**.
+- **`experimental.webVitalsAttribution`:** `['LCP', 'INP', 'CLS']` for build-time attribution hints.
 
 ## API rate limiting
 
@@ -47,6 +77,11 @@
 
 - **Removed:** mutating **`config.entry`** to drop `/dev` chunks (fragile on Next upgrades).
 - **Replaced:** production **middleware** returns **404** for **`/dev/*`**; tracing excludes remain in **`outputFileTracingExcludes`** where useful.
+
+## E2E (Playwright)
+
+- **Config:** `playwright.config.ts` — `e2e/` specs, Chromium only; **local** uses `webServer` → `npm run dev` with `reuseExistingServer` so an existing dev server is reused; **CI** (`CI=true`) uses `npm run start` after `npm run build` for production-like runs.
+- **Vitest** excludes `e2e/**` so `*.spec.ts` in `e2e/` is not picked up by unit tests.
 
 ## Verification benchmarks
 

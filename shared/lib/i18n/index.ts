@@ -37,7 +37,7 @@ const i18nInitPromise = i18next
         fallbackLng: DEFAULT_LANGUAGE,
         defaultNS: DEFAULT_NAMESPACE,
         ns: DEFAULT_NAMESPACES,
-        initImmediate: false,
+        initAsync: true,
         detection: {
             order: ['localStorage', 'navigator'],
             lookupLocalStorage: I18N_STORAGE_KEY,

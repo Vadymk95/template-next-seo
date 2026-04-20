@@ -134,17 +134,4 @@
     }
 }
 
-/* Hide content until i18n is ready to prevent showing translation keys
- * Using opacity instead of visibility to prevent CLS (Cumulative Layout Shift)
- * and ensure smooth transition without layout recalculation
- */
-html.i18n-loading body {
-    opacity: 0;
-    pointer-events: none;
-}
-
-html.i18n-ready body {
-    opacity: 1;
-    pointer-events: auto;
-    transition: opacity 0.1s ease-in;
-}
+/* i18n readiness classes are toggled in shared/lib/i18n (no LCP-blocking opacity). */

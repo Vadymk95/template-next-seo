@@ -2,7 +2,9 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { buildContentSecurityPolicy, CSP_NONCE_HEADER } from '@/shared/lib/cspHeader';
-import { checkRateLimit } from '@/shared/lib/rateLimit';
+import { logger } from '@/shared/lib/logger';
+import { getRateLimitKey, isAssetPath } from '@/shared/lib/middlewareRequest';
+import { checkRateLimit } from '@/shared/lib/rateLimitCore';
 import { getUpstashRatelimit } from '@/shared/lib/upstashRateLimit';
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -20,19 +22,6 @@ function generateNonce(): string {
     return btoa(binary);
 }
 
-function getRateLimitKey(request: NextRequest): string {
-    const forwarded = request.headers.get('x-forwarded-for');
-    return forwarded ? forwarded.split(',')[0]!.trim() : 'unknown';
-}
-
-function isAssetPath(pathname: string): boolean {
-    return (
-        pathname.startsWith('/_next/static') ||
-        pathname.startsWith('/_next/image') ||
-        /\.(css|js|woff|woff2|ttf|otf|eot|svg|png|jpg|jpeg|gif|webp|ico|avif)$/i.test(pathname)
-    );
-}
-
 function applySecurityHeaders(response: NextResponse, requestNonce: string, isDev: boolean): void {
     response.headers.set('X-DNS-Prefetch-Control', 'on');
     response.headers.set(
@@ -42,7 +31,7 @@ function applySecurityHeaders(response: NextResponse, requestNonce: string, isDe
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Reporting-Endpoints', 'csp-endpoint="/api/csp-report"');
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
     response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 
@@ -55,19 +44,29 @@ function applySecurityHeaders(response: NextResponse, requestNonce: string, isDe
 }
 
 async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse | null> {
-    if (!request.nextUrl.pathname.startsWith('/api/')) {
+    const isApi = request.nextUrl.pathname.startsWith('/api/');
+    const isServerAction = Boolean(request.headers.get('next-action'));
+    if (!isApi && !isServerAction) {
         return null;
     }
 
-    const key = getRateLimitKey(request);
+    const key = getRateLimitKey(request.headers);
     const upstash = getUpstashRatelimit();
 
     if (upstash) {
-        const { success } = await upstash.limit(key);
-        if (!success) {
-            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        try {
+            const { success } = await upstash.limit(key);
+            if (!success) {
+                return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+            }
+            return null;
+        } catch (err) {
+            logger.error(
+                '[middleware] Upstash rate limit failed; falling back to in-memory limiter',
+                err instanceof Error ? err : new Error(String(err)),
+                { keyHint: key.slice(0, 24) }
+            );
         }
-        return null;
     }
 
     const now = Date.now();

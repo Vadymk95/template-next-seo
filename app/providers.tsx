@@ -1,21 +1,22 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState, type FC, type ReactNode } from 'react';
+import { useEffect, useState, type FunctionComponent, type ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import i18n, { i18nInitPromise } from '@/shared/lib/i18n';
 import { logger } from '@/shared/lib/logger';
 import { createQueryClient } from '@/shared/lib/queryClient';
-import { reportWebVitals, reportWebVitalsToConsole } from '@/shared/lib/web-vitals';
 import { Loading } from '@/shared/ui';
 
-export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
+export const Providers: FunctionComponent<{ children: ReactNode }> = ({ children }) => {
     const [queryClient] = useState(() => createQueryClient());
     const [isI18nReady, setIsI18nReady] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
+        // Client-only mount flag for i18n shell; synchronous setState in effect is intentional here.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- mount gate before i18n init
         setIsMounted(true);
 
         const initI18n = async () => {
@@ -29,31 +30,23 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
                     );
                 }
             }
-            if (i18n.isInitialized && i18n.hasResourceBundle(i18n.language, 'common')) {
-                setIsI18nReady(true);
-            } else {
-                await new Promise((resolve) => requestAnimationFrame(resolve));
-                setIsI18nReady(true);
-            }
+            setIsI18nReady(true);
         };
 
-        initI18n();
-        reportWebVitals(reportWebVitalsToConsole);
+        void initI18n();
 
-        // Deferred analytics initialization (if used)
         const initAnalytics = () => {
             if ('requestIdleCallback' in window) {
                 requestIdleCallback(
                     () => {
                         // Initialize analytics here if needed
-                        // Example: gtag('config', 'GA_MEASUREMENT_ID');
                     },
                     { timeout: 2000 }
                 );
             } else {
                 setTimeout(() => {
                     // Initialize analytics here if needed
-                }, 100);
+                }, 0);
             }
         };
 
@@ -64,7 +57,6 @@ export const Providers: FC<{ children: ReactNode }> = ({ children }) => {
         }
     }, []);
 
-    // Show loading state while i18n initializes (only on client, after mount)
     if (isMounted && !isI18nReady) {
         return <Loading />;
     }

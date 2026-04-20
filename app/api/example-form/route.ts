@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 
+import { logger } from '@/shared/lib/logger';
+
+/**
+ * JSON POST/GET sample for non-browser or integration clients.
+ * Browser form flows use the Server Action in app/actions/example-form.ts instead.
+ */
 // Edge runtime for faster cold start (optional - can be removed if you need Node.js APIs)
 // export const runtime = 'edge';
 
@@ -16,7 +22,11 @@ export async function GET() {
                 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
             }
         });
-    } catch {
+    } catch (err) {
+        logger.error(
+            '[example-form-api] GET failed',
+            err instanceof Error ? err : new Error(String(err))
+        );
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -43,7 +53,11 @@ export async function POST(request: Request) {
                 'Cache-Control': 'no-store, no-cache, must-revalidate'
             }
         });
-    } catch {
+    } catch (err) {
+        logger.error(
+            '[example-form-api] POST failed',
+            err instanceof Error ? err : new Error(String(err))
+        );
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
