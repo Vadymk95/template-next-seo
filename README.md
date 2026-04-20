@@ -13,17 +13,16 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 - **TypeScript** strict mode
 - **Tailwind CSS v4** (PostCSS + `app/globals.css` theme tokens) + Shadcn-style UI in `shared/ui/`
 - **Zustand** for client-side state management
-- **TanStack Query** for server state management
 - **i18next** for internationalization
 - **Vitest** + Testing Library for testing
 
 ### Performance & SEO
 
-- ✅ **Bundle optimization** - 163 kB First Load JS (excellent!)
-- ✅ **Vendor chunking** - 7 optimized chunks (react, next, state, ui, i18n, form, common)
-- ✅ **Tree-shaking** via `optimizePackageImports` and `modularizeImports`
+- ✅ **Bundle optimization** - ~154 kB First Load JS (gzipped rootMainFiles + polyfills). Run `npm run build:analyze` to see breakdown.
+- ✅ **Vendor chunking** - via `optimizePackageImports` + webpack cache groups
+- ✅ **Tree-shaking** via `optimizePackageImports`
 - ✅ **Image optimization** - AVIF/WebP formats, responsive sizes
-- ✅ **ISR (Incremental Static Regeneration)** - automatic revalidation
+- ✅ **ISR** - `/` (revalidate 1h) and `/example-form` (revalidate 30m) are statically generated at build time
 - ✅ **Cache-Control headers** - optimized API caching
 - ✅ **Metadata API** - automatic meta tags, Open Graph, Twitter Cards
 - ✅ **Sitemap** generation (`app/sitemap.ts`)
@@ -90,7 +89,7 @@ npm start
 
 ### Build & lint notes (Next 16)
 
-- **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React Query and related libs). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
+- **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
 - **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
 - **Enterprise verification**: **`npm run verify:enterprise`** runs lint → format → TypeScript → tests → production build (same spirit as CI). **`npm run bench:verify`** runs the same steps and prints **per-step durations** for local benchmarking.
 
@@ -324,37 +323,30 @@ export const Component = () => {
 
 ### Edge proxy (`proxy.ts`)
 
-- Content Security Policy (CSP)
-- X-Frame-Options: DENY
-- X-Content-Type-Options: nosniff
-- Referrer-Policy
-- Permissions-Policy
-- Strict-Transport-Security (HSTS)
-- Rate limiting (100 req/min)
+- Per-request CSP (nonce + `strict-dynamic` in production) for `/api/*` and `/dev/*`
+- Rate limiting (100 req/min) for matched routes
+- Production **404** for `/dev/*`
 
 ### Security Headers
 
-Configured in:
-
-- `proxy.ts` (repo root) - CSP override + rate limiting for `/api/*` and `/dev/*`
-- `next.config.ts` - Static security headers + static CSP for all routes
+- **Static** (all routes): HSTS (production), X-Frame-Options, Referrer-Policy, Permissions-Policy, Reporting-Endpoints, COOP, CORP, baseline CSP — `next.config.ts` `headers()`
+- **Dynamic CSP** (matched routes only): nonce + `strict-dynamic` for `script-src` — `proxy.ts`
 
 ## 📊 Performance Metrics
 
 ### Bundle Sizes
 
-- **First Load JS:** 163 kB (excellent! < 200 kB)
-- **Shared chunks:** 141 kB (optimal for caching)
-- **Vendor chunks:** Optimized splitting (react, next, state, ui, i18n, form)
+- **First Load JS:** ~154 kB (gzipped rootMainFiles + polyfills; run `npm run build:analyze` for a breakdown)
+- **Vendor chunks:** `optimizePackageImports` + webpack cache groups (React, Next, Zustand, i18n, forms, UI)
 
 ### Optimizations
 
-- ✅ Vendor chunking (7 chunks)
+- ✅ Vendor chunking via webpack cache groups
 - ✅ Tree-shaking (package imports)
 - ✅ Code splitting (dynamic imports)
 - ✅ Image optimization (AVIF/WebP)
 - ✅ Font optimization (next/font)
-- ✅ ISR for static pages
+- ✅ ISR for `/` and `/example-form`
 - ✅ API route caching
 
 ## 🧪 Testing
@@ -392,7 +384,7 @@ describe('Component', () => {
 ### Architecture
 
 - **FSD Architecture** - Feature-Sliced Design principles
-- **Import Rules** - Layer dependencies (app → features → entities → shared)
+- **Import Rules** - Layer dependencies (app → features → shared; add `entities/` when you need domain slices)
 - **Component Patterns** - Server vs Client Components
 
 ### Development Guidelines
@@ -422,11 +414,10 @@ NEXT_PUBLIC_APP_NAME=Next.js SEO Template
 Key optimizations in `next.config.ts`:
 
 - Bundle analyzer
-- Package imports optimization
-- Modularize imports (lucide-react)
+- Package imports optimization (includes `lucide-react`)
 - Webpack chunking strategy
 - Image optimization
-- Security headers
+- Security headers (`headers()` + `proxy.ts` CSP on API/dev)
 
 ## 🚦 CI/CD
 
@@ -466,12 +457,6 @@ Components are in `shared/ui/`:
 - `Header` - Site header with navigation
 - `Footer` - Site footer
 
-### Adding Components
-
-```bash
-npx shadcn@latest add [component-name]
-```
-
 ## 🌍 Deployment
 
 ### Production Build
@@ -489,11 +474,17 @@ npm start
 
 ### Performance Checklist
 
-- ✅ Bundle size < 200 kB (163 kB ✅)
-- ✅ ISR configured for static pages
+- ✅ Bundle size under 200 kB First Load JS (~154 kB gzipped baseline)
+- ✅ ISR for `/` and `/example-form`
 - ✅ Cache-Control headers for API routes
-- ✅ Security headers configured
+- ✅ Security headers (`next.config.ts` + `proxy.ts`)
 - ✅ Web Vitals tracking enabled
+
+## Known trade-offs
+
+- **CSP on static routes** uses a nonce-less baseline (`script-src 'self'` in production). Stricter nonce + `strict-dynamic` applies only on `/api/*` and `/dev/*` via `proxy.ts`.
+- **Rate-limit identity** on non-Vercel hosts: set `RATE_LIMIT_TRUST_PROXY` to `vercel`, `first-hop`, or `none` so `X-Forwarded-For` is not trusted incorrectly.
+- **Same-origin on APIs**: `POST`/`PUT`/`PATCH`/`DELETE` on `/api/example-form`, `/api/csp-report`, and `/api/vitals` require a matching `Origin` (same-tab `fetch` with `keepalive` instead of `sendBeacon` for vitals).
 
 ## 🤝 Contributing
 
