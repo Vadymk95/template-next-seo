@@ -1,5 +1,7 @@
 'use server';
 
+import { getTranslations } from 'next-intl/server';
+
 import { exampleFormSchema } from '@/features/example-form/model/schema';
 import { logger } from '@/shared/lib/logger';
 
@@ -18,6 +20,9 @@ export type ExampleFormActionFailure = {
 export async function exampleFormAction(
     formData: FormData
 ): Promise<ExampleFormActionSuccess | ExampleFormActionFailure> {
+    const tCommon = await getTranslations('common.form');
+    const tErrors = await getTranslations('errors.page');
+
     const rawData = {
         name: formData.get('name'),
         email: formData.get('email')
@@ -47,7 +52,7 @@ export async function exampleFormAction(
 
         return {
             success: true,
-            message: 'Form submitted successfully',
+            message: tCommon('submittedSuccessfully'),
             data: validatedData
         };
     } catch (err) {
@@ -57,7 +62,7 @@ export async function exampleFormAction(
         );
         return {
             success: false,
-            error: 'An unexpected error occurred'
+            error: tErrors('unexpectedError')
         };
     }
 }
