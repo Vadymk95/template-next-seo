@@ -414,7 +414,7 @@ NEXT_PUBLIC_APP_NAME=Next.js SEO Template
 Key optimizations in `next.config.ts`:
 
 - Bundle analyzer
-- Package imports optimization (includes `lucide-react`)
+- Package imports optimization via `experimental.optimizePackageImports` (see next.config.ts)
 - Webpack chunking strategy
 - Image optimization
 - Security headers (`headers()` + `proxy.ts` CSP on API/dev)
