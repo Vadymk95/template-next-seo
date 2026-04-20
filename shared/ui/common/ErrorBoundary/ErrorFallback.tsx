@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/button';
 
 interface ErrorFallbackProps {
-    error?: Error;
+    error: Error;
     onReset: () => void;
     onReload: () => void;
 }

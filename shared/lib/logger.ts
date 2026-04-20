@@ -1,11 +1,17 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+type SerializedError = {
+    name: string;
+    message: string;
+    stack?: string;
+};
+
 interface LogEntry {
     level: LogLevel;
     message: string;
     timestamp: string;
     context?: Record<string, unknown>;
-    error?: Error;
+    error?: SerializedError;
 }
 
 class Logger {
@@ -24,7 +30,7 @@ class Logger {
                 error: {
                     name: error.name,
                     message: error.message,
-                    stack: error.stack
+                    ...(error.stack !== undefined ? { stack: error.stack } : {})
                 }
             })
         };

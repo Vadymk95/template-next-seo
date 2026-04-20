@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getRateLimitKey, isAssetPath, resolveTrustedProxyMode } from './middlewareRequest';
+import {
+    getRateLimitKey,
+    isAssetPath,
+    resolveTrustedProxyMode,
+    type RateLimitRequestLike
+} from './middlewareRequest';
 
 function headersFrom(init: Record<string, string>): { get(name: string): string | null } {
     const lower = new Map(Object.entries(init).map(([k, v]) => [k.toLowerCase(), v] as const));
@@ -11,8 +16,12 @@ function headersFrom(init: Record<string, string>): { get(name: string): string 
     };
 }
 
-function req(init: Record<string, string>, ip?: string | null) {
-    return { headers: headersFrom(init), ip: ip ?? undefined };
+function req(init: Record<string, string>, ip?: string | null): RateLimitRequestLike {
+    const headers = headersFrom(init);
+    if (ip === undefined) {
+        return { headers };
+    }
+    return { headers, ip };
 }
 
 describe('resolveTrustedProxyMode', () => {

@@ -26,7 +26,10 @@ export function pruneAndCapRateLimitMap(
     const entries = [...map.entries()].sort((a, b) => a[1].resetTime - b[1].resetTime);
     const overflow = map.size - maxKeys;
     for (let i = 0; i < overflow; i++) {
-        map.delete(entries[i][0]);
+        const pair = entries[i];
+        if (pair) {
+            map.delete(pair[0]);
+        }
     }
 }
 
