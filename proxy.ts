@@ -36,7 +36,7 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
         return null;
     }
 
-    const key = getRateLimitKey(request.headers);
+    const key = getRateLimitKey(request);
     const upstash = getUpstashRatelimit();
 
     if (upstash) {
