@@ -112,7 +112,7 @@ app/                    # Next.js App Router (routing layer)
   │   └── example-form.ts
   ├── [routes]/         # Pages (file-based routing)
   ├── layout.tsx        # Root layout (Header + Footer)
-  ├── providers.tsx     # Client providers (QueryClient, i18n)
+  ├── providers.tsx     # Client providers (i18n)
   ├── error.tsx         # Global error boundary
   ├── loading.tsx       # Global loading UI
   ├── not-found.tsx     # 404 page
@@ -127,17 +127,11 @@ shared/                 # Shared code (reusable)
   │   └── input.tsx
   ├── lib/             # Utilities and configs
   │   ├── i18n/        # i18n configuration
-  │   ├── queryClient.ts
   │   ├── logger.ts    # Structured logging
   │   ├── web-vitals.ts # Web Vitals tracking
   │   └── test-utils/  # Test utilities
   ├── types/           # Shared TypeScript types
   └── constants/       # Shared constants
-
-entities/               # Business entities
-  └── user/            # User entity
-      ├── model/       # Types, interfaces
-      └── store/       # Zustand store
 
 features/               # Features (isolated)
   └── example-form/     # Example form feature
