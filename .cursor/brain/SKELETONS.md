@@ -10,10 +10,11 @@
 - **Risk:** importing client-only modules (`useEffect`, browser APIs, client store hooks) into Server Components breaks the build or causes subtle errors.
 - **Mitigation:** Add **`'use client'`** only at boundaries that need it; keep data-fetching defaults on the server where possible.
 
-## i18n (client-only)
+## i18n (next-intl SSR)
 
-- **Risk:** browser detectors, cached language, and bundled defaults can desync from new locale keys (wrong language, flash of untranslated content).
-- **Mitigation:** When changing locale keys or detection order, test first load, hard refresh, and `html.i18n-*` classes in `globals.css`.
+- **Risk:** document routes live under **`app/[locale]/`** — omitting `generateStaticParams`, forgetting **`setRequestLocale(locale)`** at the page/layout entry before any client descendant, or rendering Header/Footer outside the `NextIntlClientProvider` boundary breaks SSR (hydration mismatch, prerender failure with swallowed `Error(void 0)` from the translation proxy).
+- **Title-template quirk:** `title.template` does **not** apply to the same segment that defines it — only to descendants. Root `app/layout.tsx` owns `title.default` + `title.template` so the brand chrome cascades through `[locale]` to every page. `app/[locale]/layout.tsx` sets **only** `description` / `openGraph` / `twitter` to preserve the cascade.
+- **Mitigation:** when adding a new localized route, mirror `app/[locale]/page.tsx` — `generateMetadata` builds `alternates.languages` from `routing.locales`; page entry calls `setRequestLocale`. Keep `messages/<locale>.json` the single source (no `public/locales/*`). Middleware composition is documented under **`proxy` composition** below.
 
 ## SEO surfaces
 
@@ -52,7 +53,7 @@ This repo is a template, not a shipped product. Several files, deps, and config 
 
 - **`lucide-react`** — default icon set; pre-wired in `next.config.ts` (`experimental.optimizePackageImports` + webpack `uiVendor` `splitChunks` regex) and exercised in `features/example-form/ui/ExampleForm.tsx` (pending/idle submit icons). Removing it breaks the "how to add icons" example and forces the next MVP to re-pick and re-wire an icon lib.
 - **`shared/constants/index.ts`** — FSD pattern showcase (`ROUTES`, `API_BASE_URL`). Kept so MVPs have a ready place for cross-feature literals. Do not delete as "no consumers".
-- **`features/example-form/**`** — canonical FSD feature skeleton: `model/schema.ts` (Zod), `model/types.ts` (`z.infer`), `ui/ExampleForm.tsx` (RHF + shadcn + i18n + icons), `/example-form` route. The full triad stays until the MVP ships real features.
+- **`features/example-form/**`** — canonical FSD feature skeleton: `model/schema.ts` (Zod), `model/types.ts` (`z.infer`), `ui/ExampleForm.tsx` (RHF + shadcn + next-intl hooks + icons), `/[locale]/example-form` route. The full triad stays until the MVP ships real features.
 - **Web Vitals pipeline** — `app/WebVitalsReporter.tsx` + `app/api/vitals/route.ts` kept minimal on purpose (log-only sink). Expand to analytics when the MVP picks a vendor; do not collapse further.
 
 **Rule:** when in doubt, search for `Template scaffolding` inline comments — every protected site is marked. Only strip after the caller confirms "this is now my MVP, not the template".

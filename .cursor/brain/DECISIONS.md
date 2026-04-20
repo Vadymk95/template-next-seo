@@ -39,7 +39,17 @@
 
 ## Webpack vendor splits
 
-- Production client **`splitChunks`** uses named groups (React, Next, Zustand, UI, i18n, form, **`common`**) so dependency upgrades do not silently reshuffle critical vendors into anonymous chunks.
+- Production client **`splitChunks`** uses named groups (React, Next, Zustand, UI, next-intl `i18nVendor`, form, **`common`**) so dependency upgrades do not silently reshuffle critical vendors into anonymous chunks.
+
+## i18n: next-intl SSR (2026-04-20)
+
+- **Migrated from** `i18next` + `react-i18next` (client-only, HTTP backend to `public/locales/**`, FOUC masked via `html.i18n-*` classes) **to** `next-intl` (App Router SSR, `[locale]` dynamic segment, server-rendered translations).
+- **Why:** SEO surfaces (sitemap `hreflang`, per-locale metadata, localized canonical URLs) require translations at render time, not after hydration. i18next's client-only initialization produced a flash of untranslated content on cold loads and prevented localized `generateMetadata`.
+- **Structure:** `i18n/routing.ts` (`defineRouting({ locales: ['en'], defaultLocale: 'en' })`) → `i18n/request.ts` (`getRequestConfig`) → `i18n/navigation.ts` (typed `Link` / `redirect`). Document routes live under `app/[locale]/`. `proxy.ts` composes the next-intl middleware with nonce CSP + rate limit.
+- **Title-template cascade:** Next.js does not apply `title.template` to the segment that defines it — only to descendants. Root `app/layout.tsx` owns the locale-independent `title.default` + `title.template`; `app/[locale]/layout.tsx` contributes only `description` / `openGraph` / `twitter`.
+- **Server Actions:** translate responses via `getTranslations('namespace')`; tests mock `next-intl/server` with a messages-indexed resolver.
+- **Single source:** `messages/<locale>.json`. `public/locales/**` and `shared/lib/i18n/**` were deleted. `i18nVendor` `splitChunk` regex retargeted to `/next-intl/`.
+- **Locale set:** kept at `['en']` — add new locales in `routing.locales` + `messages/<locale>.json`; no other code changes required.
 
 ## Security headers (two layers)
 

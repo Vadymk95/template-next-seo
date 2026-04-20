@@ -13,7 +13,7 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 - **TypeScript** strict mode
 - **Tailwind CSS v4** (PostCSS + `app/globals.css` theme tokens) + Shadcn-style UI in `shared/ui/`
 - **Zustand** for client-side state management
-- **i18next** for internationalization
+- **next-intl** for App Router SSR i18n (`[locale]` segment, localized metadata, `hreflang`)
 - **Vitest** + Testing Library for testing
 
 ### Performance & SEO
@@ -109,14 +109,25 @@ app/                    # Next.js App Router (routing layer)
   │   └── health/
   ├── actions/          # Server Actions (by domain)
   │   └── example-form.ts
-  ├── [routes]/         # Pages (file-based routing)
-  ├── layout.tsx        # Root layout (Header + Footer)
-  ├── providers.tsx     # Client providers (i18n)
+  ├── [locale]/         # Locale segment (next-intl SSR)
+  │   ├── layout.tsx   # setRequestLocale + NextIntlClientProvider (Header/Footer)
+  │   ├── page.tsx     # Home; localized generateMetadata + alternates.languages
+  │   └── example-form/
+  ├── layout.tsx        # Root layout (fonts, title.default + title.template cascade)
+  ├── providers.tsx     # Client providers (analytics)
   ├── error.tsx         # Global error boundary
   ├── loading.tsx       # Global loading UI
   ├── not-found.tsx     # 404 page
-  ├── sitemap.ts        # Sitemap generation
+  ├── sitemap.ts        # Sitemap with per-route xhtml:link hreflang entries
   └── robots.ts         # Robots.txt config
+
+i18n/                   # next-intl configuration
+  ├── routing.ts        # defineRouting({ locales, defaultLocale })
+  ├── request.ts        # getRequestConfig (messages loader)
+  └── navigation.ts     # createNavigation (typed Link / redirect / hooks)
+
+messages/               # Translation sources (single source of truth)
+  └── en.json
 
 shared/                 # Shared code (reusable)
   ├── ui/              # UI components (Shadcn)
@@ -125,10 +136,9 @@ shared/                 # Shared code (reusable)
   │   ├── button.tsx
   │   └── input.tsx
   ├── lib/             # Utilities and configs
-  │   ├── i18n/        # i18n configuration
   │   ├── logger.ts    # Structured logging
   │   ├── web-vitals.ts # Web Vitals tracking
-  │   └── test-utils/  # Test utilities
+  │   └── test-utils/  # Test utilities (NextIntlClientProvider wrapper)
   ├── types/           # Shared TypeScript types
   └── constants/       # Shared constants
 
@@ -288,36 +298,71 @@ logger.info('User action', { userId: '123' });
 logger.error('API error', error, { endpoint: '/api/users' });
 ```
 
-## 🌐 Internationalization (i18n)
+## 🌐 Internationalization (next-intl SSR)
 
 ### Structure
 
 ```
-public/locales/
-  en/
-    common.json    # UI elements, buttons, navigation
-    errors.json    # API/HTTP/validation errors
-    home.json      # HomePage-specific content
+i18n/
+  routing.ts        # defineRouting({ locales: ['en'], defaultLocale: 'en' })
+  request.ts        # getRequestConfig — validates locale, loads messages
+  navigation.ts     # createNavigation — typed Link / redirect / hooks
+
+messages/
+  en.json           # Flat namespace tree: common, errors, home, meta, ...
+
+app/[locale]/
+  layout.tsx        # setRequestLocale + NextIntlClientProvider
+  page.tsx          # localized generateMetadata + alternates.languages
 ```
 
-### Usage
+### Usage — Server Components
+
+```typescript
+// app/[locale]/page.tsx
+import { getTranslations } from 'next-intl/server';
+
+export const generateMetadata = async ({ params }) => {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'meta.home' });
+    return { title: t('title'), description: t('description') };
+};
+```
+
+### Usage — Client Components
 
 ```typescript
 'use client';
 
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
 
 export const Component = () => {
-    const { t } = useTranslation(['common', 'home']);
-    return <h1>{t('home:title')}</h1>;
+    const t = useTranslations('home');
+    return <h1>{t('title')}</h1>;
 };
+```
+
+### Usage — Server Actions
+
+```typescript
+'use server';
+import { getTranslations } from 'next-intl/server';
+
+export async function exampleAction() {
+    const t = await getTranslations('common.form');
+    return { success: true, message: t('submittedSuccessfully') };
+}
 ```
 
 ### Adding Languages
 
-1. Create `public/locales/{lng}/` directory
-2. Copy JSON files from `en/` and translate
-3. Add to `SUPPORTED_LANGUAGES` in `shared/lib/i18n/constants.ts`
+1. Add the code to `locales` in `i18n/routing.ts`
+2. Create `messages/<code>.json` (copy `en.json`, translate values)
+3. Middleware and `alternates.languages` pick up the new locale automatically
+
+### Caveat — title.template cascade
+
+Next.js does **not** apply `title.template` to the segment that defines it — only to descendants. The brand chrome (`title.default` + `title.template`) lives in root `app/layout.tsx`; `app/[locale]/layout.tsx` sets only `description` / `openGraph` / `twitter`. Do not move the template into `[locale]/layout.tsx` — the home page title will lose the suffix.
 
 ## 🔒 Security Features
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **Zustand-ready** shared helpers, and **FSD-style** layering. Copy, rename, extend.
+Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **next-intl SSR**, **Zustand-ready** shared helpers, and **FSD-style** layering. Copy, rename, extend.
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **Zu
 | Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)              |
 | Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed              |
 | Forms         | react-hook-form + Zod                                                                   |
-| i18n          | i18next + react-i18next (client; locale files under `public/locales`)                   |
+| i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                 |
 | Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`, `npm run test:e2e`)                    |
 | Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)     |
 | Security      | Static document CSP + nonce **`strict-dynamic`** on **`proxy`** matcher paths, COOP/CORP, optional **Upstash** in **`proxy`** |

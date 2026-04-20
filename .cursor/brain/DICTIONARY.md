@@ -3,7 +3,8 @@
 | Term | Meaning |
 | --- | --- |
 | **RSC** | React Server Component — default in App Router without `'use client'`. |
-| **FOUC (i18n)** | Flash of untranslated content; mitigated via `html.i18n-loading` / `html.i18n-ready` in `globals.css`. |
+| **next-intl SSR** | App Router i18n via `next-intl`: `[locale]` segment + `setRequestLocale` + `getMessages` → `NextIntlClientProvider`. Server uses `getTranslations`, client uses `useTranslations`. Single source under `messages/<locale>.json`. |
+| **hreflang alternates** | Per-route locale map injected via `generateMetadata().alternates.languages` and mirrored in `app/sitemap.ts` as `<xhtml:link rel="alternate" hreflang="…" href="…" />`. |
 | **Server Action** | Server-side function invoked from a form or client component via `action=` or `useActionState`; marked with `'use server'`. |
 | **ISR** | Incremental Static Regeneration — `export const revalidate = N` (seconds) on a route. Used on `/` (1h) and `/example-form` (30m). |
 | **Nonce CSP** | Per-request CSP nonce injected by `proxy.ts` for scripts and inline styles; enables `'strict-dynamic'`. |
