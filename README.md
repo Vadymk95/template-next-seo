@@ -18,7 +18,7 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ### Performance & SEO
 
-- ✅ **Bundle optimization** - ~154 kB First Load JS (gzipped rootMainFiles + polyfills). Run `npm run build:analyze` to see breakdown.
+- ✅ **Bundle optimization** — see Performance Metrics. Run `npm run build:analyze` to see breakdown.
 - ✅ **Vendor chunking** - via `optimizePackageImports` + webpack cache groups
 - ✅ **Tree-shaking** via `optimizePackageImports`
 - ✅ **Image optimization** - AVIF/WebP formats, responsive sizes
@@ -474,7 +474,7 @@ npm start
 
 ### Performance Checklist
 
-- ✅ Bundle size under 200 kB First Load JS (~154 kB gzipped baseline)
+- ✅ Bundle size under 200 kB First Load JS (see Performance Metrics)
 - ✅ ISR for `/` and `/example-form`
 - ✅ Cache-Control headers for API routes
 - ✅ Security headers (`next.config.ts` + `proxy.ts`)
