@@ -29,7 +29,6 @@ export default defineConfig({
         include: [
             '**/*.{test,spec}.{ts,tsx}',
             'shared/**/*.{test,spec}.{ts,tsx}',
-            'entities/**/*.{test,spec}.{ts,tsx}',
             'features/**/*.{test,spec}.{ts,tsx}'
         ]
     },

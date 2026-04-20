@@ -6,9 +6,7 @@ export const runtime = 'edge';
 export async function GET() {
     const health = {
         status: 'ok',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV,
-        version: process.env.npm_package_version || '1.0.0'
+        timestamp: new Date().toISOString()
     };
 
     return NextResponse.json(health, {

@@ -72,7 +72,8 @@ const nextConfig: NextConfig = {
             'i18next-browser-languagedetector',
             'i18next-http-backend',
             '@hookform/resolvers',
-            'zod'
+            'zod',
+            'lucide-react'
         ]
     },
     compiler: {
@@ -148,12 +149,7 @@ const nextConfig: NextConfig = {
         }
         return config;
     },
-    productionBrowserSourceMaps: false,
-    modularizeImports: {
-        'lucide-react': {
-            transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}'
-        }
-    }
+    productionBrowserSourceMaps: false
 };
 
 export default withBundleAnalyzer(nextConfig);

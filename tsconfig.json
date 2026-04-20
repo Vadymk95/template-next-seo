@@ -24,7 +24,8 @@
         },
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "noFallthroughCasesInSwitch": true
+        "noFallthroughCasesInSwitch": true,
+        "allowJs": false
     },
     "include": [
         "next-env.d.ts",
