@@ -1,4 +1,3 @@
-import { QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -9,8 +8,6 @@ import errorsTranslations from '@/public/locales/en/errors.json';
 import homeTranslations from '@/public/locales/en/home.json';
 import i18n from '@/shared/lib/i18n';
 import { ALL_NAMESPACES, DEFAULT_LANGUAGE, DEFAULT_NAMESPACE } from '@/shared/lib/i18n/constants';
-import { createQueryClient } from '@/shared/lib/queryClient';
-
 // Map namespaces to their translation objects
 const translationMap = {
     common: commonTranslations,
@@ -44,16 +41,8 @@ interface ProvidersProps {
 }
 
 export const renderWithProviders = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) => {
-    // Create QueryClient with test-specific options (no retries for faster tests)
-    const queryClient = createQueryClient({
-        retry: 0,
-        refetchOnWindowFocus: false
-    });
-
     const Wrapper = ({ children }: ProvidersProps) => (
-        <I18nextProvider i18n={i18n}>
-            <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-        </I18nextProvider>
+        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
     );
 
     return render(ui, { wrapper: Wrapper, ...options });

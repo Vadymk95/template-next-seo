@@ -107,9 +107,9 @@ const nextConfig: NextConfig = {
                             reuseExistingChunk: true,
                             enforce: true
                         },
-                        stateVendor: {
-                            name: 'state-vendor',
-                            test: /[\\/]node_modules[\\/](zustand|@tanstack[\\/](react-query|query-core))[\\/]/,
+                        zustandVendor: {
+                            name: 'zustand-vendor',
+                            test: /[\\/]node_modules[\\/]zustand[\\/]/,
                             priority: 30,
                             reuseExistingChunk: true,
                             enforce: true

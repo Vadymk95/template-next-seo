@@ -1,4 +1,3 @@
-import queryPlugin from '@tanstack/eslint-plugin-query';
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import nextTypescript from 'eslint-config-next/typescript';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
@@ -51,7 +50,6 @@ export default defineConfig([
     ]),
     ...nextCoreWebVitals,
     ...nextTypescript,
-    ...queryPlugin.configs['flat/recommended'],
     oxlintPlugin.configs['flat/all'],
     {
         files: ['**/*.{ts,tsx}'],

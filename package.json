@@ -51,7 +51,6 @@
     "dependencies": {
         "@hookform/resolvers": "^5.2.2",
         "@radix-ui/react-slot": "^1.2.4",
-        "@tanstack/react-query": "^5.99.2",
         "@upstash/ratelimit": "^2.0.8",
         "@upstash/redis": "^1.37.0",
         "class-variance-authority": "^0.7.1",
@@ -78,7 +77,6 @@
         "@next/bundle-analyzer": "^16.2.4",
         "@playwright/test": "^1.59.1",
         "@tailwindcss/postcss": "^4.2.2",
-        "@tanstack/eslint-plugin-query": "^5.99.2",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
         "@types/node": "^24.12.2",
