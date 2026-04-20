@@ -77,5 +77,21 @@
         "title": "Welcome to Next.js SEO Template",
         "description": "This is a production-ready Next.js template optimized for SEO and performance.",
         "welcome": "Welcome to our site"
+    },
+    "meta": {
+        "root": {
+            "titleDefault": "React Enterprise Foundation",
+            "titleTemplate": "%s | React Enterprise Foundation",
+            "description": "Production-ready React/Next.js foundation optimized for SEO and performance",
+            "siteName": "React Enterprise Foundation"
+        },
+        "home": {
+            "title": "Home",
+            "description": "Welcome to React Enterprise Foundation"
+        },
+        "exampleForm": {
+            "title": "Example Form",
+            "description": "Example form with Server Actions and validation"
+        }
     }
 }

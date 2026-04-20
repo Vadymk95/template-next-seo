@@ -1,6 +1,7 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
-import { getMessages, setRequestLocale } from 'next-intl/server';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { routing } from '@/i18n/routing';
 import { Footer, Header } from '@/shared/ui';
@@ -12,6 +13,34 @@ export const generateStaticParams = () => {
 type LocaleLayoutProps = {
     children: React.ReactNode;
     params: Promise<{ locale: string }>;
+};
+
+export const generateMetadata = async ({
+    params
+}: {
+    params: Promise<{ locale: string }>;
+}): Promise<Metadata> => {
+    const { locale } = await params;
+    const t = await getTranslations({ locale, namespace: 'meta.root' });
+    return {
+        title: {
+            default: t('titleDefault'),
+            template: t('titleTemplate')
+        },
+        description: t('description'),
+        openGraph: {
+            type: 'website',
+            locale,
+            siteName: t('siteName'),
+            title: t('titleDefault'),
+            description: t('description')
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: t('titleDefault'),
+            description: t('description')
+        }
+    };
 };
 
 const LocaleLayout = async ({ children, params }: LocaleLayoutProps) => {

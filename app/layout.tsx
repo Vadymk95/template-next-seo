@@ -21,30 +21,9 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     metadataBase,
-    title: {
-        default: 'React Enterprise Foundation',
-        template: '%s | React Enterprise Foundation'
-    },
-    description: 'Production-ready React/Next.js foundation optimized for SEO and performance',
     keywords: ['React', 'Next.js', 'TypeScript', 'SEO'],
     authors: [{ name: 'Your Name' }],
     creator: 'Your Name',
-    alternates: {
-        canonical: '/'
-    },
-    openGraph: {
-        type: 'website',
-        locale: 'en_US',
-        url: '/',
-        siteName: 'React Enterprise Foundation',
-        title: 'React Enterprise Foundation',
-        description: 'Production-ready React/Next.js foundation optimized for SEO and performance'
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'React Enterprise Foundation',
-        description: 'Production-ready React/Next.js foundation optimized for SEO and performance'
-    },
     robots: {
         index: true,
         follow: true,
