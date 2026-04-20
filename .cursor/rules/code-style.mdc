@@ -29,12 +29,7 @@ alwaysApply: true
 - **NEVER** restate the code (`// fetch data`, `// set loading`, `// return result`)
 - **NEVER** add `// TODO` without a ticket reference or specific action item
 
-## Imports
-
-- **Use path aliases**: `@/components`, `@/lib`, `@/store`, `@/hooks`
-- **Group imports**: external libraries first, then internal
-- **Use `import type`** for types
-- **Follow import order rules** from ESLint config (categories separated by empty lines)
+- Formatting and import order are enforced by ESLint + Prettier (see `eslint.config.js`, `.prettierrc.json`). Do not restate those rules here.
 
 ## Project Structure
 
