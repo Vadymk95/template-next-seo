@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import bundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 
+import { buildStaticContentSecurityPolicy } from './shared/lib/cspHeader';
+
 const __rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const appOrigin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -13,6 +15,30 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+    headers: async () => {
+        const isDev = process.env.NODE_ENV !== 'production';
+        const staticCsp = buildStaticContentSecurityPolicy(isDev);
+        const securityHeaders: { key: string; value: string }[] = [
+            { key: 'X-DNS-Prefetch-Control', value: 'on' },
+            { key: 'Content-Security-Policy', value: staticCsp },
+            { key: 'X-Frame-Options', value: 'DENY' },
+            { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+            {
+                key: 'Permissions-Policy',
+                value: 'camera=(), microphone=(), geolocation=()'
+            },
+            { key: 'Reporting-Endpoints', value: 'csp-endpoint="/api/csp-report"' },
+            { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+            { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' }
+        ];
+        if (process.env.NODE_ENV === 'production') {
+            securityHeaders.push({
+                key: 'Strict-Transport-Security',
+                value: 'max-age=31536000; includeSubDomains; preload'
+            });
+        }
+        return [{ source: '/:path*', headers: securityHeaders }];
+    },
     // Pin tracing/Turbopack root so a parent monorepo lockfile does not steal the workspace root
     outputFileTracingRoot: __rootDir,
     turbopack: {

@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { headers } from 'next/headers';
 
-import { CSP_NONCE_HEADER } from '@/shared/lib/cspHeader';
 import { getPublicEnv } from '@/shared/lib/env';
 import { Footer, Header } from '@/shared/ui';
 
@@ -61,17 +59,9 @@ export const metadata: Metadata = {
     }
 };
 
-const RootLayout = async ({ children }: Readonly<{ children: React.ReactNode }>) => {
-    const headerList = await headers();
-    const nonce = headerList.get(CSP_NONCE_HEADER) ?? '';
-
+const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
     return (
-        <html
-            lang="en"
-            className={`${inter.variable} dark i18n-loading`}
-            suppressHydrationWarning
-            nonce={nonce}
-        >
+        <html lang="en" className={`${inter.variable} dark i18n-loading`} suppressHydrationWarning>
             <head>
                 <link
                     rel="preconnect"

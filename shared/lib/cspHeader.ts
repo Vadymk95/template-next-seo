@@ -1,19 +1,15 @@
 /**
- * Content-Security-Policy for App Router + middleware-injected nonce.
- * Development keeps relaxed script-src for HMR; production uses strict-dynamic + per-request nonce.
+ * Content-Security-Policy helpers: static policy via next.config headers, and
+ * nonce-based policy for proxy-handled routes (API / dev).
  */
 
 export const CSP_NONCE_HEADER = 'x-nonce';
 
-export function buildContentSecurityPolicy(nonce: string, isDevelopment: boolean): string {
-    const scriptSrc = isDevelopment
-        ? "'self' 'unsafe-eval' 'unsafe-inline'"
-        : `'strict-dynamic' 'nonce-${nonce}'`;
-
+function baseCspDirectives(scriptSrc: string, isDevelopment: boolean): string[] {
     const directives: string[] = [
         "default-src 'self'",
         `script-src ${scriptSrc}`,
-        // Next/font and RSC may emit inline style tags
+        // Next/font and Tailwind may emit inline style tags
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: https:",
         "font-src 'self' data:",
@@ -30,5 +26,22 @@ export function buildContentSecurityPolicy(nonce: string, isDevelopment: boolean
         directives.push('upgrade-insecure-requests');
     }
 
-    return directives.join('; ');
+    return directives;
+}
+
+/**
+ * CSP for ISR/static pages (no per-request nonce). Production uses script-src 'self' only:
+ * adding 'strict-dynamic' without a bootstrap nonce/hash would ignore host sources and break
+ * Next.js script tags. style-src keeps 'unsafe-inline' for Tailwind / next/font.
+ */
+export function buildStaticContentSecurityPolicy(isDevelopment: boolean): string {
+    const scriptSrc = isDevelopment ? "'self' 'unsafe-eval' 'unsafe-inline'" : "'self'";
+    return baseCspDirectives(scriptSrc, isDevelopment).join('; ');
+}
+
+export function buildContentSecurityPolicy(nonce: string, isDevelopment: boolean): string {
+    const scriptSrc = isDevelopment
+        ? "'self' 'unsafe-eval' 'unsafe-inline'"
+        : `'strict-dynamic' 'nonce-${nonce}'`;
+    return baseCspDirectives(scriptSrc, isDevelopment).join('; ');
 }

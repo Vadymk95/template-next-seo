@@ -22,25 +22,11 @@ function generateNonce(): string {
     return btoa(binary);
 }
 
-function applySecurityHeaders(response: NextResponse, requestNonce: string, isDev: boolean): void {
-    response.headers.set('X-DNS-Prefetch-Control', 'on');
+function applyProxyCsp(response: NextResponse, requestNonce: string, isDev: boolean): void {
     response.headers.set(
         'Content-Security-Policy',
         buildContentSecurityPolicy(requestNonce, isDev)
     );
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    response.headers.set('Reporting-Endpoints', 'csp-endpoint="/api/csp-report"');
-    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-    response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
-
-    if (process.env.NODE_ENV === 'production') {
-        response.headers.set(
-            'Strict-Transport-Security',
-            'max-age=31536000; includeSubDomains; preload'
-        );
-    }
 }
 
 async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse | null> {
@@ -102,13 +88,11 @@ export async function middleware(request: NextRequest) {
         request: { headers: requestHeaders }
     });
 
-    applySecurityHeaders(response, nonce, isDev);
+    applyProxyCsp(response, nonce, isDev);
 
     return response;
 }
 
 export const config = {
-    matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2|ttf|otf|eot|ico|avif)$).*)'
-    ]
+    matcher: ['/api/:path*', '/dev/:path*']
 };
