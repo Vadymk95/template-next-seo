@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('next-intl/middleware', () => ({
+    default: () => () => undefined
+}));
+
 vi.mock('@/shared/lib/upstashRateLimit', () => ({
     getUpstashRatelimit: vi.fn(() => null)
 }));

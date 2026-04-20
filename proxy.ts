@@ -1,11 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import createIntlMiddleware from 'next-intl/middleware';
 
+import { routing } from '@/i18n/routing';
 import { buildContentSecurityPolicy, CSP_NONCE_HEADER } from '@/shared/lib/cspHeader';
 import { logger } from '@/shared/lib/logger';
 import { getRateLimitKey, isAssetPath } from '@/shared/lib/middlewareRequest';
 import { checkRateLimit } from '@/shared/lib/rateLimitCore';
 import { getUpstashRatelimit } from '@/shared/lib/upstashRateLimit';
+
+const intlMiddleware = createIntlMiddleware(routing);
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
@@ -75,24 +79,31 @@ export async function proxy(request: NextRequest) {
         return rateResponse;
     }
 
-    if (process.env.NODE_ENV === 'production' && pathname.startsWith('/dev')) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const isApi = pathname.startsWith('/api/');
+    const isDevPath = pathname.startsWith('/dev');
+
+    if (isApi || isDevPath) {
+        if (process.env.NODE_ENV === 'production' && isDevPath) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+
+        const isDev = process.env.NODE_ENV !== 'production';
+        const nonce = generateNonce();
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set(CSP_NONCE_HEADER, nonce);
+
+        const response = NextResponse.next({
+            request: { headers: requestHeaders }
+        });
+
+        applyProxyCsp(response, nonce, isDev);
+
+        return response;
     }
 
-    const isDev = process.env.NODE_ENV !== 'production';
-    const nonce = generateNonce();
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set(CSP_NONCE_HEADER, nonce);
-
-    const response = NextResponse.next({
-        request: { headers: requestHeaders }
-    });
-
-    applyProxyCsp(response, nonce, isDev);
-
-    return response;
+    return intlMiddleware(request);
 }
 
 export const config = {
-    matcher: ['/api/:path*', '/dev/:path*']
+    matcher: ['/api/:path*', '/dev/:path*', '/((?!_next|_vercel|api|dev|.*\\..*).*)']
 };

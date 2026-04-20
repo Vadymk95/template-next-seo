@@ -40,10 +40,11 @@
 - **Risk:** **`Cross-Origin-Opener-Policy: same-origin`** and **`Cross-Origin-Resource-Policy: same-origin`** can break legacy **OAuth popup** flows or rare third-party embeds.
 - **Mitigation:** relax headers only for routes that need popups, or move auth to **same-tab redirects**.
 
-## Narrow `proxy` matcher
+## `proxy` composition (next-intl + nonce CSP + rate limit)
 
-- **Risk:** nonce CSP, `/dev` gate, and rate checks apply only to paths in **`config.matcher`**; document HTML keeps static CSP from **`next.config`**—widening matcher changes security and runtime cost.
-- **Mitigation:** treat matcher edits as a security review; keep **`next.config`** and **`proxy.ts`** CSP stories in sync when adding routes.
+- **Risk:** `proxy.ts` now composes **next-intl middleware** (locale redirect/rewrite for document routes) with the existing **nonce CSP + rate limit + `/dev` gate** (scoped to `/api/*` and `/dev/*`). Matcher is intentionally broad — `'/api/:path*'`, `'/dev/:path*'`, and `'/((?!_next|_vercel|api|dev|.*\\..*).*)'` — so every locale-prefixed document route passes through next-intl. Reordering branches, dropping either matcher entry, or moving rate-limit below the branch silently breaks security (CSP, throttling) or SEO (locale redirects, `hreflang`).
+- **Server Actions:** `enforceApiRateLimit` gates on `isApi || isServerAction` (the `next-action` header); with the widened matcher this finally covers actions posted to `/[locale]/*` (latent since inception). The rate-limit LOGIC is byte-for-byte unchanged — only its coverage expanded.
+- **Mitigation:** treat `proxy.ts` + `next.config.ts` header edits as a security review. Keep static CSP in `next.config.ts` (document routes) and nonce CSP in `proxy.ts` (`/api`, `/dev`) in sync. Never add a branch *before* rate limit. Keep next-intl the terminal fallback for everything non-`/api` / non-`/dev`.
 
 ## Template scaffolding (do not strip as "unused")
 
