@@ -1,0 +1,81 @@
+{
+    "common": {
+        "button": {
+            "submit": "Submit",
+            "cancel": "Cancel",
+            "save": "Save",
+            "delete": "Delete",
+            "edit": "Edit",
+            "close": "Close",
+            "back": "Back",
+            "next": "Next",
+            "previous": "Previous",
+            "tryAgain": "Try again",
+            "reloadPage": "Reload page",
+            "goBackHome": "Go back home",
+            "reset": "Reset"
+        },
+        "loading": "Loading...",
+        "error": {
+            "generic": "Something went wrong"
+        },
+        "success": "Success",
+        "navigation": {
+            "home": "Home",
+            "about": "About",
+            "contact": "Contact"
+        },
+        "form": {
+            "name": "Name",
+            "email": "Email",
+            "enterName": "Enter your name",
+            "enterEmail": "Enter your email",
+            "submitting": "Submitting...",
+            "submittedSuccessfully": "Form submitted successfully!"
+        },
+        "page": {
+            "exampleForm": {
+                "title": "Example Form",
+                "description": "This is an example form using React Hook Form, Zod validation, and Server Actions."
+            }
+        }
+    },
+    "errors": {
+        "api": {
+            "network": "Network error. Please check your connection.",
+            "timeout": "Request timeout. Please try again.",
+            "unknown": "An unexpected error occurred."
+        },
+        "http": {
+            "400": "Bad request",
+            "401": "Unauthorized. Please log in.",
+            "403": "Access denied",
+            "404": "Resource not found",
+            "500": "Server error. Please try again later.",
+            "503": "Service temporarily unavailable"
+        },
+        "validation": {
+            "required": "This field is required",
+            "email": "Invalid email format",
+            "minLength": "Value is too short",
+            "maxLength": "Value is too long",
+            "pattern": "Invalid format",
+            "failed": "Validation failed"
+        },
+        "page": {
+            "404": "Page not found",
+            "500": "Internal server error",
+            "generic": "Something went wrong. Please try again later.",
+            "notFound": "The page you are looking for does not exist or has been moved.",
+            "errorTitle": "Something went wrong",
+            "errorDescription": "We encountered an unexpected error. Please try again or refresh the page.",
+            "errorDetails": "Error details (dev only)",
+            "unexpectedError": "An unexpected error occurred"
+        }
+    },
+    "home": {
+        "title": "Welcome to Next.js SEO Template",
+        "description": "This is a production-ready Next.js template optimized for SEO and performance.",
+        "welcome": "Welcome to our site"
+    }
+}
