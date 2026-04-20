@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 
 const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
     return (
-        <html lang="en" className={`${inter.variable} dark i18n-loading`} suppressHydrationWarning>
+        <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
             <head>
                 <link
                     rel="preconnect"

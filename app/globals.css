@@ -133,5 +133,3 @@
         @apply bg-background text-foreground min-h-screen font-sans antialiased;
     }
 }
-
-/* i18n readiness classes are toggled in shared/lib/i18n (no LCP-blocking opacity). */

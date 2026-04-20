@@ -71,10 +71,6 @@ const nextConfig: NextConfig = {
         optimizePackageImports: [
             'zustand',
             'next-intl',
-            'react-i18next',
-            'i18next',
-            'i18next-browser-languagedetector',
-            'i18next-http-backend',
             '@hookform/resolvers',
             'zod',
             // Template scaffolding: lucide-react is pre-wired as the default icon set for MVPs.
@@ -130,7 +126,7 @@ const nextConfig: NextConfig = {
                         },
                         i18nVendor: {
                             name: 'i18n-vendor',
-                            test: /[\\/]node_modules[\\/](i18next|react-i18next|i18next-browser-languagedetector|i18next-http-backend)[\\/]/,
+                            test: /[\\/]node_modules[\\/]next-intl[\\/]/,
                             priority: 20,
                             reuseExistingChunk: true,
                             enforce: true
