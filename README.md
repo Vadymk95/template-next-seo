@@ -32,9 +32,9 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ### Security
 
-- ✅ **Security middleware** - CSP, HSTS, X-Frame-Options, etc.
+- ✅ **Edge proxy** (`proxy.ts`) - stricter CSP + rate limits for `/api/*` and `/dev/*`
 - ✅ **Rate limiting** - 100 requests/minute for API routes
-- ✅ **Security headers** - configured in `next.config.ts` and middleware
+- ✅ **Security headers** - static set in `next.config.ts`, CSP override on API/dev via `proxy.ts`
 - ✅ **Input validation** - Zod schemas for forms and API routes
 
 ### Developer Experience
@@ -96,8 +96,8 @@ npm start
 
 ### Security (production)
 
-- **CSP**: per-request **nonce** + **`strict-dynamic`** for `script-src` (development keeps relaxed rules for HMR). Nonce is set in **`middleware`** and passed to **`app/layout.tsx`** via the `x-nonce` request header.
-- **Headers**: HSTS (**`preload`** — [submit the domain](https://hstspreload.org/) before relying on preload in browsers), **COOP** / **CORP**, frame protections, Permissions-Policy — all from **`middleware`** (single source).
+- **CSP**: static policy on pages via **`next.config.ts`**; per-request **nonce** + **`strict-dynamic`** for `script-src` on **`/api/*`** and **`/dev/*`** only (development keeps relaxed rules for HMR).
+- **Headers**: HSTS (**`preload`** — [submit the domain](https://hstspreload.org/) before relying on preload in browsers), **COOP** / **CORP**, frame protections, Permissions-Policy — baseline from **`next.config.ts`**, CSP tightened in **`proxy.ts`** for matched routes.
 - **Rate limiting**: set **`UPSTASH_REDIS_REST_URL`** and **`UPSTASH_REDIS_REST_TOKEN`** in your local or deployment environment for **sliding-window** limits shared across regions; otherwise **in-memory** fallback (edge isolate).
 - **`/dev/*`**: returns **404 in production** (no webpack entry hacks).
 
@@ -328,7 +328,7 @@ export const Component = () => {
 
 ## 🔒 Security Features
 
-### Middleware (`app/middleware.ts`)
+### Edge proxy (`proxy.ts`)
 
 - Content Security Policy (CSP)
 - X-Frame-Options: DENY
@@ -342,8 +342,8 @@ export const Component = () => {
 
 Configured in:
 
-- `app/middleware.ts` - Dynamic headers
-- `next.config.ts` - Static headers
+- `proxy.ts` (repo root) - CSP override + rate limiting for `/api/*` and `/dev/*`
+- `next.config.ts` - Static security headers + static CSP for all routes
 
 ## 📊 Performance Metrics
 

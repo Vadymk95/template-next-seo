@@ -48,7 +48,7 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
             return null;
         } catch (err) {
             logger.error(
-                '[middleware] Upstash rate limit failed; falling back to in-memory limiter',
+                '[proxy] Upstash rate limit failed; falling back to in-memory limiter',
                 err instanceof Error ? err : new Error(String(err)),
                 { keyHint: key.slice(0, 24) }
             );
@@ -63,7 +63,7 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
     return null;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
     if (isAssetPath(pathname)) {

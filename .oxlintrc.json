@@ -34,7 +34,7 @@
             }
         },
         {
-            "files": ["scripts/**/*.{js,mjs}", "middleware.ts"],
+            "files": ["scripts/**/*.{js,mjs}", "proxy.ts"],
             "rules": {
                 "no-console": "off"
             }

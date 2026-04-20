@@ -1,5 +1,5 @@
 /**
- * Edge-safe helpers shared with `middleware.ts` (rate-limit identity + static asset skip).
+ * Edge-safe helpers shared with root `proxy.ts` (rate-limit identity + static asset skip).
  */
 
 export type RequestHeadersLike = {
