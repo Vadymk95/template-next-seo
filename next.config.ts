@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url';
 
 import bundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 import { buildStaticContentSecurityPolicy } from './shared/lib/cspHeader';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const __rootDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -155,4 +158,4 @@ const nextConfig: NextConfig = {
     productionBrowserSourceMaps: false
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withNextIntl(withBundleAnalyzer(nextConfig));
