@@ -21,6 +21,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     metadataBase,
+    title: {
+        default: 'React Enterprise Foundation',
+        template: '%s | React Enterprise Foundation'
+    },
     keywords: ['React', 'Next.js', 'TypeScript', 'SEO'],
     authors: [{ name: 'Your Name' }],
     creator: 'Your Name',

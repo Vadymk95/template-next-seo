@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Smoke', () => {
-    test('home page loads with expected document title', async ({ page }) => {
+    test('home page loads with localized document title', async ({ page }) => {
         await page.goto('/');
-        // Matches `app/page.tsx` metadata.title ("Home"); layout template may not appear in <title> in all Next versions.
-        await expect(page).toHaveTitle(/^Home$/);
+        await expect(page).toHaveURL(/\/en$/);
+        await expect(page).toHaveTitle(/Home \| React Enterprise Foundation/);
     });
 
     test('home exposes main landmark after shell is ready', async ({ page }) => {

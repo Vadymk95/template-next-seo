@@ -23,10 +23,6 @@ export const generateMetadata = async ({
     const { locale } = await params;
     const t = await getTranslations({ locale, namespace: 'meta.root' });
     return {
-        title: {
-            default: t('titleDefault'),
-            template: t('titleTemplate')
-        },
         description: t('description'),
         openGraph: {
             type: 'website',
