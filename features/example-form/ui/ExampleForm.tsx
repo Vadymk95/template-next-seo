@@ -1,6 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+// Template scaffolding: canonical lucide-react usage example (pending/idle submit button).
+// See .cursor/brain/SKELETONS.md → "Template scaffolding".
+import { Loader2, Send } from 'lucide-react';
 import { useState, type FunctionComponent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -102,7 +105,12 @@ export const ExampleForm: FunctionComponent = () => {
             </div>
 
             <div className="flex gap-4">
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="gap-2">
+                    {isSubmitting ? (
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                        <Send className="size-4" aria-hidden="true" />
+                    )}
                     {isSubmitting ? t('common:form.submitting') : t('common:button.submit')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => reset()}>

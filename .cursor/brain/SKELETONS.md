@@ -44,3 +44,14 @@
 
 - **Risk:** nonce CSP, `/dev` gate, and rate checks apply only to paths in **`config.matcher`**; document HTML keeps static CSP from **`next.config`**—widening matcher changes security and runtime cost.
 - **Mitigation:** treat matcher edits as a security review; keep **`next.config`** and **`proxy.ts`** CSP stories in sync when adding routes.
+
+## Template scaffolding (do not strip as "unused")
+
+This repo is a template, not a shipped product. Several files, deps, and config entries are **intentionally present as patterns**, not because the current template has consumers for them. An agent running an "unused code" audit must treat the items below as load-bearing until the forked MVP actually replaces or removes them.
+
+- **`lucide-react`** — default icon set; pre-wired in `next.config.ts` (`experimental.optimizePackageImports` + webpack `uiVendor` `splitChunks` regex) and exercised in `features/example-form/ui/ExampleForm.tsx` (pending/idle submit icons). Removing it breaks the "how to add icons" example and forces the next MVP to re-pick and re-wire an icon lib.
+- **`shared/constants/index.ts`** — FSD pattern showcase (`ROUTES`, `API_BASE_URL`). Kept so MVPs have a ready place for cross-feature literals. Do not delete as "no consumers".
+- **`features/example-form/**`** — canonical FSD feature skeleton: `model/schema.ts` (Zod), `model/types.ts` (`z.infer`), `ui/ExampleForm.tsx` (RHF + shadcn + i18n + icons), `/example-form` route. The full triad stays until the MVP ships real features.
+- **Web Vitals pipeline** — `app/WebVitalsReporter.tsx` + `app/api/vitals/route.ts` kept minimal on purpose (log-only sink). Expand to analytics when the MVP picks a vendor; do not collapse further.
+
+**Rule:** when in doubt, search for `Template scaffolding` inline comments — every protected site is marked. Only strip after the caller confirms "this is now my MVP, not the template".

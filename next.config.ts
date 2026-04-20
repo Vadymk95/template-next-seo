@@ -72,7 +72,10 @@ const nextConfig: NextConfig = {
             'i18next-browser-languagedetector',
             'i18next-http-backend',
             '@hookform/resolvers',
-            'zod'
+            'zod',
+            // Template scaffolding: lucide-react is pre-wired as the default icon set for MVPs.
+            // See .cursor/brain/SKELETONS.md → "Template scaffolding" before removing.
+            'lucide-react'
         ]
     },
     compiler: {
@@ -116,7 +119,7 @@ const nextConfig: NextConfig = {
                         },
                         uiVendor: {
                             name: 'ui-vendor',
-                            test: /[\\/]node_modules[\\/](@radix-ui|class-variance-authority|clsx|tailwind-merge)[\\/]/,
+                            test: /[\\/]node_modules[\\/](@radix-ui|lucide-react|class-variance-authority|clsx|tailwind-merge)[\\/]/,
                             priority: 20,
                             reuseExistingChunk: true,
                             enforce: true

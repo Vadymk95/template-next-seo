@@ -485,7 +485,6 @@ npm start
 These packages were stripped as unused. Commands to restore if a feature needs them again:
 
 - **`web-vitals`** — removed with `shared/lib/web-vitals.ts`. The app uses `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). To restore the raw wrapper: `npm install web-vitals`, then recreate the wrapper module and re-export it from `shared/lib/index.ts`.
-- **`lucide-react`** — removed because no component imported it. To restore: `npm install lucide-react`, add `'lucide-react'` back to `experimental.optimizePackageImports` in `next.config.ts`, and include `lucide-react` in the `uiVendor` `splitChunks` regex (`/[\\/]node_modules[\\/](@radix-ui|lucide-react|class-variance-authority|clsx|tailwind-merge)[\\/]/`).
 
 ## Known trade-offs
 
