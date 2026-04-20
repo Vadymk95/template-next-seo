@@ -1,7 +1,9 @@
 import { render, type RenderOptions } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
+import messages from '@/messages/en.json';
 // Load real translation files to avoid duplication (Vitest resolves JSON via @/)
 import commonTranslations from '@/public/locales/en/common.json';
 import errorsTranslations from '@/public/locales/en/errors.json';
@@ -42,7 +44,9 @@ interface ProvidersProps {
 
 export const renderWithProviders = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) => {
     const Wrapper = ({ children }: ProvidersProps) => (
-        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        <NextIntlClientProvider locale={DEFAULT_LANGUAGE} messages={messages}>
+            <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        </NextIntlClientProvider>
     );
 
     return render(ui, { wrapper: Wrapper, ...options });

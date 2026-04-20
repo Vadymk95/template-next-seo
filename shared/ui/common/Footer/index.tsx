@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
+
+import { Link } from '@/i18n/navigation';
 
 export const Footer = () => {
-    const { t } = useTranslation('common');
+    const t = useTranslations('common');
 
     return (
         <footer className="border-t bg-background">

@@ -1,11 +1,11 @@
 'use client';
 
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
 
 import { ExampleForm } from '@/features/example-form';
 
 export const ExampleFormPageClient = () => {
-    const { t } = useTranslation('common');
+    const t = useTranslations('common');
 
     return (
         <div className="container py-10">

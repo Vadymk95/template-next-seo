@@ -3,6 +3,7 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 
 import { routing } from '@/i18n/routing';
+import { Footer, Header } from '@/shared/ui';
 
 export const generateStaticParams = () => {
     return routing.locales.map((locale) => ({ locale }));
@@ -23,7 +24,11 @@ const LocaleLayout = async ({ children, params }: LocaleLayoutProps) => {
 
     return (
         <NextIntlClientProvider locale={locale} messages={messages}>
-            {children}
+            <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+            </div>
         </NextIntlClientProvider>
     );
 };

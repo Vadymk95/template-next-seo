@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
+
+import { Link } from '@/i18n/navigation';
 
 export const Header = () => {
-    const { t } = useTranslation('common');
+    const t = useTranslations('common');
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -27,12 +28,12 @@ export const Header = () => {
                         Example Form
                     </Link>
                     {process.env.NODE_ENV === 'development' && (
-                        <Link
+                        <a
                             href="/dev/ui"
                             className="text-sm font-medium transition-colors hover:text-primary"
                         >
                             Dev UI
-                        </Link>
+                        </a>
                     )}
                 </nav>
             </div>

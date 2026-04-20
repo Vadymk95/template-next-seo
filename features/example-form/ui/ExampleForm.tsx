@@ -4,16 +4,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 // Template scaffolding: canonical lucide-react usage example (pending/idle submit button).
 // See .cursor/brain/SKELETONS.md → "Template scaffolding".
 import { Loader2, Send } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState, type FunctionComponent } from 'react';
 import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
 
 import { exampleFormAction } from '@/app/actions/example-form';
 import { exampleFormSchema, type ExampleFormSchema } from '@/features/example-form/model/schema';
 import { Button, Input } from '@/shared/ui';
 
 export const ExampleForm: FunctionComponent = () => {
-    const { t } = useTranslation(['common', 'errors']);
+    const tCommon = useTranslations('common');
+    const tErrors = useTranslations('errors');
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const {
         register,
@@ -51,7 +52,7 @@ export const ExampleForm: FunctionComponent = () => {
         if (result.error) {
             setError('root.serverError', { message: result.error });
         } else if (!result.fieldErrors || Object.keys(result.fieldErrors).length === 0) {
-            setError('root.serverError', { message: t('errors:validation.failed') });
+            setError('root.serverError', { message: tErrors('validation.failed') });
         }
     };
 
@@ -59,7 +60,7 @@ export const ExampleForm: FunctionComponent = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {submitSuccess && (
                 <p className="text-sm text-muted-foreground" role="status">
-                    {t('common:form.submittedSuccessfully')}
+                    {tCommon('form.submittedSuccessfully')}
                 </p>
             )}
             {errors.root?.serverError && (
@@ -69,12 +70,12 @@ export const ExampleForm: FunctionComponent = () => {
             )}
             <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-medium">
-                    {t('common:form.name')}
+                    {tCommon('form.name')}
                 </label>
                 <Input
                     id="name"
                     {...register('name')}
-                    placeholder={t('common:form.enterName')}
+                    placeholder={tCommon('form.enterName')}
                     aria-invalid={errors.name ? 'true' : 'false'}
                     aria-describedby={errors.name ? 'name-error' : undefined}
                 />
@@ -87,13 +88,13 @@ export const ExampleForm: FunctionComponent = () => {
 
             <div>
                 <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                    {t('common:form.email')}
+                    {tCommon('form.email')}
                 </label>
                 <Input
                     id="email"
                     type="email"
                     {...register('email')}
-                    placeholder={t('common:form.enterEmail')}
+                    placeholder={tCommon('form.enterEmail')}
                     aria-invalid={errors.email ? 'true' : 'false'}
                     aria-describedby={errors.email ? 'email-error' : undefined}
                 />
@@ -111,10 +112,10 @@ export const ExampleForm: FunctionComponent = () => {
                     ) : (
                         <Send className="size-4" aria-hidden="true" />
                     )}
-                    {isSubmitting ? t('common:form.submitting') : t('common:button.submit')}
+                    {isSubmitting ? tCommon('form.submitting') : tCommon('button.submit')}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => reset()}>
-                    {t('common:button.reset')}
+                    {tCommon('button.reset')}
                 </Button>
             </div>
         </form>

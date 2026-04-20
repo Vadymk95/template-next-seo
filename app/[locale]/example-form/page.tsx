@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { setRequestLocale } from 'next-intl/server';
 
 import { ExampleFormPageClient } from './ExampleFormPageClient';
 
@@ -13,7 +14,13 @@ export const metadata: Metadata = {
 // ISR: Revalidate every 30 minutes
 export const revalidate = 1800;
 
-const ExampleFormPage = () => {
+type ExampleFormPageProps = {
+    params: Promise<{ locale: string }>;
+};
+
+const ExampleFormPage = async ({ params }: ExampleFormPageProps) => {
+    const { locale } = await params;
+    setRequestLocale(locale);
     return <ExampleFormPageClient />;
 };
 

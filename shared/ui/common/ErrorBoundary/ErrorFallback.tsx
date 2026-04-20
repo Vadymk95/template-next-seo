@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/shared/ui/button';
 
@@ -11,7 +11,8 @@ interface ErrorFallbackProps {
 }
 
 export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps) => {
-    const { t } = useTranslation(['common', 'errors']);
+    const tCommon = useTranslations('common');
+    const tErrors = useTranslations('errors');
     const isDev = process.env.NODE_ENV === 'development';
 
     return (
@@ -21,13 +22,13 @@ export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps) 
             className="flex min-h-screen flex-col items-center justify-center p-4"
         >
             <div className="max-w-md space-y-4 text-center">
-                <h1 className="text-2xl font-bold">{t('errors:page.errorTitle')}</h1>
-                <p className="text-muted-foreground">{t('errors:page.errorDescription')}</p>
+                <h1 className="text-2xl font-bold">{tErrors('page.errorTitle')}</h1>
+                <p className="text-muted-foreground">{tErrors('page.errorDescription')}</p>
 
                 {isDev && error && (
                     <details className="mt-4 text-left">
                         <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-                            {t('errors:page.errorDetails')}
+                            {tErrors('page.errorDetails')}
                         </summary>
                         <pre className="mt-2 overflow-auto rounded-md bg-muted p-4 text-xs">
                             {error.message}
@@ -39,10 +40,10 @@ export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps) 
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
                     <Button onClick={onReset} variant="default">
-                        {t('common:button.tryAgain')}
+                        {tCommon('button.tryAgain')}
                     </Button>
                     <Button onClick={onReload} variant="outline">
-                        {t('common:button.reloadPage')}
+                        {tCommon('button.reloadPage')}
                     </Button>
                 </div>
             </div>
