@@ -7,12 +7,12 @@
 
 ## Server vs Client Components
 
-- **Risk:** importing client-only modules (`useEffect`, browser APIs, Zustand/React Query hooks) into Server Components breaks the build or causes subtle errors.
+- **Risk:** importing client-only modules (`useEffect`, browser APIs, client store hooks) into Server Components breaks the build or causes subtle errors.
 - **Mitigation:** Add **`'use client'`** only at boundaries that need it; keep data-fetching defaults on the server where possible.
 
-## i18n + middleware
+## i18n (client-only)
 
-- **Risk:** middleware and locale detection can desync from client `i18next` config (wrong default language, flash of untranslated content).
+- **Risk:** browser detectors, cached language, and bundled defaults can desync from new locale keys (wrong language, flash of untranslated content).
 - **Mitigation:** When changing locale keys or detection order, test first load, hard refresh, and `html.i18n-*` classes in `globals.css`.
 
 ## SEO surfaces
@@ -32,15 +32,15 @@
 
 ## In-memory API rate limit
 
-- **Risk:** per-isolate map does not coordinate across regions/instances; under attack, capped map evicts oldest windows (possible fairness quirks).
-- **Mitigation:** set **Upstash** env vars for distributed limits; tune **`DEFAULT_MAX_KEYS`** / window in `shared/lib/rateLimit.ts` for fallback-only mode.
+- **Risk:** per-isolate map does not coordinate across regions/instances; under attack, capped map evicts oldest windows (possible fairness quirks). **`proxy.ts`** matcher limits where the Edge limiter runs—easy to assume coverage on routes that never hit it.
+- **Mitigation:** set **Upstash** env vars for distributed limits; align **`config.matcher`** with every surface that must be throttled; tune **`rateLimitCore`** / Node **`rateLimit`** for non-proxy handlers if added.
 
 ## COOP / CORP / strict CSP
 
 - **Risk:** **`Cross-Origin-Opener-Policy: same-origin`** and **`Cross-Origin-Resource-Policy: same-origin`** can break legacy **OAuth popup** flows or rare third-party embeds.
 - **Mitigation:** relax headers only for routes that need popups, or move auth to **same-tab redirects**.
 
-## Dynamic root layout
+## Narrow `proxy` matcher
 
-- **Risk:** **`headers()`** in root layout opts pages into **dynamic rendering**; edge CDN HTML caching behavior changes from pure static ISR for those segments.
-- **Mitigation:** intentional for per-request CSP nonce; tune **`Cache-Control`** at host if needed.
+- **Risk:** nonce CSP, `/dev` gate, and rate checks apply only to paths in **`config.matcher`**; document HTML keeps static CSP from **`next.config`**—widening matcher changes security and runtime cost.
+- **Mitigation:** treat matcher edits as a security review; keep **`next.config`** and **`proxy.ts`** CSP stories in sync when adding routes.

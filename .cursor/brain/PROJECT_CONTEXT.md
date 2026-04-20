@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **TanStack Query**, **Zustand**, and **FSD-style** layering. Copy, rename, extend.
+Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **Zustand-ready** shared helpers, and **FSD-style** layering. Copy, rename, extend.
 
 ## Tech Stack
 
@@ -13,13 +13,13 @@ Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **Ta
 | Language      | TypeScript **5.9** strict                                                               |
 | Styling       | Tailwind CSS **v4** (`app/globals.css`, PostCSS)                                        |
 | Components    | shadcn-style primitives under `shared/ui/`                                              |
-| Global state  | Zustand + `shared/lib/utils-store/createSelectors`                                      |
-| Server state  | TanStack Query (`@tanstack/react-query`)                                                |
+| Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)              |
+| Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed              |
 | Forms         | react-hook-form + Zod                                                                   |
-| i18n          | i18next + react-i18next (+ middleware)                                                  |
+| i18n          | i18next + react-i18next (client; locale files under `public/locales`)                   |
 | Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`, `npm run test:e2e`)                    |
 | Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)     |
-| Security      | CSP nonce + **`strict-dynamic`** (prod), COOP/CORP, optional **Upstash** API rate limit |
+| Security      | Static document CSP + nonce **`strict-dynamic`** on **`proxy`** matcher paths, COOP/CORP, optional **Upstash** in **`proxy`** |
 
 ## Layout (FSD-ish)
 
@@ -27,7 +27,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots), **i18n**, **Ta
 | ----------- | ------------------------------------------------------ |
 | `app/`      | Routes, layouts, providers, Server Actions, API routes |
 | `features/` | Feature slices (e.g. `example-form`)                   |
-| `entities/` | Domain entities (e.g. `user` store + types)            |
+| `entities/` | Optional domain slices (empty in baseline)               |
 | `shared/`   | UI kit, `lib/`, constants, types                       |
 
 Imports use the `@/*` path alias (repo root).
@@ -40,4 +40,4 @@ Imports use the `@/*` path alias (repo root).
 
 ## CI
 
-GitHub Actions: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → unit tests → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
+GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → unit tests → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
