@@ -1,6 +1,8 @@
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { logger } from '@/shared/lib/logger';
+import { requireSameOrigin } from '@/shared/lib/requireSameOrigin';
 
 /**
  * JSON POST/GET sample for non-browser or integration clients.
@@ -31,7 +33,11 @@ export async function GET() {
     }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+    const originDenied = requireSameOrigin(request);
+    if (originDenied) {
+        return originDenied;
+    }
     try {
         const body = await request.json();
 

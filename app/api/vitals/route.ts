@@ -1,8 +1,14 @@
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { logger } from '@/shared/lib/logger';
+import { requireSameOrigin } from '@/shared/lib/requireSameOrigin';
 
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
+    const originDenied = requireSameOrigin(request);
+    if (originDenied) {
+        return originDenied;
+    }
     let body: unknown;
     try {
         body = await request.json();
