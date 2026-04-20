@@ -67,6 +67,7 @@ const nextConfig: NextConfig = {
         webVitalsAttribution: ['LCP', 'INP', 'CLS'],
         optimizePackageImports: [
             'zustand',
+            'next-intl',
             'react-i18next',
             'i18next',
             'i18next-browser-languagedetector',
