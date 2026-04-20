@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { requireLocale } from '@/i18n/request-locale';
 import { routing } from '@/i18n/routing';
 
 import { HomePageClient } from './HomePageClient';
@@ -13,7 +14,8 @@ type HomePageProps = {
 };
 
 export const generateMetadata = async ({ params }: HomePageProps): Promise<Metadata> => {
-    const { locale } = await params;
+    const { locale: rawLocale } = await params;
+    const locale = requireLocale(rawLocale);
     const t = await getTranslations({ locale, namespace: 'meta.home' });
     const languages = Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])) as Record<
         string,
@@ -30,7 +32,8 @@ export const generateMetadata = async ({ params }: HomePageProps): Promise<Metad
 };
 
 const HomePage = async ({ params }: HomePageProps) => {
-    const { locale } = await params;
+    const { locale: rawLocale } = await params;
+    const locale = requireLocale(rawLocale);
     setRequestLocale(locale);
     return <HomePageClient />;
 };

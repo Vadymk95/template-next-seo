@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { requireLocale } from '@/i18n/request-locale';
 import { routing } from '@/i18n/routing';
 
 import { ExampleFormPageClient } from './ExampleFormPageClient';
@@ -13,7 +14,8 @@ type ExampleFormPageProps = {
 };
 
 export const generateMetadata = async ({ params }: ExampleFormPageProps): Promise<Metadata> => {
-    const { locale } = await params;
+    const { locale: rawLocale } = await params;
+    const locale = requireLocale(rawLocale);
     const t = await getTranslations({ locale, namespace: 'meta.exampleForm' });
     const languages = Object.fromEntries(
         routing.locales.map((l) => [l, `/${l}/example-form`])
@@ -30,7 +32,8 @@ export const generateMetadata = async ({ params }: ExampleFormPageProps): Promis
 };
 
 const ExampleFormPage = async ({ params }: ExampleFormPageProps) => {
-    const { locale } = await params;
+    const { locale: rawLocale } = await params;
+    const locale = requireLocale(rawLocale);
     setRequestLocale(locale);
     return <ExampleFormPageClient />;
 };
