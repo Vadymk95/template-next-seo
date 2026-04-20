@@ -18,7 +18,13 @@ export default defineConfig({
             provider: 'v8',
             reporter: ['text', 'json'],
             exclude: ['node_modules/', 'test/', '.next/', 'app/'],
-            reportsDirectory: './coverage'
+            reportsDirectory: './coverage',
+            thresholds: {
+                lines: 85,
+                branches: 70,
+                functions: 75,
+                statements: 85
+            }
         },
         include: [
             '**/*.{test,spec}.{ts,tsx}',
