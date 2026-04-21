@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Link } from '@/i18n/navigation';
+import { SmartLink } from '@/shared/ui/common/SmartLink';
 
 export const Footer = () => {
     const t = useTranslations('common');
@@ -18,18 +18,18 @@ export const Footer = () => {
                         </p>
                     </div>
                     <nav className="flex items-center space-x-6">
-                        <Link
+                        <SmartLink
                             href="/"
                             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                         >
                             {t('navigation.home')}
-                        </Link>
-                        <Link
+                        </SmartLink>
+                        <SmartLink
                             href="/example-form"
                             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                         >
                             Example Form
-                        </Link>
+                        </SmartLink>
                     </nav>
                 </div>
             </div>

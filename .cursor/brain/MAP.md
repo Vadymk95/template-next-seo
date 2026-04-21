@@ -10,7 +10,6 @@
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
 | `app/not-found.tsx`             | 404                                                                |
 | `app/error.tsx`                 | Error boundary                                                     |
-| `app/loading.tsx`               | Segment loading UI                                                 |
 | `proxy.ts` (repo root)            | Matched routes only: API rate limit (in-memory or Upstash), prod `/dev` 404, nonce CSP on the proxy response; matcher is **`/api/*`** and **`/dev/*`** |
 | `app/sitemap.ts`                | Dynamic sitemap                                                    |
 | `app/robots.ts`                 | robots.txt                                                         |

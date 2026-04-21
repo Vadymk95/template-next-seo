@@ -51,7 +51,7 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 - ✅ **Global error boundary** (`app/error.tsx`)
 - ✅ **404 page** (`app/not-found.tsx`)
 - ✅ **Component error boundary** (`shared/ui/common/ErrorBoundary`)
-- ✅ **Loading states** (`app/loading.tsx`)
+- ✅ **Reusable loading primitive** (`shared/ui/common/Loading`)
 - ✅ **Error logging** - structured error tracking
 
 ### Forms & Validation
