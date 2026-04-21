@@ -8,9 +8,10 @@
 | `app/[locale]/layout.tsx`       | Locale segment: `generateStaticParams` from `routing.locales`, `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets locale-specific `description` / `openGraph` / `twitter` only (title inherits from root) |
 | `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` emits `alternates.languages` per routing locale |
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
-| `app/not-found.tsx`             | 404                                                                |
-| `app/error.tsx`                 | Error boundary                                                     |
-| `proxy.ts` (repo root)            | Matched routes only: API rate limit (in-memory or Upstash), prod `/dev` 404, nonce CSP on the proxy response; matcher is **`/api/*`** and **`/dev/*`** |
+| `app/[locale]/not-found.tsx`    | Locale-scoped 404                                                  |
+| `app/[locale]/error.tsx`        | Locale error boundary                                              |
+| `app/global-error.tsx`          | Root catastrophic error UI                                         |
+| `proxy.ts` (repo root)          | Composed middleware: API/Server Action rate limit (in-memory or Upstash), prod `/dev` 404, nonce CSP for `/api` + `/dev`, next-intl middleware for document routes; matcher includes API/dev plus broad non-asset document paths |
 | `app/sitemap.ts`                | Dynamic sitemap                                                    |
 | `app/robots.ts`                 | robots.txt                                                         |
 | `app/providers.tsx`             | Client providers (analytics init on load / requestIdleCallback; i18n moved to `NextIntlClientProvider` in `[locale]/layout`) |
@@ -24,7 +25,6 @@
 | `app/api/example-form/route.ts` | JSON sample API (non-browser clients; forms use Server Action)      |
 | `app/api/csp-report/route.ts`   | CSP `report-to` ingest (POST)                                     |
 | `app/api/vitals/route.ts`       | `sendBeacon` Web Vitals (POST → 204)                               |
-| `app/global-error.tsx`          | Root catastrophic error UI                                       |
 | `app/actions/example-form.ts`   | Server Action example                                              |
 | `next.config.ts` (repo root)    | Static CSP + security headers on `/:path*`, experimental knobs, webpack vendor `splitChunks`, tracing/Turbopack root |
 
@@ -36,8 +36,8 @@
 
 ## Features / entities
 
-- **`features/example-form/`**: UI + model (Zod schema, types); consumed by `app/example-form`.
-- **`entities/`**: FSD slot for domain stores; not shipped in this baseline (Zustand is a dependency with shared selector helpers only).
+- **`features/example-form/`**: UI + model (Zod schema, types); consumed by `app/[locale]/example-form`.
+- **`entities/`**: FSD slot for domain slices; directory is intentionally absent in baseline and is created when first real domain entity appears.
 
 ## Data flow (high level)
 

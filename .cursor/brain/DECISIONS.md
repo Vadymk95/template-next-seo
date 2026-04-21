@@ -70,9 +70,9 @@
 - **`experimental.serverActions`:** `allowedOrigins` from **`NEXT_PUBLIC_APP_URL`** (fallback `http://localhost:3000`), **`bodySizeLimit: '1mb'`**.
 - **`experimental.webVitalsAttribution`:** `['LCP', 'INP', 'CLS']` for build-time attribution hints.
 
-## API rate limiting
+## API and Server Action rate limiting
 
-- **Where it runs:** **`proxy.ts`**, only for **`config.matcher`** (currently **`/api/*`** and **`/dev/*`**). **`next-action`** is recognized inside the limiter, but widening **matcher** is required if document-route Server Actions should share the same gate.
+- **Where it runs:** **`proxy.ts`**, on **`config.matcher`** (`/api/:path*`, `/dev/:path*`, and broad non-asset document paths). Limiter applies when request is API (`/api/**`) or carries `next-action`, so document-route Server Actions are covered once they traverse the matcher.
 - **Default:** in-memory prune + cap via **`rateLimitCore`** when **Upstash env is unset**.
 - **Enterprise:** optional **Upstash Redis** via **`@upstash/ratelimit`** + **`UPSTASH_REDIS_REST_URL`** / **`UPSTASH_REDIS_REST_TOKEN`** — distributed quota (`shared/lib/upstashRateLimit.ts`).
 

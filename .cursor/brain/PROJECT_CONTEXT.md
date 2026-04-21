@@ -27,7 +27,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | ----------- | ------------------------------------------------------ |
 | `app/`      | Routes, layouts, providers, Server Actions, API routes |
 | `features/` | Feature slices (e.g. `example-form`)                   |
-| `entities/` | Optional domain slices (empty in baseline)               |
+| `entities/` | Optional domain slices (directory is created on first domain extraction) |
 | `shared/`   | UI kit, `lib/`, constants, types                       |
 
 Imports use the `@/*` path alias (repo root).
