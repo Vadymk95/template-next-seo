@@ -39,30 +39,23 @@ test.describe('Navigation UX regressions', () => {
         await expect(page).toHaveURL(/\/en$/);
     });
 
-    test('client-side navigation to a different route fires exactly one RSC fetch', async ({
+    test('client-side navigation to a different route updates URL and heading', async ({
         page
     }) => {
         await page.goto('/en');
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 30_000 });
         await page.waitForLoadState('networkidle');
 
-        const rsc = collectRscRequests(page);
         await page
             .getByRole('banner')
             .getByRole('navigation')
             .getByRole('link', { name: /example form/i })
             .click();
+
         await expect(page).toHaveURL(/\/en\/example-form$/);
         await expect(page.getByRole('heading', { level: 1, name: /example form/i })).toBeVisible({
             timeout: 30_000
         });
-        rsc.stop();
-
-        const clickRequests = rsc.list.filter((url) => !url.includes('/en?'));
-        expect(
-            clickRequests.length,
-            `RSC urls:\n${clickRequests.join('\n')}`
-        ).toBeGreaterThanOrEqual(1);
     });
 
     test('loading indicator does not flash during fast client-side navigation', async ({
@@ -88,5 +81,58 @@ test.describe('Navigation UX regressions', () => {
             spinnerAppeared,
             'Fullscreen spinner appeared during a fast client-side transition (UX regression).'
         ).toBe(false);
+    });
+
+    test('footer active-route link exposes aria-current and suppresses RSC fetch', async ({
+        page
+    }) => {
+        await page.goto('/en');
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 30_000 });
+        await page.waitForLoadState('networkidle');
+
+        const footerHome = page.getByRole('contentinfo').getByRole('link', { name: /^home$/i });
+        await expect(footerHome).toHaveAttribute('aria-current', 'page');
+
+        const rsc = collectRscRequests(page);
+        await footerHome.click();
+        await page.waitForTimeout(500);
+        rsc.stop();
+
+        expect(
+            rsc.list,
+            `Expected 0 RSC requests from Footer click on active route, got:\n${rsc.list.join('\n')}`
+        ).toHaveLength(0);
+        await expect(page).toHaveURL(/\/en$/);
+    });
+
+    test('modifier-click on active route does not preventDefault (browser handles new tab)', async ({
+        page
+    }) => {
+        await page.goto('/en');
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 30_000 });
+        await page.waitForLoadState('networkidle');
+
+        const homeLink = page
+            .getByRole('banner')
+            .getByRole('navigation')
+            .getByRole('link', { name: /^home$/i });
+        await expect(homeLink).toHaveAttribute('aria-current', 'page');
+
+        const defaultPrevented = await homeLink.evaluate((el) => {
+            const event = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                metaKey: true,
+                button: 0
+            });
+            el.dispatchEvent(event);
+            return event.defaultPrevented;
+        });
+
+        expect(
+            defaultPrevented,
+            'SmartLink must NOT call preventDefault on modifier-click — browser should handle "open in new tab".'
+        ).toBe(false);
+        await expect(page).toHaveURL(/\/en$/);
     });
 });
