@@ -26,6 +26,8 @@
     "scripts": {
         "dev": "node scripts/startup.js && next dev --turbo",
         "dev:webpack": "node scripts/startup.js && next dev",
+        "dev:clean": "npm run clean && npm run dev",
+        "clean": "rm -rf .next",
         "build": "next build --webpack",
         "build:turbo": "next build --turbopack",
         "build:analyze": "ANALYZE=true next build --webpack",

@@ -531,6 +531,24 @@ These packages were stripped as unused. Commands to restore if a feature needs t
 
 - **`web-vitals`** — removed with `shared/lib/web-vitals.ts`. The app uses `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). To restore the raw wrapper: `npm install web-vitals`, then recreate the wrapper module and re-export it from `shared/lib/index.ts`.
 
+## Troubleshooting — stale content in dev
+
+Seeing old errors, old strings, or stale UI in a normal tab while incognito looks fine? The repo ships **no** client-side persistence (no Service Worker, no `localStorage` writes, no `manifest.json`, no custom `Cache-Control` on HTML). Staleness is almost always **browser or build-cache state** — not this codebase. Common causes, cheapest to nuclear:
+
+- **Chrome DevTools → Console → Preserve log = OFF.** When ON, errors from previous navigations keep showing after the fix ships. Incognito starts with a fresh console.
+- **bfcache (back/forward cache).** Hitting the browser Back button restores a DOM snapshot, not a fresh render. This is a browser feature, not a bug — open the page fresh to re-render.
+- **`.next/cache/` drift after config or route changes.** When you change `next.config.ts`, i18n messages, or segment metadata, the incremental cache can serve the old tree. Run `npm run clean` to wipe `.next` and rebuild from scratch.
+- **Chrome memory/back-forward cache in the tab.** Hard-reload (`Cmd+Shift+R`) or close the tab; don't just reload.
+- **Do NOT enable DevTools → Network → "Disable cache"** for day-to-day dev. Per [Vercel's guidance](https://vercel.com/guides/why-is-my-nextjs-code-not-updating) this masks real caching bugs and makes dev slower. Rely on Next defaults (`no-cache` in dev, `immutable` on hashed chunks in prod).
+- **Do NOT add `Cache-Control: no-store` on HTML.** It disables bfcache and tanks back-nav UX.
+
+Quick commands:
+
+```bash
+npm run clean         # nuke .next (last-resort)
+npm run dev:clean     # clean + dev in one step
+```
+
 ## Known trade-offs
 
 - **CSP on static routes** uses a nonce-less baseline (`script-src 'self'` in production). Stricter nonce + `strict-dynamic` applies only on `/api/*` and `/dev/*` via `proxy.ts`.
