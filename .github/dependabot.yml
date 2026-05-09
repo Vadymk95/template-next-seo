@@ -16,8 +16,14 @@ updates:
       # peer at `^9`; eslint-plugin-react@7.37.5 caps at `^9.7`. Both are pulled
       # transitively via eslint-config-next. Bumping eslint to 10.x errors with
       # ERESOLVE. Re-evaluate when those plugins ship ESLint 10 support.
+      #
+      # @types/node held at ^24.x deliberately per .cursor/brain/DECISIONS.md —
+      # alignment with `engines.node >=24` (Node 24 LTS), not Node 26 type defs
+      # by default. Re-evaluate when this template's `engines.node` bumps.
       ignore:
           - dependency-name: eslint
             versions: ['>=10']
           - dependency-name: '@eslint/js'
             versions: ['>=10']
+          - dependency-name: '@types/node'
+            versions: ['>=25']
