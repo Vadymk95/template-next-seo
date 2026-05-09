@@ -18,7 +18,7 @@ as load-bearing examples, not dead code (see Danger Zones).
 | Runtime   | Node **≥ 24** (`engine-strict=true`)                           |
 | Framework | Next.js **16** App Router (`build --webpack`, not Turbo)       |
 | UI        | React **19**, Tailwind **v4**, shadcn-style `shared/ui/*`      |
-| Lang      | TypeScript **5.9** strict                                      |
+| Lang      | TypeScript **6.0** strict                                      |
 | State     | Zustand + `shared/lib/utils-store/createSelectors`             |
 | Forms     | react-hook-form + Zod                                          |
 | i18n      | **next-intl 4.9** (SSR, `[locale]` segment, `messages/*.json`) |

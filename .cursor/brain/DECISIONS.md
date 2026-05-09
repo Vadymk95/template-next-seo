@@ -27,11 +27,11 @@
 - **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.
 - **Not enabled:** `func-style: expression` globally — Next idioms use `export async function` for routes, **`proxy`**, and Server Actions; enabling would fight the framework.
 
-## ESLint & TypeScript majors (hold)
+## ESLint & TypeScript majors (hold — re-evaluated 2026-05-09)
 
-- **ESLint 9.x** — `eslint-plugin-react-hooks` (v5/v7) peers stop at ESLint **9**; ESLint **10** forces peer conflicts or `legacy-peer-deps`.
-- **TypeScript 5.9.x** — `typescript-eslint` **8.57.x** peers require `typescript < 6.0.0`. **TS 6** waits on a supported **typescript-eslint** major.
-- **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default).
+- **ESLint 9.x (HOLD)** — `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**, but the React + JSX-a11y blockers stay. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. Re-evaluate when `eslint-plugin-react@7.38+` and `eslint-plugin-jsx-a11y@7.x` ship with `^10` peers.
+- **TypeScript 6.0.x (ACTIVE — bumped 2026-05-09)** — `typescript-eslint@8.59.2` peer relaxed to `>=4.8.4 <6.1.0`, unblocking TS 6.0.x. Repo bumped from `~5.9.3` → `~6.0.3`. Keep within `~6.0.x` until `typescript-eslint` ships its next major widening the upper bound.
+- **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default). Latest 24.x patch is `24.12.3`.
 
 ## Lint command (Next.js 16)
 
