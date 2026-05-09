@@ -12,3 +12,12 @@ updates:
               dependency-type: production
           development-dependencies:
               dependency-type: development
+      # ESLint 10 ecosystem: eslint-plugin-jsx-a11y@6.10.2 (latest stable) caps
+      # peer at `^9`; eslint-plugin-react@7.37.5 caps at `^9.7`. Both are pulled
+      # transitively via eslint-config-next. Bumping eslint to 10.x errors with
+      # ERESOLVE. Re-evaluate when those plugins ship ESLint 10 support.
+      ignore:
+          - dependency-name: eslint
+            versions: ['>=10']
+          - dependency-name: '@eslint/js'
+            versions: ['>=10']
