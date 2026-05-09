@@ -72,6 +72,12 @@ jobs:
               run: npm run build
               env:
                   ANALYZE: 'false'
+                  # Required at build time (env.ts strict in production):
+                  # drives metadataBase / sitemap / robots / hreflang. Forks
+                  # override per environment in their host. The `.invalid`
+                  # TLD is reserved by RFC 6761 — never resolves, never an
+                  # accidental real production deploy.
+                  NEXT_PUBLIC_APP_URL: https://template-next-seo.invalid
 
             - name: Install Playwright Chromium
               run: npx playwright install --with-deps chromium
@@ -80,3 +86,4 @@ jobs:
               run: npm run test:e2e
               env:
                   CI: 'true'
+                  NEXT_PUBLIC_APP_URL: https://template-next-seo.invalid

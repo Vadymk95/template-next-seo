@@ -79,28 +79,38 @@ export async function proxy(request: NextRequest) {
         return rateResponse;
     }
 
-    const isApi = pathname.startsWith('/api/');
     const isDevPath = pathname.startsWith('/dev');
+    if (process.env.NODE_ENV === 'production' && isDevPath) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const isApi = pathname.startsWith('/api/');
+    const isDev = process.env.NODE_ENV !== 'production';
 
     if (isApi || isDevPath) {
-        if (process.env.NODE_ENV === 'production' && isDevPath) {
-            return NextResponse.json({ error: 'Not found' }, { status: 404 });
-        }
-
-        const isDev = process.env.NODE_ENV !== 'production';
+        // API + /dev are dynamic: per-request nonce CSP works because Next renders
+        // each request fresh and (when forwarded via x-nonce on request headers)
+        // automatically attaches `nonce="..."` to its emitted inline scripts.
         const nonce = generateNonce();
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set(CSP_NONCE_HEADER, nonce);
-
-        const response = NextResponse.next({
-            request: { headers: requestHeaders }
-        });
-
+        const response = NextResponse.next({ request: { headers: requestHeaders } });
         applyProxyCsp(response, nonce, isDev);
-
         return response;
     }
 
+    // Document routes are ISR'd (`/[locale]` 1h, `/[locale]/example-form` 30m).
+    // ISR HTML is prerendered at BUILD TIME and cached — middleware sets CSP
+    // headers per-request, but the HTML body is static. A per-request nonce
+    // would arrive in the header without ever appearing on the inline scripts
+    // in the cached HTML, so CSP would block hydration in any CSP-respecting
+    // browser. Per Next.js docs (CSP guide, "Nonces"): "Nonces only support
+    // dynamic routes." For ISR / static routes the recommendation is hash-based
+    // CSP — impractical here because the inline `__next_f.push` payload differs
+    // per page. The static CSP in `next.config.ts` headers() therefore allows
+    // `'unsafe-inline'` for `script-src` — required by Next 16 RSC inline
+    // bootstrap scripts on ISR routes. Trade-off documented in
+    // .cursor/brain/DECISIONS.md ("CSP: nonce on dynamic, unsafe-inline on ISR").
     return intlMiddleware(request);
 }
 

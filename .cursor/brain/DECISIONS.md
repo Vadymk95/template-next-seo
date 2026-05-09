@@ -76,11 +76,44 @@
 - **Default:** in-memory prune + cap via **`rateLimitCore`** when **Upstash env is unset**.
 - **Enterprise:** optional **Upstash Redis** via **`@upstash/ratelimit`** + **`UPSTASH_REDIS_REST_URL`** / **`UPSTASH_REDIS_REST_TOKEN`** — distributed quota (`shared/lib/upstashRateLimit.ts`).
 
-## Content Security Policy (static vs nonce)
+## Content Security Policy: nonce on dynamic, `'unsafe-inline'` on ISR (2026-05-09)
 
-- **Default HTML:** production **`script-src 'self'`** only (static CSP from **`next.config`**); avoids **`strict-dynamic`** without a bootstrap nonce on document responses, which would break Next script loading.
-- **Proxy-handled responses:** **`buildContentSecurityPolicy(nonce, …)`** adds **`strict-dynamic` + nonce** for matched routes; comment and tests in **`shared/lib/cspHeader.ts`** document the split.
-- **Trade-off:** strictest nonce policy applies where the proxy runs; broadening **matcher** widens nonce CSP coverage and runtime surface—change only with intent.
+The template runs **two** CSP strategies in parallel because Next.js 16 RSC has
+no nonce path for ISR'd HTML:
+
+- **ISR / static document routes** (`/[locale]`, `/[locale]/example-form`,
+  `/sitemap.xml`, `/robots.txt`, `/dev/ui` in dev): `script-src 'self'
+  'unsafe-inline'` from `next.config.ts` `headers()` via
+  `buildStaticContentSecurityPolicy`. Required because Next emits inline
+  `<script>self.__next_f.push(...)` scripts into prerendered HTML at BUILD
+  time; ISR HTML is cached and a per-request nonce in the response header
+  never reaches those cached `<script>` tags. Per Next.js docs CSP guide,
+  "Nonces only support dynamic routes." Hash-based CSP for the inline
+  scripts is impractical because the `__next_f.push` payload differs per
+  page (infinite hashes). The XSS surface is constrained by the rest of
+  the policy: `frame-ancestors 'none'`, `object-src 'none'`,
+  `base-uri 'self'`, `connect-src 'self'`, `form-action 'self'`.
+
+- **Dynamic routes** (`/api/*`, `/dev/*`): `script-src 'strict-dynamic'
+  'nonce-<random>'` from `proxy.ts` via `buildContentSecurityPolicy`.
+  Each request gets a fresh nonce; Next renders fresh HTML server-side
+  and (when given the `x-nonce` request header in middleware) automatically
+  attaches `nonce` to its inline scripts. Strictest setting available for
+  routes that can support it.
+
+- **Why not nonce everywhere?** Tried in commit history (proxy briefly applied
+  nonce CSP to document routes via mutated request headers + `intlMiddleware`).
+  Empirical curl on production server: HTML still had 0 `<script nonce=...>`
+  attributes — ISR cache served prerendered HTML without nonce, the response
+  header just announced a nonce that nothing matched → all 8 inline
+  `__next_f` scripts blocked by browser → hydration broken. Reverted
+  document-route CSP to the static `'unsafe-inline'` path; nonce kept only
+  for the dynamic surface where it actually works.
+
+- **Trade-off:** `'unsafe-inline'` weakens the ISR surface against inline-script
+  injection. The ISR'd HTML is server-prerendered with no user input in inline
+  scripts by design. Forks that ship user-generated content into ISR routes
+  must either escape strictly or move to a dynamic route + nonce CSP.
 
 ## Webpack `/dev` exclusion
 
