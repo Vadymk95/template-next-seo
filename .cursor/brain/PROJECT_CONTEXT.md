@@ -10,7 +10,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | ------------- | --------------------------------------------------------------------------------------- |
 | Framework     | Next.js **16** (App Router)                                                             |
 | UI            | React **19**                                                                            |
-| Language      | TypeScript **5.9** strict                                                               |
+| Language      | TypeScript **6.0** strict                                                               |
 | Styling       | Tailwind CSS **v4** (`app/globals.css`, PostCSS)                                        |
 | Components    | shadcn-style primitives under `shared/ui/`                                              |
 | Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)              |

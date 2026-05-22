@@ -27,11 +27,11 @@
 - **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.
 - **Not enabled:** `func-style: expression` globally — Next idioms use `export async function` for routes, **`proxy`**, and Server Actions; enabling would fight the framework.
 
-## ESLint & TypeScript majors (hold — re-evaluated 2026-05-09)
+## ESLint & TypeScript majors (hold — re-evaluated 2026-05-22)
 
-- **ESLint 9.x (HOLD)** — `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**, but the React + JSX-a11y blockers stay. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. Re-evaluate when `eslint-plugin-react@7.38+` and `eslint-plugin-jsx-a11y@7.x` ship with `^10` peers.
+- **ESLint 9.x (HOLD)** — Snapshot 2026-05-22: ESLint 10.0.0 shipped 2026-02-09; latest 10.4.0 shipped 2026-05-15. ESLint 9.x EOL is 2026-08-06 (`maintenance` dist-tag `9.39.4`). `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. ESLint 10 removed `context.getFilename()` + `sourceCode.isSpaceBetweenTokens` + `sourceCode.getAllComments` + RuleTester `type` field — `eslint-plugin-react@7.x` calls these at runtime (crash, not warning). Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. PR #3979 (eslint-plugin-react ESLint 10) blocked transitively by `import-js/eslint-plugin-import#3230`; PR #1081 (eslint-plugin-jsx-a11y) awaiting `ljharb` review since Mar 2026. Re-evaluate monthly starting 2026-07-01 (1-month buffer pre-EOL). Plan B if upstream still blocked: switch to `@eslint-react/eslint-plugin@5.8.4+` (peer `eslint ^10.3.0`, requires Node ≥22, NOT drop-in — config rewrite ~3-5h) + `eslint-plugin-jsx-a11y-x@0.2.0+` (es-tooling org, drop-in).
 - **TypeScript 6.0.x (ACTIVE — bumped 2026-05-09)** — `typescript-eslint@8.59.2` peer relaxed to `>=4.8.4 <6.1.0`, unblocking TS 6.0.x. Repo bumped from `~5.9.3` → `~6.0.3`. Keep within `~6.0.x` until `typescript-eslint` ships its next major widening the upper bound.
-- **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default). Latest 24.x patch is `24.12.3`.
+- **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default). Latest 24.x patch is `24.12.4` (snapshot 2026-05-22). Dependabot config (`.github/dependabot.yml`) ignores @types/node ≥25.
 
 ## Lint command (Next.js 16)
 

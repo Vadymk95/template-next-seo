@@ -13,17 +13,17 @@ as load-bearing examples, not dead code (see Danger Zones).
 
 ## Stack (pinned)
 
-| Layer     | Choice                                                         |
-| --------- | -------------------------------------------------------------- |
-| Runtime   | Node **≥ 24** (`engine-strict=true`)                           |
-| Framework | Next.js **16** App Router (`build --webpack`, not Turbo)       |
-| UI        | React **19**, Tailwind **v4**, shadcn-style `shared/ui/*`      |
-| Lang      | TypeScript **6.0** strict                                      |
-| State     | Zustand + `shared/lib/utils-store/createSelectors`             |
-| Forms     | react-hook-form + Zod                                          |
-| i18n      | **next-intl 4.9** (SSR, `[locale]` segment, `messages/*.json`) |
-| Tests     | Vitest + Testing Library (`test/`), Playwright (`e2e/`)        |
-| Lint      | Oxlint → ESLint 9 (flat) → Prettier                            |
+| Layer     | Choice                                                           |
+| --------- | ---------------------------------------------------------------- |
+| Runtime   | Node **≥ 24** (`engine-strict=true`)                             |
+| Framework | Next.js **16** App Router (`build --webpack`, not Turbo)         |
+| UI        | React **19**, Tailwind **v4**, shadcn-style `shared/ui/*`        |
+| Lang      | TypeScript **6.0** strict                                        |
+| State     | Zustand + `shared/lib/utils-store/createSelectors`               |
+| Forms     | react-hook-form + Zod                                            |
+| i18n      | **next-intl 4.12+** (SSR, `[locale]` segment, `messages/*.json`) |
+| Tests     | Vitest + Testing Library (`test/`), Playwright (`e2e/`)          |
+| Lint      | Oxlint → ESLint 9 (flat) → Prettier                              |
 
 Detail: @.cursor/brain/PROJECT_CONTEXT.md
 
