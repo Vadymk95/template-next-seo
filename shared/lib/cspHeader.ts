@@ -3,6 +3,8 @@
  * nonce-based policy for proxy-handled routes (API / dev).
  */
 
+import { CSP_REPORTING_ENDPOINT_NAME } from '@/shared/constants';
+
 export const CSP_NONCE_HEADER = 'x-nonce';
 
 function baseCspDirectives(scriptSrc: string, isDevelopment: boolean): string[] {
@@ -23,7 +25,7 @@ function baseCspDirectives(scriptSrc: string, isDevelopment: boolean): string[] 
         "form-action 'self'",
         "frame-ancestors 'none'",
         "object-src 'none'",
-        'report-to csp-endpoint'
+        `report-to ${CSP_REPORTING_ENDPOINT_NAME}`
     ];
 
     if (!isDevelopment) {

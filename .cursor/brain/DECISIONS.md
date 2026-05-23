@@ -1,5 +1,32 @@
 # DECISIONS — template-next-seo
 
+## [2026-05] Magic strings → constants (CSP Reporting-Endpoint contract only)
+
+**Decision**: extract magic strings used in 2+ places OR carrying external contract to named constants in `shared/constants/`. Apply selectively per scope rules. NOT blanket extraction (Ghost Principle + existing Template scaffolding seeds stay intentionally inline as patterns for consumers to copy).
+
+**Audit result — narrow extraction surface**: this template has minimal magic-string duplication. Server Components + Server Actions remove most client-side string fan-out. The only duplicated strings with external-contract semantics are the CSP Reporting-Endpoint name and the `/api/csp-report` path, which must stay in lock-step between `next.config.ts` (header announcement) and `shared/lib/cspHeader.ts` (`report-to <name>` directive) plus the route handler filesystem path.
+
+**Extraction sites added this commit**:
+- `shared/constants/index.ts` extended with:
+  - `CSP_REPORTING_ENDPOINT_NAME = 'csp-endpoint'` — referenced by `next.config.ts` `Reporting-Endpoints` header AND `shared/lib/cspHeader.ts` `report-to` directive. Drift between the two silently drops CSP violation reports.
+  - `API_PATHS = { CSP_REPORT: '/api/csp-report' } as const` — referenced by `next.config.ts` header. Browser sends CSP reports here; must match `app/api/csp-report/route.ts` filesystem path. Single source for the URL string.
+
+**Items LEFT INLINE (scope discipline proof)**:
+- `/api/vitals` — 1 call site (`app/WebVitalsReporter.tsx`); single use, route handler self-documents
+- `/api/example-form` — 0 production call sites (form uses Server Action `app/actions/example-form.ts`); only test fixtures reference it
+- `/api/health` — 0 production call sites (only `e2e/health.spec.ts` and `proxy.test.ts`)
+- `/api/` prefix — `app/robots.ts` disallow + `proxy.ts` matcher use `startsWith('/api/')` pattern, not literal path comparison
+- `appOrigin` Server Action `allowedOrigins` — already deduplicated via local `const appOrigin` in `next.config.ts`
+- Zustand `STORAGE_KEYS` / `DEVTOOLS_NAMES` — NO Zustand stores exist in template (only `shared/lib/utils-store/createSelectors` utility); `persist` / `devtools` never called
+- `localStorage` / `sessionStorage` keys — never used in source (only referenced in `shared/lib/api/safeFetch.ts` JSDoc as something the helper avoids)
+- Custom event names — never dispatched (only `window.addEventListener('load', …)` in `app/providers.tsx`, DOM standard event)
+
+**Pattern**: `as const` objects, NOT `enum`. Type via `typeof OBJ[keyof typeof OBJ]`.
+
+**When NOT to extract**: single-use, self-documenting, i18n keys, intentional Template scaffolding seed examples (per SKELETONS.md "Template scaffolding" rule), prototype scope.
+
+**Revisit trigger**: if consumer fork removes more than half the constants in their first product slice = signal pattern doesn't fit their flow, drop from template seed.
+
 ## [2026-05] Boundary validation via Zod safeFetch + Server Action output schemas
 
 **Decision**: validate ALL external boundary crossings using Zod schemas. Wrapper: `shared/lib/api/safeFetch.ts`. Reference example: `app/actions/example-form.ts` (Server Action output schema). Pattern is opt-in for consumer forks — add per boundary.

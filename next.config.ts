@@ -5,6 +5,7 @@ import bundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+import { API_PATHS, CSP_REPORTING_ENDPOINT_NAME } from './shared/constants';
 import { buildStaticContentSecurityPolicy } from './shared/lib/cspHeader';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
@@ -30,7 +31,10 @@ const nextConfig: NextConfig = {
                 key: 'Permissions-Policy',
                 value: 'camera=(), microphone=(), geolocation=()'
             },
-            { key: 'Reporting-Endpoints', value: 'csp-endpoint="/api/csp-report"' },
+            {
+                key: 'Reporting-Endpoints',
+                value: `${CSP_REPORTING_ENDPOINT_NAME}="${API_PATHS.CSP_REPORT}"`
+            },
             { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
             { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' }
         ];
