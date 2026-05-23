@@ -133,3 +133,47 @@ no nonce path for ISR'd HTML:
 ## Button primitive
 
 - Base variant omits **`ring-offset-background`** (aligns with enterprise template; focus ring stays via `ring-*`).
+
+## [2026-05] CI coverage enforcement (`npm test` → `npm run test:coverage`)
+
+**Decision**: `.github/workflows/ci.yml` "Run tests" step calls **`npm run test:coverage`**, NOT `npm test`. Per /consilium 2026-05-23 APPLY Item 11 (6/6 voters YES, no dissent).
+
+**Why**: Vitest thresholds in `vitest.config.ts` (statements 85 / branches 70 / functions 75 / lines 85) only enforce when `--coverage` is passed. Previous `npm test` ran without it → thresholds were defined-but-unenforced, worst of both worlds (false-signal contract). One-line fix turns defined thresholds into PR-gating reality. `bench:verify` script unchanged (still runs `vitest` not `test:coverage`).
+
+## [2026-05] `web-vitals@^5.2.0` explicit dependency (alongside `next/web-vitals`)
+
+**Decision**: pin `web-vitals: ^5.2.0` as explicit dependency alongside the existing `next/web-vitals` wrapper used in `app/WebVitalsReporter.tsx`. Per /consilium 2026-05-23 APPLY Item 12 (4 YES / 2 NO — Pragma+Mini gang-of-two flagged speculative).
+
+**Why**: `next/web-vitals` is a thin wrapper; consuming attribution metrics not exposed by the wrapper requires the raw `web-vitals` package (per existing README "Restore playbook"). Adding it explicit + pinned removes the "where does this transitive come from" question and gives the consumer fork-time access without an `npm install` round-trip when the first `useReportWebVitals` attribution use lands.
+
+**Minority dissent (carrying forward)**: Pragma+Mini NO — speculative, no observed attribution-metric gap. Sec+Future+Ergo+Econ YES on triviality (5KB install, zero runtime cost, removes future "where does this come from" question). Tally crossed ≥4 YES threshold; minority concern documented here, not silenced.
+
+**Revisit trigger (60-day, 2026-07-23)**: if first consumer fork builds and never imports raw `web-vitals` directly within 60 days, revert this addition (Pragma+Mini were right; remove explicit dep).
+
+## [2026-05] REJECT list — explicit non-adoption (2026-05-23 /consilium)
+
+**Decision**: explicit DO-NOT-ADOPT register so future agents + forks don't re-litigate the same items in template-next-seo context. Per /consilium 2026-05-23 APPLY Item 14 (6/6 voters YES). Sibling templates (template-1, template-spa-pwa, template-rn) carry equivalent sections.
+
+### React Compiler enable in template-next-seo (VETOED)
+
+**Status**: skip. **Why**: /consilium 2026-05-23 Item 3 (`experimental.reactCompiler: true` in next.config.ts + `babel-plugin-react-compiler@1.0.0`) — 3 YES / 1 NO / 1 COND / 1 NO + **Adversarial killer Q VETO**: "Name one Compiler-enabled production app at >100K MAU where #35105 or #35644 reproducers have been ruled out as of 2026-05-23" — unanswerable. Open silent-bailout bugs: [facebook/react#35105](https://github.com/facebook/react/issues/35105) (filed 2025-11-11, `Status: Unconfirmed`, no assignees), [#35644](https://github.com/facebook/react/issues/35644) (filed 2026-01-27, same status). Independent verifier Nadia Makarevich ([developerway.com Dec 4, 2024](https://www.developerway.com/posts/how-react-compiler-performs-on-real-code)) N=1 mixed-positive — Compiler fixed only 1-2 of 8-10 noticeable re-renders.
+**Revisit (quarterly, 2026-08-23)**: if either bug closes AND ≥1 named >100K-MAU app publishes "ruled out" retro, re-evaluate. `eslint-plugin-react-hooks@7.1.1` already loaded via `eslint-config-next/core-web-vitals` — Compiler correctness rules already fire as lint-only signal.
+
+### Lighthouse CI (LHCI) in template-next-seo (REJECTED on cost cascade)
+
+**Status**: skip. **Why**: /consilium 2026-05-23 Item 7 (`@lhci/cli` + `numberOfRuns: 3` + multi-URL + desktop+mobile + accessibility error≥0.95 + total-byte error≤200KB in `verify:enterprise`) — Econ math: 3 URLs × 3 runs × 2 form factors = 18 Lighthouse runs × ~30-60s = 9-18 min added per `verify:enterprise`. Compounds to 90-180h attention drain over 6mo (mirrors 2026-05-03 LLM-judge hook rejection on cost-cascade). Mini+Econ gang-of-two NO. Sibling `template-spa-pwa` ships LHCI; this template intentionally doesn't (different cost/benefit at SEO-focused Next 16 boundary).
+**Revisit (60-day, 2026-07-23)**: if `verify:enterprise` becomes the canonical pre-PR gate AND consumer forks observe perf regression that LHCI would have caught, re-evaluate scoped to single URL × 3 runs × desktop only.
+
+### memlab / WDYR / `react-native-flipper` / `vite-plugin-bundlesize`
+
+See sibling template `template-rn/.cursor/brain/DECISIONS.md` REJECT list section — same reasoning applies (no observed leak, Compiler-incompat / not applicable to web, sunset, size-limit preferred — though template-next-seo uses webpack not Vite, so size-limit + Vite-specific bundle gates are template-1 / template-spa-pwa concern).
+
+### React Doctor `lint-staged --staged --fail-on warning` PR-gate (REJECTED)
+
+**Status**: skip. **Why**: /consilium 2026-05-23 Item 1 — 0 YES / 4 NO / 2 COND. Speculative infra (no dated bug Doctor would have caught), `lint-staged` scope mismatch (Doctor is project-level scan, not staged-file linter — Ergo "category error"), gang-of-two Pragma+Mini NO, Adversarial flagged [typicode/husky#1462](https://github.com/typicode/husky/issues/1462) Windows-path issues on cross-platform forks.
+**Revisit (60-day, 2026-07-23)**: if React Doctor 1.0 ships AND ≥1 dated bug observed in a fork that Doctor would have caught, re-evaluate scoped to `npm run doctor` ad-hoc + GitHub Action `millionco/react-doctor@<commit-sha>` (NOT `@main`) with `--offline` + PR comment only (NOT lint-staged blocking).
+
+### Zstd compression (Brotli universal mandatory)
+
+**Status**: skip. **Why**: Safari Zstd landed 26.3 Feb 11, 2026 ([WebKit blog](https://webkit.org/blog/17798/webkit-features-for-safari-26-3/)) but [caniuse zstd](https://caniuse.com/zstd) global compat 45/100 — pre-26.3 long-tail huge. Brotli still mandatory. Next.js does not currently expose a Zstd-aware compression hook for static asset serving; deploy-side encoding negotiation handles this when needed.
+**Revisit (no trigger needed)**: revisit only when caniuse Zstd global crosses 80/100 AND Next.js exposes a per-route encoding negotiation contract.

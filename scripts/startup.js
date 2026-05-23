@@ -49,7 +49,6 @@ function printStartupMessage() {
     console.log('');
     console.log(`${colors.blue}${colors.bright}📚 Useful Links:${colors.reset}`);
     console.log(`   ${colors.dim}•${colors.reset} Local:        http://localhost:3000`);
-    console.log(`   ${colors.dim}•${colors.reset} Network:      http://192.168.0.106:3000`);
     console.log(`   ${colors.dim}•${colors.reset} Health Check: http://localhost:3000/api/health`);
     console.log(`   ${colors.dim}•${colors.reset} Dev UI:        http://localhost:3000/dev/ui`);
     console.log('');

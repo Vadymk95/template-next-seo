@@ -57,8 +57,12 @@ jobs:
             - name: TypeScript check
               run: npm run type-check
 
-            - name: Run tests
-              run: npm test
+            - name: Run tests with coverage thresholds
+              # Coverage thresholds (statements 85 / branches 70 / functions 75 / lines 85)
+              # are defined in vitest.config.ts. `npm test` runs vitest WITHOUT --coverage,
+              # so the thresholds are local-only. `npm run test:coverage` enforces them on
+              # every PR. Per /consilium 2026-05-23 APPLY Item 11 (6/6 voters YES, no dissent).
+              run: npm run test:coverage
 
             - name: Cache Next.js build
               uses: actions/cache@v4
