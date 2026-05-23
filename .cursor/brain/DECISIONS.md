@@ -1,5 +1,27 @@
 # DECISIONS — template-next-seo
 
+## [2026-05] Boundary validation via Zod safeFetch + Server Action output schemas
+
+**Decision**: validate ALL external boundary crossings using Zod schemas. Wrapper: `shared/lib/api/safeFetch.ts`. Reference example: `app/actions/example-form.ts` (Server Action output schema). Pattern is opt-in for consumer forks — add per boundary.
+
+**Why (Next 16-specific)**:
+1. **Server Components fetching**: `await fetch()` in RSC returns untyped `Response`; consumers cast to expected shape. Zod parse = runtime guarantee.
+2. **Server Action returns**: Server Actions return `Promise<unknown>` to client; client must trust the shape. `ServerActionResultSchema.parse(result)` before return = client-side runtime contract.
+3. **Route handlers**: incoming body via `await request.json()` is `unknown`. Standard Zod input validation — already convention.
+4. **External APIs**: when consumer pulls from Stripe/Twilio/etc — boundary validation = SLA against vendor schema drift.
+
+**Scope**:
+- Route handlers (input + output) — `request.json()` → `Schema.safeParse(...)` + return `Schema.parse(result)`
+- Server Actions — input via `formData` schema (already pattern) + **output** via result schema (new pattern this ADR adds)
+- RSC `fetch()` calls — wrap with `safeFetch(url, schema)`
+- Client Components (if TanStack Query added later) — same `safeFetch` wrapper
+
+**When NOT to use**: trusted same-process internal calls (Server Component calling local function); throwaway prototypes; tRPC end-to-end codegen.
+
+**Trade-offs**: +0 KB bundle (Zod in deps); ~50-200μs parse per call; schemas duplicate BE types (acceptable for solo/small-team).
+
+**Revisit trigger**: if consumer ships ≥5 boundary crossings without safeFetch within 60 days of fork-start, drop from template seed (signal pattern overhead > benefit for their use case).
+
 ## Tailwind CSS v4
 
 - Configuration lives in **`app/globals.css`** (`@import 'tailwindcss'`, `@theme inline`, design tokens). **`tailwind.config.ts` removed.** PostCSS uses **`@tailwindcss/postcss`** only (no `autoprefixer`; v4 handles intended targets).
