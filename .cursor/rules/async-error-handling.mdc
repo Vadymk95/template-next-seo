@@ -7,12 +7,12 @@ alwaysApply: false
 ## Error Handling
 
 - **Always handle errors**
-- **Use ErrorBoundary** for Client Components (create in `components/common/ErrorBoundary`)
+- **Use ErrorBoundary** for Client Components (lives in `shared/ui/common/ErrorBoundary`)
 - **Use `error.tsx`** for route-level error handling in Next.js App Router
 - **ErrorBoundary includes ARIA attributes** (`role="alert"`, `aria-live="assertive"`), recovery buttons, and error monitoring hooks
 - **Show clear error messages** to users
 - **Technical error details** only visible in dev mode (production-safe)
-- **Handle loading and error states** in TanStack Query
+- **Handle loading and error states** in TanStack Query (opt-in; not in the default template)
 
 ## Next.js Error Handling
 
@@ -81,7 +81,7 @@ export default async function BlogPost({ params }: Props) {
 }
 ```
 
-### Client Components
+### Client Components (opt-in — requires adding `@tanstack/react-query`)
 
 ```typescript
 'use client';

@@ -1,6 +1,7 @@
 'use client';
 
-export const Loading = () => {
+import type { ReactElement } from 'react';
+export const Loading = (): ReactElement => {
     return (
         <div
             className="flex min-h-screen items-center justify-center"

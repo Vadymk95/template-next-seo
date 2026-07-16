@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactElement } from 'react';
 
 import { ExampleForm } from '@/features/example-form';
 
-export const ExampleFormPageClient = () => {
+export const ExampleFormPageClient = (): ReactElement => {
     const t = useTranslations('common');
 
     return (

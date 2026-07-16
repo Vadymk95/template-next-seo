@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     }
 };
 
-const DevPlaygroundLayout = ({ children }: { children: React.ReactNode }) => {
+const DevPlaygroundLayout = ({ children }: { children: React.ReactNode }): React.ReactNode => {
     if (process.env.NODE_ENV === 'production') {
         notFound();
     }

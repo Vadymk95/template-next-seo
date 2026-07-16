@@ -144,7 +144,7 @@ const updateUser = async (data: UserData) => {
 #### Test Quality
 
 - **Use proper mocks**: Mock external dependencies (APIs, etc.)
-- **Use `renderWithProviders`**: For components that need QueryClient provider
+- **Use `renderWithProviders`**: wraps components in `NextIntlClientProvider` (so `useTranslations` resolves in tests)
 - **Test user interactions**: For components, test user interactions (clicks, input, etc.)
 - **Avoid testing implementation details**: Test behavior, not implementation
 
@@ -191,7 +191,7 @@ describe('useComponentName', () => {
 // ComponentName.tsx
 'use client';
 
-export const ComponentName: FC<ComponentProps> = () => {
+export const ComponentName: FunctionComponent<ComponentProps> = () => {
     const { handleSubmit } = useComponentName();
     return <form onSubmit={handleSubmit}>...</form>;
 };

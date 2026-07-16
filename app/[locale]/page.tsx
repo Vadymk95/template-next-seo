@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
 import { routing } from '@/i18n/routing';
@@ -31,7 +32,7 @@ export const generateMetadata = async ({ params }: HomePageProps): Promise<Metad
     };
 };
 
-const HomePage = async ({ params }: HomePageProps) => {
+const HomePage = async ({ params }: HomePageProps): Promise<ReactElement> => {
     const { locale: rawLocale } = await params;
     const locale = requireLocale(rawLocale);
     setRequestLocale(locale);

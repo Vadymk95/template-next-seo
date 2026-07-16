@@ -2,7 +2,7 @@
 
 import { useReportWebVitals } from 'next/web-vitals';
 
-export function WebVitalsReporter() {
+export function WebVitalsReporter(): null {
     useReportWebVitals((metric) => {
         if (typeof fetch === 'undefined') {
             return;

@@ -28,7 +28,7 @@ alwaysApply: false
 - **Use `describe`** for grouping tests
 - **Use `it` or `test`** for individual tests
 - **Use `beforeEach`, `afterEach`** for setup/teardown when needed
-- **Use `renderWithProviders`** from test utilities for components that need QueryClient provider
+- **Use `renderWithProviders`** from test utilities — wraps the component in `NextIntlClientProvider` (locale + messages) so `useTranslations` works in tests
 
 ### Example
 

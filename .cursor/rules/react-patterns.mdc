@@ -7,7 +7,7 @@ alwaysApply: false
 ## React 19 + Next.js
 
 - **DO NOT import React from 'react'** - React 19 does not require React import for JSX
-- **Use only types from React**: `import type { FC, PropsWithChildren } from 'react'`
+- **Use only types from React**: `import type { FunctionComponent, PropsWithChildren } from 'react'`. Note: `import { FC }` is banned by ESLint (`no-restricted-imports`) — use `FunctionComponent`, or type props inline.
 - **Always use functional components**
 
 ## Server Components vs Client Components
@@ -76,14 +76,16 @@ export default AboutPage;
 ### Client Components
 
 - **Use arrow functions with named exports** - better for tree-shaking and autocomplete
-- **Type with `FC<PropsType>`** for better TypeScript support
+- **Type with `FunctionComponent<PropsType>`** (not `FC` — banned by ESLint) for better TypeScript support
 - **Named exports** preferred over default exports
 
 ```typescript
 // shared/ui/Button.tsx - Client Component
 'use client';
 
-export const Button: FC<ButtonProps> = ({ children, ...props }) => {
+import type { FunctionComponent } from 'react';
+
+export const Button: FunctionComponent<ButtonProps> = ({ children, ...props }) => {
     return <button {...props}>{children}</button>;
 };
 
@@ -204,8 +206,6 @@ export async function generateMetadata({ params }): Promise<Metadata> {
 
 ```
 hooks/
-  ├── i18n/
-  │   └── useI18nReload.ts       # Dev-only HMR hook (no tests)
   ├── user/
   │   ├── useUserProfile.ts
   │   └── useUserProfile.test.ts
@@ -213,6 +213,9 @@ hooks/
       ├── useApiQuery.ts
       └── useApiQuery.test.ts
 ```
+
+> No `hooks/` directory exists in the baseline template — create it (or keep
+> slice-local hooks under `features/*` / `entities/*`) when the first hook lands.
 
 ## Dynamic Imports
 

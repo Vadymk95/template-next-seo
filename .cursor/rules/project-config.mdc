@@ -9,7 +9,7 @@ alwaysApply: true
 
 - **Next.js**: Next.js 16 with App Router
 - **React**: React 19 with automatic JSX runtime
-- **State Management**: Zustand for global state, TanStack Query for server state
+- **State Management**: Zustand for global client state; server state via Server Components / Route Handlers (TanStack Query is opt-in, not in the default `package.json`)
 - **TypeScript**: Strict mode with `@/*` path aliases
 - **Routing**: Next.js App Router (file-based)
 - **Styling**: Tailwind CSS v4 + shadcn-style UI primitives
@@ -22,18 +22,18 @@ alwaysApply: true
 - **App Router** in `app/`:
     - `layout.tsx` - Root layout
     - `page.tsx` - Pages (file-based routing)
-    - `providers.tsx` - Client providers (QueryClient, etc.)
+    - `providers.tsx` - Client providers (analytics init on idle; i18n lives in `NextIntlClientProvider` in `[locale]/layout.tsx`)
     - `loading.tsx` - Loading UI
     - `error.tsx` - Error UI
     - `not-found.tsx` - 404 page
 - **Shared** in `shared/`:
     - `ui/` - Shadcn UI primitives (button, input, card, etc.)
-    - `lib/` - Utilities and configs (queryClient, utils, i18n, etc.)
+    - `lib/` - Utilities and configs (`env`, `logger`, `cspHeader`, `rateLimit`, `utils`, `utils-store`, etc.; i18n config lives in root `i18n/`)
     - `types/` - Shared TypeScript types
     - `constants/` - Shared constants
-- **Entities** in `entities/` (business entities, each in its own folder with store/model)
-- **Features** in `features/` (isolated features with ui/model/api segments)
-- **Hooks** in `hooks/` (organized by domain)
+- **Entities** in `entities/` (business entities, each in its own folder with store/model) — **not in the baseline template**; the directory is created on first domain extraction
+- **Features** in `features/` (isolated features with ui/model/api segments) — baseline ships `features/example-form`
+- **Hooks** in `hooks/` (organized by domain) — **no `hooks/` directory exists in the baseline**; create it (or keep slice-local hooks under `features/*` / `entities/*`) when the first hook lands
 
 ## SEO Configuration
 
@@ -60,6 +60,19 @@ export const metadata: Metadata = {
 };
 ```
 
+## UI Quality — avoid the "AI aesthetic"
+
+AI-generated UI has recognizable tells. For any UI work reject the generic default in favour of this template's design tokens (`@theme inline` + `:root` / `.dark` HSL vars in `app/globals.css`). This is a public, SEO-facing template — "AI slop" output is a tell and ships into every fork.
+
+- **Palette** — brand is **blue** (`--primary` = `hsl(221.2 83.2% 53.3%)`) on slate neutrals (`--secondary` / `--muted` / `--accent`), `--destructive` red. Use semantic classes (`bg-primary`, `text-foreground`, `bg-muted`, `border-border`, `ring-ring`) — never raw `purple-*` / `indigo-*` or arbitrary hex.
+- **Gradients** — none in `@theme`; keep surfaces flat. `tw-animate-css` is the only sanctioned animation layer — no hand-rolled gradient washes or glows.
+- **Radius** — tokens derive from `--radius: 0.5rem` (`--radius-sm` / `-md` / `-lg`). Vary radius by hierarchy; don't slap `rounded-2xl` / `rounded-full` on every card and button.
+- **Layout** — content-first and priority-driven (this is an SEO surface — the H1 and copy carry ranking weight), not a decorative hero followed by a uniform grid of identical cards.
+- **Copy** — realistic strings from `messages/<locale>.json` (next-intl), never lorem-ipsum; real length surfaces wrapping / overflow / truncation during dev.
+- **Padding & shadows** — no shadow tokens exist in `@theme`; lean on `shadow-*` sparingly (or `border-border` separation). Use the spacing scale, not blanket oversized padding.
+- **Dark mode** — every surface must read in both themes; verify against `.dark` tokens, don't tune light only.
+- **Baseline APIs only** — stick to Baseline "Widely available" (`:has()`, container queries, `<dialog>`, `scroll-snap`, view-transitions); don't reach for "Newly available" (e.g. `scheduler.yield()`) without a fallback.
+
 ## Accessibility
 
 - **Use semantic HTML tags**
@@ -69,45 +82,47 @@ export const metadata: Metadata = {
 - **Use shadcn/ui components** which include accessibility features
 - **Don't overuse ARIA** - prefer semantic HTML first
 
-## Internationalization (i18n)
+## Internationalization (i18n) — next-intl SSR
 
-- **i18n included by default** with production-ready configuration
-- **Lazy Loading**: Translations loaded from `/public/locales/{lng}/{ns}.json` via HTTP
-- **Caching**: Built-in i18next caching prevents redundant downloads
-- **Language Detection**: Automatically detects language from localStorage → browser → fallback 'en'
-- **Namespace Structure**: `common` (UI elements), `errors` (API/HTTP/validation errors), page-specific namespaces
-- **Initial Load**: Loads `common`, `errors`, and current page namespace on mount
-- **Lazy Loading**: Feature namespaces are loaded on demand when components use them
+- **next-intl App Router SSR** with a `[locale]` route segment; translations render on the server (no client-side JSON fetch, **no `public/locales/*`**).
+- **Single source of truth**: `messages/<locale>.json` (flat namespace tree: `common`, `errors`, `home`, `meta`, …).
+- **Config** lives under `i18n/` at repo root: `routing.ts` (`defineRouting({ locales: ['en'], defaultLocale: 'en' })`), `request.ts` (`getRequestConfig` messages loader), `navigation.ts` (typed `Link` / `redirect` / hooks), `request-locale.ts` (`requireLocale` narrowing).
+- **Locale set is `['en']`** by default — expand only when the caller asks.
+- **Type safety**: `global.d.ts` augments next-intl's `AppConfig`; `t('key')` calls are compile-time checked.
 
 ### Structure
 
 ```
-public/locales/
-  en/
-    common.json    # UI elements, buttons, general phrases
-    errors.json    # API/HTTP/validation errors
-    home.json      # HomePage-specific content
+i18n/
+  routing.ts        # defineRouting({ locales, defaultLocale })
+  request.ts        # getRequestConfig (messages loader)
+  navigation.ts     # createNavigation (typed Link / redirect / hooks)
+messages/
+  en.json           # single source of truth (common, errors, home, meta, …)
 ```
 
 ### Usage in Components
 
 ```typescript
+// Server Component
+import { getTranslations } from 'next-intl/server';
+
+const t = await getTranslations('home');
+return <h1>{t('title')}</h1>;
+```
+
+```typescript
 // Client Component
 'use client';
 
-import { useTranslation } from 'react-i18next';
+import { useTranslations } from 'next-intl';
 
-const { t } = useTranslation(['common', 'home']);
-return <h1>{t('home:title')}</h1>;
+const t = useTranslations('home');
+return <h1>{t('title')}</h1>;
 ```
 
 ### Adding a New Language
 
-1. Create `public/locales/{lng}/` directory (e.g., `public/locales/uk/`)
-2. Copy JSON files from `en/` and translate
-3. Add language to `SUPPORTED_LANGUAGES` in `shared/lib/i18n/constants.ts`
-
-### Adding a New Namespace
-
-1. Create `public/locales/en/{namespace}.json`
-2. Load namespace when needed: `useTranslation(['common', 'namespace'])`
+1. Add the code to `locales` in `i18n/routing.ts`
+2. Create `messages/<code>.json` (copy `en.json`, translate values)
+3. Middleware and `alternates.languages` pick up the new locale automatically

@@ -1,8 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactElement } from 'react';
 
-export const HomePageClient = () => {
+export const HomePageClient = (): ReactElement => {
     const t = useTranslations('home');
 
     return (

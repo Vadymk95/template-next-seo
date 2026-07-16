@@ -26,22 +26,22 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
         return { hasError: true, error };
     }
 
-    componentDidCatch(error: Error, info: ErrorInfo) {
+    componentDidCatch(error: Error, info: ErrorInfo): void {
         logger.error('ErrorBoundary caught an error', error, {
             componentStack: info.componentStack,
             errorBoundary: true
         });
     }
 
-    handleReset = () => {
+    handleReset = (): void => {
         this.setState({ hasError: false, error: null });
     };
 
-    handleReload = () => {
+    handleReload = (): void => {
         window.location.reload();
     };
 
-    render() {
+    render(): ReactNode {
         if (this.state.hasError && this.state.error) {
             return (
                 <ErrorFallback

@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactElement } from 'react';
+
 import { logger } from '@/shared/lib/logger';
 
 export default function GlobalError({
@@ -8,7 +10,7 @@ export default function GlobalError({
 }: {
     error: Error & { digest?: string };
     reset: () => void;
-}) {
+}): ReactElement {
     logger.error('[global-error]', error);
 
     return (

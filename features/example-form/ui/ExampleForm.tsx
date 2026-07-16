@@ -27,7 +27,7 @@ export const ExampleForm: FunctionComponent = () => {
         resolver: zodResolver(exampleFormSchema)
     });
 
-    const onSubmit = async (data: ExampleFormSchema) => {
+    const onSubmit = async (data: ExampleFormSchema): Promise<void> => {
         clearErrors();
         setSubmitSuccess(false);
         const formData = new FormData();

@@ -13,11 +13,11 @@ alwaysApply: true
     - Test strategy (which parts use TDD, which use hybrid approach)
     - Any dependencies or considerations
 - **Only after required confirmation**: Proceed with implementation once the required repo approval has been given
-- **Exception**: For very simple, single-file changes (up to 10 lines), planning can be skipped, but still inform user about the change
+- **Exception**: For trivial leaf edits (self-contained, no danger-zone / contract surface), planning can be skipped, but still inform user about the change
 
 ## Approval & Brain (see `agent-pipeline.mdc`)
 
-- **Threshold**: Changes **> 10 lines** or touching **Zustand** / **TanStack Query** / **Server Actions** / **API contracts** / **App Router routes** need **explicit approval** before coding; **< 10 lines** — brief notification is enough (Phase 2 gate).
+- **Threshold (by risk, not LOC)**: Changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits** — brief notification is enough (Phase 2 gate).
 - **Brain**: After meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Phase 5).
 
 ## Implementation Workflow (TDD Integration)
@@ -76,7 +76,7 @@ alwaysApply: true
 ### Before Committing
 
 - **ALWAYS check files before committing and pushing**
-- Run linting: `npm run lint` (`eslint . --max-warnings 0`)
+- Run linting: `npm run lint` (oxlint → `eslint . --max-warnings 0`)
 - Run formatting check: `npm run format:check` or `prettier --check .`
 - Run tests: `npm test` or `vitest run`
 - Fix any errors or warnings before committing

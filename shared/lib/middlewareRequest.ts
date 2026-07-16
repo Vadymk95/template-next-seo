@@ -8,7 +8,7 @@
  */
 
 export type RequestHeadersLike = {
-    get(name: string): string | null;
+    get: (name: string) => string | null;
 };
 
 /** Minimal request shape for rate-limit identity (NextRequest satisfies this). */

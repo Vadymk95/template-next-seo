@@ -1,11 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactElement } from 'react';
 
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/shared/ui';
 
-const NotFound = () => {
+const NotFound = (): ReactElement => {
     const tCommon = useTranslations('common');
     const tErrors = useTranslations('errors');
 

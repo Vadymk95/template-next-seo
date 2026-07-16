@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import type { ReactElement } from 'react';
 
 import { getPublicEnv } from '@/shared/lib/env';
 
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     }
 };
 
-const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>) => {
+const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>): ReactElement => {
     return (
         <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
             <head>

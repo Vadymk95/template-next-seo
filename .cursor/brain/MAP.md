@@ -7,6 +7,7 @@
 | `app/layout.tsx`                | Root layout: fonts, `<head>` preconnects, `WebVitalsReporter`, `Providers`, static `title.default` + `title.template` (cascades to descendants); no Header/Footer here |
 | `app/[locale]/layout.tsx`       | Locale segment: `generateStaticParams` from `routing.locales`, `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets locale-specific `description` / `openGraph` / `twitter` only (title inherits from root) |
 | `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` emits `alternates.languages` per routing locale |
+| `app/[locale]/HomePageClient.tsx` | Client island for the home page |
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
 | `app/[locale]/not-found.tsx`    | Locale-scoped 404                                                  |
 | `app/[locale]/error.tsx`        | Locale error boundary                                              |
@@ -19,6 +20,7 @@
 | `i18n/routing.ts`               | `defineRouting({ locales: ['en'], defaultLocale: 'en' })` — single source for locales |
 | `i18n/request.ts`               | `getRequestConfig` — validates locale, loads `messages/<locale>.json` |
 | `i18n/navigation.ts`            | `createNavigation(routing)` — `Link`, `redirect`, `usePathname`, `useRouter` bound to locales |
+| `i18n/request-locale.ts`        | `requireLocale()` — narrows the route param to `Locale` (throws notFound on unknown); every `[locale]` page/layout entry calls it before `setRequestLocale` |
 | `messages/en.json`              | Server + client translations (replaces `public/locales/en/*.json`) |
 | `app/dev/ui/`                   | Dev UI playground                                                  |
 | `app/api/health/route.ts`       | Health check                                                       |
@@ -30,7 +32,7 @@
 
 ## Shared
 
-- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `web-vitals`, `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; `shared/lib/i18n/` was removed with the next-intl migration.)
+- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "Boundary validation"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; `shared/lib/i18n/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
 - **`shared/ui/`**: Button, Input, layout chrome, ErrorBoundary, `WithSuspense`.
 - **`shared/constants/`**, **`shared/types/`**: cross-cutting definitions.
 

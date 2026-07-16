@@ -35,22 +35,25 @@ alwaysApply: true
 
 ### Folders and Files
 
-- **App Router** in `app/`:
+This repo uses **FSD layering** (`app → features → entities → shared`), not a flat
+`components/` / `store/` / `lib/` layout.
+
+- **App Router** in `app/` (document routes live under `app/[locale]/*`):
     - `layout.tsx` - Layouts (Server Components by default)
     - `page.tsx` - Pages (Server Components by default)
     - `loading.tsx` - Loading UI
     - `error.tsx` - Error UI
     - `not-found.tsx` - 404 page
-    - `route.ts` - API routes
-- **Components** in `components/`:
-    - `ui/` - UI primitives (Shadcn UI components)
-    - `common/` - Common components (ErrorBoundary, etc.)
-    - `features/` - Feature components
-- **Hooks** in `hooks/` (organized by domain)
-- **Store** in `store/` (Zustand stores, each in its own folder with tests)
-- **Lib** in `lib/` (queryClient, utils, i18n, etc.)
-- **Types** in `types/` (if exists)
-- **Constants** in `constants/` (if exists)
+    - `route.ts` - API routes (`app/api/**`)
+    - `actions/` - Server Actions
+- **Shared** in `shared/`:
+    - `ui/` - UI primitives (shadcn-style) + `common/` (ErrorBoundary, Header, Footer)
+    - `lib/` - utilities and configs (`env`, `logger`, `utils`, `utils-store`, etc.)
+    - `types/` - shared TypeScript types
+    - `constants/` - shared constants
+- **Features** in `features/` (isolated slices: `ui/` + `model/`)
+- **Entities** in `entities/` (domain slices; created on first domain extraction)
+- **i18n** config in `i18n/`; translations in `messages/<locale>.json`
 
 ## Accessibility
 

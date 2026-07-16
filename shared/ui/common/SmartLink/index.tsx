@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentProps, MouseEvent } from 'react';
+import type { ComponentProps, MouseEvent, ReactElement } from 'react';
 
 import { Link, usePathname } from '@/i18n/navigation';
 
@@ -18,11 +18,11 @@ const extractPathname = (href: SmartLinkProps['href']): string => {
     return href.pathname ?? '';
 };
 
-export const SmartLink = ({ href, onClick, ...rest }: SmartLinkProps) => {
+export const SmartLink = ({ href, onClick, ...rest }: SmartLinkProps): ReactElement => {
     const pathname = usePathname();
     const isActive = pathname === extractPathname(href);
 
-    const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    const handleClick = (event: MouseEvent<HTMLAnchorElement>): void => {
         const isModifiedClick =
             event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
         if (isActive && !isModifiedClick && !event.defaultPrevented) {

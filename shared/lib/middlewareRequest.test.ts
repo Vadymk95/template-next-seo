@@ -7,7 +7,7 @@ import {
     type RateLimitRequestLike
 } from './middlewareRequest';
 
-function headersFrom(init: Record<string, string>): { get(name: string): string | null } {
+function headersFrom(init: Record<string, string>): { get: (name: string) => string | null } {
     const lower = new Map(Object.entries(init).map(([k, v]) => [k.toLowerCase(), v] as const));
     return {
         get(name: string) {

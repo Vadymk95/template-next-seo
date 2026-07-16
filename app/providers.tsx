@@ -4,7 +4,7 @@ import { useEffect, type FunctionComponent, type ReactNode } from 'react';
 
 export const Providers: FunctionComponent<{ children: ReactNode }> = ({ children }) => {
     useEffect(() => {
-        const initAnalytics = () => {
+        const initAnalytics = (): void => {
             if ('requestIdleCallback' in window) {
                 requestIdleCallback(
                     () => {

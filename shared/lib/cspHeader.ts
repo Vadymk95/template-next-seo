@@ -3,7 +3,11 @@
  * nonce-based policy for proxy-handled routes (API / dev).
  */
 
-import { CSP_REPORTING_ENDPOINT_NAME } from '@/shared/constants';
+// This file is part of the next.config.ts import graph — Next transpiles that
+// graph standalone, before any bundler `@/` alias resolution exists, so every
+// import reachable from next.config.ts must stay relative.
+// eslint-disable-next-line no-restricted-imports
+import { CSP_REPORTING_ENDPOINT_NAME } from '../constants';
 
 export const CSP_NONCE_HEADER = 'x-nonce';
 

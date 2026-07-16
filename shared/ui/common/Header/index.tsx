@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactElement } from 'react';
 
 import { SmartLink } from '@/shared/ui/common/SmartLink';
 
-export const Header = () => {
+export const Header = (): ReactElement => {
     const t = useTranslations('common');
 
     return (

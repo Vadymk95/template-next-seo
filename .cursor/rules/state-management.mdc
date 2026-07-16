@@ -1,17 +1,16 @@
 ---
-description: "Zustand stores and TanStack Query patterns for Next.js"
-globs: ["**/store/**/*.ts", "**/*.tsx"]
+description: "Zustand and (opt-in) TanStack Query patterns for Next.js"
+globs: ["**/entities/**/*.ts", "**/utils-store/**/*.ts", "**/*.tsx"]
 alwaysApply: false
 ---
 
 ## State Management
 
-- **Use Zustand** for global client state management (stores in `store/`)
-- **Each store should be in its own folder** with tests alongside (e.g., `store/user/userStore.ts` + `userStore.test.ts`)
-- **Use `createSelectors` utility** from `store/utils/createSelectors.ts` for auto-selectors
+- **Use Zustand** for global client state management. The template ships **no** store by default; add stores inside FSD slices (`entities/<name>/model/` for domain state) — there is no root `store/` directory.
+- **Each store should be in its own folder** with tests alongside (e.g., `entities/user/model/userStore.ts` + `userStore.test.ts`)
+- **Use the `createSelectors` utility** from `shared/lib/utils-store/createSelectors.ts` for auto-selectors
 - **Store exports both regular selector and auto-selector**: `useStore((state) => state.value)` or `useStore.use.value()`
-- **Use TanStack Query** for server state and data fetching
-- **Configure QueryClient** in `lib/queryClient.ts` using `createQueryClient()` helper
+- **Server state**: prefer Server Components / Route Handlers (default). **TanStack Query is opt-in** — it is not in the default `package.json`; add it in-repo only when a client-side cache is needed.
 - **Keep local state in components** when possible, use Zustand for shared state
 - **Client Components only** - Zustand stores must be used in Client Components ('use client')
 
@@ -25,31 +24,34 @@ alwaysApply: false
 ### Example Structure
 
 ```
-store/
+entities/
   ├── user/
-  │   ├── userStore.ts
-  │   └── userStore.test.ts
-  ├── settings/
-  │   ├── settingsStore.ts
-  │   └── settingsStore.test.ts
-  └── utils/
-      └── createSelectors.ts
+  │   └── model/
+  │       ├── userStore.ts
+  │       └── userStore.test.ts
+  └── settings/
+      └── model/
+          ├── settingsStore.ts
+          └── settingsStore.test.ts
+
+shared/lib/utils-store/
+  └── createSelectors.ts        # shared auto-selector helper
 ```
 
 ### Example Usage
 
 ```typescript
-// store/user/userStore.ts
+// entities/user/model/userStore.ts
 'use client';
 
 import { create } from 'zustand';
-import { createSelectors } from '../utils/createSelectors';
+import { createSelectors } from '@/shared/lib/utils-store/createSelectors';
 
 const useUserStoreBase = create(...);
 export const useUserStore = createSelectors(useUserStoreBase);
 
 // Import directly
-import { useUserStore } from '@/store/user/userStore';
+import { useUserStore } from '@/entities/user/model/userStore';
 
 // In Client Component
 'use client';
@@ -62,9 +64,13 @@ export const UserProfile = () => {
 };
 ```
 
-## TanStack Query in Next.js
+## TanStack Query in Next.js (opt-in — not in the default template)
 
-- **Provider in `app/providers.tsx`** - wraps app with QueryClientProvider
+The default `package.json` has no `@tanstack/react-query`, and `app/providers.tsx`
+wires analytics only. Add the dependency and a `QueryClientProvider` first if a fork
+needs the patterns below.
+
+- **Provider in `app/providers.tsx`** - wrap the app with `QueryClientProvider`
 - **Server Components**: Use `fetch` directly or Server Actions
 - **Client Components**: Use `useQuery`, `useMutation` hooks
 - **Server-side data fetching**: Use async Server Components

@@ -1,8 +1,10 @@
 'use client';
 
+import type { ReactElement } from 'react';
+
 import { Button, Input } from '@/shared/ui';
 
-const DevPlaygroundPage = () => {
+const DevPlaygroundPage = (): ReactElement => {
     return (
         <div className="container mx-auto max-w-4xl space-y-8 p-8">
             <div className="space-y-2">

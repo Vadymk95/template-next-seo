@@ -1,12 +1,18 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
+import { useEffect, type ReactElement } from 'react';
 
 import { logger } from '@/shared/lib/logger';
 import { Button } from '@/shared/ui';
 
-const Error = ({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) => {
+const Error = ({
+    error,
+    reset
+}: {
+    error: Error & { digest?: string };
+    reset: () => void;
+}): ReactElement => {
     const tCommon = useTranslations('common');
     const tErrors = useTranslations('errors');
 

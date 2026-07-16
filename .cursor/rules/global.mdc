@@ -12,6 +12,33 @@ priority: 95
 - **Any task MUST begin** with the protocol in **`agent-pipeline.mdc`** (Priority 100).
 - Phases: Discovery → Simulation → TDD Execution → Verification → Brain Sync → Confidence.
 
+## 0.1 Conditional Rule Routing
+
+Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply: false` rules are not always injected for a task, and silently skipping them is a real failure mode. Before planning/editing in a task area, **explicitly read the matching conditional rules** below (the `alwaysApply: true` rules — `agent-pipeline`, `code-style`, `fsd-architecture`, `project-config`, `workflow`, `test-driven-development`, this file — are always loaded and are not listed here):
+
+- **React / UI / Server or Client Components / Metadata** → `react-patterns.mdc`, `performance.mdc`
+- **App Router routes / layouts / `sitemap` / `robots` / `generateMetadata`** → `routing.mdc`, `react-patterns.mdc`
+- **New behavioral component or changed behavior** → also `testing.mdc` **before** implementation
+- **Tests / fixtures / mocks** → `testing.mdc` (+ `shared/lib/test-utils`)
+- **API route handlers / Server Actions / payload contracts** → `routing.mdc`, `resilience.mdc`, `async-error-handling.mdc`, `typescript.mdc`
+- **Zustand stores / `createSelectors` / client-global state** → `state-management.mdc`, `typescript.mdc`
+- **Async / error handling / debugging** → `async-error-handling.mdc`, `resilience.mdc`
+- **Styling / render-perf / memo / list keys** → `performance.mdc`
+- **Constants / enums** → `constants.mdc`
+- **Types / interfaces / file-size discipline** → `typescript.mdc`, `engineering-standards.mdc`
+- **Commit flow** → `commit-command.mdc`
+
+`agent-pipeline.mdc` Phase 1 enforces this: load the matching rules, then emit a **Rule Receipt** listing the ones actually loaded.
+
+## Danger zones — FROZEN / PROTECTED (read SKELETONS before touching)
+
+These are not "prefer not to" — they are **do-not-touch by default**. Read `.cursor/brain/SKELETONS.md` before any edit here, and get explicit approval first (see `agent-pipeline.mdc` Anti-patterns + Phase 2 gate).
+
+- **Security surface is FROZEN** unless the task is *explicitly* security work: do not touch CSP directives in `next.config.ts`, the nonce pipeline / middleware composition order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers. `proxy.ts` composes rate-limit → nonce CSP → next-intl in a specific order — **never add a branch before the rate limiter**, and keep static (`next.config.ts`) and nonce (`proxy.ts`) CSP in sync. Treat any such edit as a **security review** (committed `CLAUDE.md` invariant 7; SKELETONS "`proxy` composition", "COOP / CORP / strict CSP").
+- **Template scaffolding is PROTECTED** — `lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, and every site marked `// Template scaffolding` are load-bearing examples, not dead code. **Never** strip them in an "unused code" pass; remove ONLY after the caller confirms "this is now my MVP, not the template" (committed `CLAUDE.md` invariant 8; SKELETONS "Template scaffolding").
+- **`app/[locale]/*`**: every page/layout entry MUST call `setRequestLocale(locale)` before any client descendant — a missing call swallows errors as `Error(void 0)` in prerender (SKELETONS "i18n"). **Locale set stays `['en']`** until the caller asks to expand it.
+- **Production build is `npm run build` (`next build --webpack`)** — custom `splitChunks` are ignored under Turbopack; do not switch the default build tool (SKELETONS "Custom `webpack()`").
+
 ## Intelligence & Context
 
 - **Reasoning**: Use `sequential-thinking` for multi-step work; `context7` for library docs.

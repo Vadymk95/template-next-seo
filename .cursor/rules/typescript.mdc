@@ -7,7 +7,7 @@ alwaysApply: false
 ## TypeScript Typing
 
 - **Always type everything** - variables, functions, props, hooks
-- **Avoid `any`** - linter does not allow `any` usage
+- **NEVER use `any` in new / touched code** — `@typescript-eslint/no-explicit-any` is an ESLint **error** outside tests (`eslint.config.js`), so `any` fails the lint gate. Do not reach for `as any` / `// eslint-disable` to get past it; fix the type.
 - **Use `unknown`** if type is truly unknown, then narrow via type guards
 - **Use `type`** for type aliases, `interface` for extensible structures
 

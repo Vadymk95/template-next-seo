@@ -124,6 +124,25 @@ export default defineConfig([
                 'error',
                 { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }
             ],
+            // ─── Explicit in/out contracts ───────────────────────────────────
+            // Every named function declares its output: a variable annotation
+            // (const X: FunctionComponent<Props> = () => …), an explicit return
+            // type (const useX = (): UseXResult => …), or for RSC/route entries
+            // `async function Page(): Promise<ReactElement>`. Inline callbacks
+            // passed as arguments/JSX props stay free (allowExpressions).
+            '@typescript-eslint/explicit-function-return-type': [
+                'error',
+                {
+                    allowExpressions: true,
+                    allowTypedFunctionExpressions: true,
+                    allowHigherOrderFunctions: true,
+                    allowIIFEs: true
+                }
+            ],
+            // Property-style signatures (`onSelect: (id: string) => void`) get
+            // strict contravariant parameter checks; method style (`onSelect(id)`)
+            // is checked bivariantly — looser, can hide unsound narrowing.
+            '@typescript-eslint/method-signature-style': ['error', 'property'],
             '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/no-misused-promises': [
                 'error',
@@ -145,6 +164,8 @@ export default defineConfig([
     {
         files: ['**/*.{test,spec}.{ts,tsx}', 'shared/lib/test-utils/**/*.{ts,tsx}'],
         rules: {
+            // Test helpers/fixtures don't need declared return contracts.
+            '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/no-empty-function': 'off',
             '@typescript-eslint/no-non-null-assertion': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
@@ -165,6 +186,7 @@ export default defineConfig([
         },
         rules: {
             ...tseslint.configs.disableTypeChecked.rules,
+            '@typescript-eslint/explicit-function-return-type': 'off',
             'import-x/no-cycle': 'off',
             'import-x/order': 'off',
             'no-console': 'off'

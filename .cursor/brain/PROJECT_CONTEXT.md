@@ -40,4 +40,4 @@ Imports use the `@/*` path alias (repo root).
 
 ## CI
 
-GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → unit tests → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
+GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.

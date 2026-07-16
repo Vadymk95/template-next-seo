@@ -14,7 +14,7 @@ The project uses **Feature-Sliced Design** architecture for maximum scalability.
 app → features → entities → shared
 ```
 
-**Import Rule:** Layers can only import from layers below them.
+**Import Rule (one-way, strict):** a layer may import ONLY from layers below it (`app → features → entities → shared`). NEVER import upward — `shared` must never import from `entities` / `features` / `app`, and `entities` must never import from `features` / `app`. Cross-imports within the same layer (feature → feature, entity → entity) are also forbidden. Always use `@/*` aliases; parent-relative `../` is an ESLint **error** (`eslint.config.js` `no-restricted-imports`).
 
 - **app** - topmost layer, application initialization
 - **features** - business features, use entities and shared
@@ -71,7 +71,13 @@ import { ExampleForm } from '@/features/example-form'; // ✅ features
 import { UserCard } from '@/features/user/ui/UserCard'; // ❌ features → features
 ```
 
-**Rule:** Features should not import each other directly. Use shared components or pass through props.
+```typescript
+// shared/ui/Button.tsx
+import { useUserStore } from '@/entities/user'; // ❌ shared → entities (upward import)
+import { ExampleForm } from '@/features/example-form'; // ❌ shared → features (upward import)
+```
+
+**Rule:** Features should not import each other directly (use shared components or pass through props). Lower layers (`shared`, `entities`) must NEVER reach upward into `features` / `app` — invert the dependency (pass data in via props/params) instead.
 
 ### Segments
 
@@ -94,7 +100,7 @@ export { ExampleForm } from './ui';
 export type { ExampleFormData } from './model/types';
 
 // Allowed exception (store/hook direct import)
-// import { useUserStore } from '@/store/user/userStore';
+// import { useUserStore } from '@/entities/user/model/userStore';
 ```
 
 ### Architecture Validation

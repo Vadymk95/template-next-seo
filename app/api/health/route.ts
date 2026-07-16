@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 // Edge runtime for faster cold start
 export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
     const health = {
         status: 'ok',
         timestamp: new Date().toISOString()

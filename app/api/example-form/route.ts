@@ -11,7 +11,7 @@ import { requireSameOrigin } from '@/shared/lib/requireSameOrigin';
 // Edge runtime for faster cold start (optional - can be removed if you need Node.js APIs)
 // export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
     try {
         const data = {
             message: 'Hello from API route',
@@ -33,7 +33,7 @@ export async function GET() {
     }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
     const originDenied = requireSameOrigin(request);
     if (originDenied) {
         return originDenied;

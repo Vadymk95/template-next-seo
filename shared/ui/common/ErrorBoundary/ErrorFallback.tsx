@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ReactElement } from 'react';
 
 import { Button } from '@/shared/ui/button';
 
@@ -10,7 +11,7 @@ interface ErrorFallbackProps {
     onReload: () => void;
 }
 
-export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps) => {
+export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps): ReactElement => {
     const tCommon = useTranslations('common');
     const tErrors = useTranslations('errors');
     const isDev = process.env.NODE_ENV === 'development';

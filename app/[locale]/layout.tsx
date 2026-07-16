@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
 import { routing } from '@/i18n/routing';
 import { Footer, Header } from '@/shared/ui';
 
-export const generateStaticParams = () => {
+export const generateStaticParams = (): { locale: (typeof routing.locales)[number] }[] => {
     return routing.locales.map((locale) => ({ locale }));
 };
 
@@ -40,7 +41,7 @@ export const generateMetadata = async ({
     };
 };
 
-const LocaleLayout = async ({ children, params }: LocaleLayoutProps) => {
+const LocaleLayout = async ({ children, params }: LocaleLayoutProps): Promise<ReactElement> => {
     const { locale: rawLocale } = await params;
     const locale = requireLocale(rawLocale);
     setRequestLocale(locale);

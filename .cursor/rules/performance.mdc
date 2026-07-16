@@ -15,7 +15,7 @@ alwaysApply: false
 - **Use `useCallback`** when passing functions as props to memoized child components
   - Only if child component is wrapped in `React.memo`
   - If unsure, ask before implementing
-- **Leverage TanStack Query caching** for data fetching
+- **Leverage TanStack Query caching** for data fetching (opt-in; only if the fork adds `@tanstack/react-query`)
 - **Don't optimize prematurely** - performance optimizations should be based on actual needs
 
 ### Next.js Optimizations
@@ -52,6 +52,17 @@ import Image from 'next/image';
     priority // For above-the-fold images
 />
 ```
+
+### Rendering & loading priority
+
+- **LCP hero image**: give the above-the-fold hero `priority` (`next/image` emits
+  `fetchpriority="high"` + a `<link rel="preload">`); never `loading="lazy"` it.
+- **Below-the-fold sections**: apply `content-visibility: auto` (with a
+  `contain-intrinsic-size` hint) to skip rendering/layout work until scrolled into view.
+- **Long lists (≥ 50 rows)**: virtualize with TanStack Virtual / `react-window`
+  instead of rendering every row.
+- Stay on Baseline "Widely available" APIs — do **not** use `scheduler.yield()` to
+  break up long tasks; prefer chunking work or `requestIdleCallback`.
 
 ### Static Generation
 

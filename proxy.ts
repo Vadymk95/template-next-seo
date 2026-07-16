@@ -67,7 +67,7 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
     return null;
 }
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
     const pathname = request.nextUrl.pathname;
 
     if (isAssetPath(pathname)) {

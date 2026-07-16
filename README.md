@@ -527,9 +527,7 @@ npm start
 
 ## Removed dependencies (restore playbook)
 
-These packages were stripped as unused. Commands to restore if a feature needs them again:
-
-- **`web-vitals`** — removed with `shared/lib/web-vitals.ts`. The app uses `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). To restore the raw wrapper: `npm install web-vitals`, then recreate the wrapper module and re-export it from `shared/lib/index.ts`.
+- **`shared/lib/web-vitals.ts` wrapper** — removed; the app reports via `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). The raw **`web-vitals`** package is pinned as an explicit dependency (`^5.2.0`) for fork-time access to attribution metrics not exposed by the wrapper (see `.cursor/brain/DECISIONS.md`, 2026-05 ADR). To restore the wrapper module, recreate it and re-export from `shared/lib/index.ts` — no install needed.
 
 ## Troubleshooting — stale content in dev
 
