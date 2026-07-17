@@ -41,6 +41,8 @@ alwaysApply: true
 4. ✅ **Check TypeScript**: `npx tsc --noEmit` — should have no type errors
 5. ✅ **Fix all found issues** before committing
 
+The individual commands above are targeted iteration checks. **The canonical pre-commit gate is `npm run verify:enterprise`** (alias `npm run verify`) — it additionally runs `scripts/check-hooks.mjs`, tests, and the production build; run it before every commit.
+
 **Rules:**
 
 - ❌ **DO NOT commit** code with linter or formatting errors
@@ -75,10 +77,8 @@ alwaysApply: true
 
 ### Before Committing
 
-- **ALWAYS check files before committing and pushing**
-- Run linting: `npm run lint` (oxlint → `eslint . --max-warnings 0`)
-- Run formatting check: `npm run format:check` or `prettier --check .`
-- Run tests: `npm test` or `vitest run`
+- **ALWAYS run the canonical gate before committing and pushing**: `npm run verify:enterprise` (alias `npm run verify`) — `scripts/check-hooks.mjs` → lint → format:check → tsc → test → build
+- Individual commands (`npm run lint`, `npm run format:check`, `npm test`) are fine for iterating on a fix, but do not replace the gate
 - Fix any errors or warnings before committing
 
 ### Commit Message Format

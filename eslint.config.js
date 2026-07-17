@@ -156,7 +156,7 @@ export default defineConfig([
     },
     prettierRecommended,
     {
-        files: ['shared/lib/logger.ts', 'shared/lib/web-vitals.ts'],
+        files: ['shared/lib/logger.ts'],
         rules: {
             'no-console': 'off'
         }

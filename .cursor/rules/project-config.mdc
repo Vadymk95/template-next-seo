@@ -19,13 +19,14 @@ alwaysApply: true
 
 ### Folders and Files
 
-- **App Router** in `app/`:
-    - `layout.tsx` - Root layout
-    - `page.tsx` - Pages (file-based routing)
+- **App Router** in `app/` (document routes live under `app/[locale]/*`):
+    - `layout.tsx` - Root layout (fonts, `WebVitalsReporter`, `Providers`, title cascade; no Header/Footer)
+    - `global-error.tsx` - Root catastrophic error UI
     - `providers.tsx` - Client providers (analytics init on idle; i18n lives in `NextIntlClientProvider` in `[locale]/layout.tsx`)
-    - `loading.tsx` - Loading UI
-    - `error.tsx` - Error UI
-    - `not-found.tsx` - 404 page
+    - `[locale]/page.tsx` + `[locale]/example-form/` - Pages (file-based routing under the locale segment)
+    - `[locale]/error.tsx` - Locale-scoped error boundary
+    - `[locale]/not-found.tsx` - Locale-scoped 404 page
+    - No `loading.tsx` in the baseline - add per segment when a route gains slow data fetching
 - **Shared** in `shared/`:
     - `ui/` - Shadcn UI primitives (button, input, card, etc.)
     - `lib/` - Utilities and configs (`env`, `logger`, `cspHeader`, `rateLimit`, `utils`, `utils-store`, etc.; i18n config lives in root `i18n/`)

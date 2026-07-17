@@ -4,158 +4,142 @@ globs: ["**/app/**/*.tsx", "**/app/**/*.ts"]
 alwaysApply: false
 ---
 
-## Next.js App Router
+## Next.js App Router (next-intl SSR)
 
 - **File-based routing** - files in `app/` directory automatically become routes
-- **No router configuration needed** - Next.js handles routing automatically
+- **Document routes live under `app/[locale]/*`** - next-intl SSR with `localePrefix: 'always'` (`i18n/routing.ts`); the next-intl middleware composed in `proxy.ts` redirects/rewrites unprefixed document requests to the locale-prefixed URL
 - **Server Components by default** - all pages are Server Components unless marked with 'use client'
+- **Non-document surfaces stay OUTSIDE `[locale]`**: `app/api/**` route handlers, `app/actions/` Server Actions, `app/sitemap.ts`, `app/robots.ts`, `app/dev/ui` (404 in production via `proxy.ts`)
 
-## Route Structure
-
-### Basic Routes
+## Route Structure (real map)
 
 ```
 app/
-  ├── page.tsx              # Route: /
-  ├── about/
-  │   └── page.tsx          # Route: /about
-  └── blog/
-      ├── page.tsx          # Route: /blog
-      └── [id]/
-          └── page.tsx      # Route: /blog/:id
+  ├── layout.tsx                # Root layout: fonts, WebVitalsReporter, Providers,
+  │                             #   title.default + title.template (NO Header/Footer here)
+  ├── global-error.tsx          # Root catastrophic error UI
+  ├── providers.tsx             # Client providers (analytics init on load/idle)
+  ├── [locale]/
+  │   ├── layout.tsx            # requireLocale → setRequestLocale → getMessages →
+  │   │                         #   NextIntlClientProvider wraps Header / main / Footer
+  │   ├── page.tsx              # Route: /en (home)
+  │   ├── error.tsx             # Locale-scoped error boundary
+  │   ├── not-found.tsx         # Locale-scoped 404
+  │   └── example-form/
+  │       └── page.tsx          # Route: /en/example-form
+  ├── api/                      # Route handlers: health, vitals, csp-report, example-form
+  ├── actions/                  # Server Actions (by domain)
+  ├── dev/ui/                   # Dev playground (production returns 404)
+  ├── sitemap.ts                # Dynamic sitemap with per-route hreflang entries
+  └── robots.ts                 # robots.txt
 ```
+
+No `loading.tsx` exists in the baseline — add one per segment only when a route
+gains slow data fetching.
 
 ### Special Files
 
 - **`layout.tsx`** - Shared layout for route segment and children
-- **`loading.tsx`** - Loading UI (Suspense boundary)
-- **`error.tsx`** - Error UI (Error Boundary)
-- **`not-found.tsx`** - 404 page
-- **`template.tsx`** - Re-renders on navigation (unlike layout)
-- **`route.ts`** - API route handler
+- **`error.tsx`** - Error UI (must be a Client Component); lives at `app/[locale]/error.tsx`
+- **`global-error.tsx`** - Last-resort root error UI (`app/global-error.tsx`)
+- **`not-found.tsx`** - 404 page (`app/[locale]/not-found.tsx`)
+- **`route.ts`** - API route handler (`app/api/**`)
 
-## Dynamic Routes
+## Adding a Localized Route (danger zone)
 
-- **Single parameter**: `app/blog/[id]/page.tsx`
-- **Multiple parameters**: `app/shop/[category]/[product]/page.tsx`
-- **Catch-all**: `app/docs/[...slug]/page.tsx`
-- **Optional catch-all**: `app/shop/[[...slug]]/page.tsx`
-
-### Accessing Params
+Every `[locale]` page/layout entry MUST narrow the route param via
+`requireLocale()` and call `setRequestLocale(locale)` **before any client
+descendant renders** — a missing call swallows errors as `Error(void 0)` in
+prerender (SKELETONS "i18n"). Mirror `app/[locale]/page.tsx`:
 
 ```typescript
-// app/blog/[id]/page.tsx
+// app/[locale]/blog/[id]/page.tsx
+import { setRequestLocale } from 'next-intl/server';
+import type { ReactElement } from 'react';
+
+import { requireLocale } from '@/i18n/request-locale';
+
 type Props = {
-    params: Promise<{ id: string }>;
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+    params: Promise<{ locale: string; id: string }>;
 };
 
-export default async function BlogPost({ params, searchParams }: Props) {
-    const { id } = await params;
-    const { category } = await searchParams;
+const BlogPost = async ({ params }: Props): Promise<ReactElement> => {
+    const { locale: rawLocale, id } = await params;
+    const locale = requireLocale(rawLocale); // notFound() on unknown locale
+    setRequestLocale(locale); // BEFORE any client descendant
     // ...
-}
+};
+
+export default BlogPost;
 ```
 
-## Route Groups
-
-- **Organize routes** without affecting URL structure
-- **Syntax**: `(groupName)/route/page.tsx`
-- **Useful for**: Organizing by feature, applying different layouts
-
-```
-app/
-  ├── (marketing)/
-  │   ├── about/
-  │   │   └── page.tsx      # Route: /about
-  │   └── contact/
-  │       └── page.tsx      # Route: /contact
-  └── (dashboard)/
-      ├── settings/
-      │   └── page.tsx      # Route: /settings
-      └── profile/
-          └── page.tsx     # Route: /profile
-```
-
-## Layouts
-
-- **Nested layouts** - each folder can have its own `layout.tsx`
-- **Layouts persist** across navigation (unlike templates)
-- **Root layout** in `app/layout.tsx` wraps entire app
-
-```typescript
-// app/layout.tsx - Root layout
-export default function RootLayout({
-    children
-}: {
-    children: React.ReactNode;
-}) {
-    return (
-        <html lang="en">
-            <body>
-                <Header />
-                {children}
-                <Footer />
-            </body>
-        </html>
-    );
-}
-
-// app/dashboard/layout.tsx - Nested layout
-export default function DashboardLayout({
-    children
-}: {
-    children: React.ReactNode;
-}) {
-    return (
-        <div>
-            <DashboardSidebar />
-            {children}
-        </div>
-    );
-}
-```
+- **Dynamic segments** work as usual, nested under the locale:
+  `app/[locale]/blog/[id]/page.tsx` → `/en/blog/:id`; catch-all `[...slug]`,
+  optional catch-all `[[...slug]]`
+- **Params are async** in Next 16: `params: Promise<{ locale: string; ... }>` —
+  always `await` them
 
 ## Metadata and SEO
 
-- **Export `metadata` object** in page or layout
-- **Use `generateMetadata`** for dynamic metadata
-- **Metadata is server-rendered** - perfect for SEO
+- **Use `generateMetadata`** with `getTranslations({ locale, namespace })` for localized metadata
+- **Every localized route builds `alternates.languages`** from `routing.locales`; `app/sitemap.ts` mirrors them as `<xhtml:link>` hreflang entries
 
 ```typescript
-// app/page.tsx
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-    title: 'Home',
-    description: 'Welcome',
-    openGraph: {
-        title: 'Home',
-        description: 'Welcome'
-    }
+// app/[locale]/page.tsx
+export const generateMetadata = async ({ params }: HomePageProps): Promise<Metadata> => {
+    const { locale: rawLocale } = await params;
+    const locale = requireLocale(rawLocale);
+    const t = await getTranslations({ locale, namespace: 'meta.home' });
+    const languages = Object.fromEntries(routing.locales.map((l) => [l, `/${l}`]));
+    return {
+        title: t('title'),
+        description: t('description'),
+        alternates: { canonical: `/${locale}`, languages }
+    };
 };
 ```
 
-## Navigation
+### title.template cascade (do not move)
 
-- **Use `next/link`** for client-side navigation
-- **Use `useRouter`** from `next/navigation` for programmatic navigation
-- **Server Components**: Use `<Link>` for navigation
+`title.template` does **not** apply to the segment that defines it — only to
+descendants. Root `app/layout.tsx` owns `title.default` + `title.template`;
+`app/[locale]/layout.tsx` sets **only** `description` / `openGraph` / `twitter`.
+Moving the template into `[locale]/layout.tsx` drops the brand suffix from page
+titles.
+
+## Layouts: root vs [locale]
+
+| Layout                    | Responsibilities                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/layout.tsx` (root)   | `<html>`/`<body>`, fonts, preconnects, `WebVitalsReporter`, `Providers`, `metadataBase`, `title.default` + `title.template`. **No Header/Footer, no i18n.**                                  |
+| `app/[locale]/layout.tsx` | `generateStaticParams` from `routing.locales`, `requireLocale` + `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wrapping `Header` / `main` / `Footer`; locale `description` / `openGraph` / `twitter`. |
+
+The layout chrome (Header/Footer) MUST stay inside `NextIntlClientProvider` —
+it consumes translations and breaks (hydration mismatch / prerender failure)
+when rendered outside the provider boundary.
+
+## Navigation (typed, locale-aware)
+
+- **NEVER import `Link` from `next/link`, or `useRouter` / `redirect` / `usePathname` from `next/navigation`** for document routes — they bypass the locale prefix and produce un-prefixed (broken) URLs
+- **Always import from `@/i18n/navigation`** (`createNavigation(routing)`): `Link`, `redirect`, `usePathname`, `useRouter`, `getPathname`
+- **Exception**: `notFound` stays in `next/navigation` (no localized variant)
 
 ```typescript
 // Client Component
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import type { ReactElement } from 'react';
 
-export const Navigation = () => {
+import { Link, useRouter } from '@/i18n/navigation';
+
+export const Navigation = (): ReactElement => {
     const router = useRouter();
 
     return (
         <nav>
-            <Link href="/about">About</Link>
-            <button onClick={() => router.push('/contact')}>Contact</button>
+            {/* renders /en/example-form */}
+            <Link href="/example-form">Example form</Link>
+            <button onClick={() => router.push('/')}>Home</button>
         </nav>
     );
 };
@@ -163,8 +147,8 @@ export const Navigation = () => {
 
 ## Route Organization Best Practices
 
-- **Group by feature** using route groups: `(feature)/routes/`
-- **Use layouts** for shared UI across routes
-- **Keep pages simple** - extract complex logic to components
-- **Use Server Components** when possible for better performance
-- **Lazy load** heavy components with `next/dynamic`
+- **New document route = new folder under `app/[locale]/`** — never at `app/` root
+- **Route groups** `(group)/` still work under `[locale]` for organization without affecting URLs
+- **Keep pages thin** - the RSC entry does locale narrowing + metadata; interactivity lives in a `*PageClient.tsx` client island (see `HomePageClient.tsx`)
+- **Locale set stays `['en']`** until the caller explicitly asks to expand it (`i18n/routing.ts` + `messages/<locale>.json`)
+- **Lazy load** heavy client components with `next/dynamic`

@@ -37,7 +37,7 @@ Before any reasoning about implementation:
 
 ### Inference-Time Scaling
 
-- Use `sequential-thinking` with `totalThoughts >= 3` for tasks > 3 steps.
+- Use `sequential-thinking` (if available in your environment) with `totalThoughts >= 3` for tasks > 3 steps.
 - Include **adversarial analysis**: what breaks SEO, caching, or RSC boundaries?
 
 ### Architectural Critique
@@ -74,7 +74,7 @@ Before any reasoning about implementation:
 
 ### Per-file checklist
 
-- [ ] `@/*` imports, no stray `../../`
+- [ ] `@/*` imports, no stray `../../` (exception: files reachable from `next.config.ts` must stay RELATIVE — see `fsd-architecture.mdc` carve-out)
 - [ ] No hardcoded user strings — i18n
 - [ ] `logger.error` with context per `resilience.mdc` — not bare `console.error(e)`
 - [ ] No stray `console.log`
@@ -87,8 +87,11 @@ Before any reasoning about implementation:
 
 ### 4.1 Automated checks
 
+**Canonical gate: `npm run verify:enterprise`** (alias `npm run verify`) — starts with `scripts/check-hooks.mjs`, then lint → format:check → tsc → vitest → build. It must pass before any commit; the raw commands below are targeted iteration checks between batches, not a substitute:
+
 ```bash
-npm run lint
+npm run verify:enterprise   # canonical pre-commit gate (hooks check → lint → format → tsc → test → build)
+npm run lint                # targeted iteration
 npm run format:check
 npx tsc --noEmit
 npm test
@@ -138,5 +141,5 @@ End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 - Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause)
 - Finishing without Brain sync declaration
 - `next build` / webpack behavior changes without updating **DECISIONS** / **SKELETONS**
-- **Touching the frozen security surface** — CSP directives in `next.config.ts`, the nonce pipeline / middleware order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers — **unless the task is explicitly security work** with prior approval. Never add a branch *before* the rate limiter in `proxy.ts`; never let static (`next.config.ts`) and nonce (`proxy.ts`) CSP drift. Such edits are a **security review**, not a routine change (committed `CLAUDE.md` invariant 7 + SKELETONS "`proxy` composition").
-- **Stripping protected Template scaffolding** as "unused" — `lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, or anything marked `// Template scaffolding`. These are load-bearing examples; remove them ONLY after the caller explicitly confirms "this is now my MVP, not the template" (committed `CLAUDE.md` invariant 8 + SKELETONS "Template scaffolding").
+- **Touching the frozen security surface** — CSP directives in `next.config.ts`, the nonce pipeline / middleware order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers — **unless the task is explicitly security work** with prior approval. Never add a branch *before* the rate limiter in `proxy.ts`; never let static (`next.config.ts`) and nonce (`proxy.ts`) CSP drift. Such edits are a **security review**, not a routine change (`AGENTS.md` invariant 7 + SKELETONS "`proxy` composition").
+- **Stripping protected Template scaffolding** as "unused" — `lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, or anything marked `// Template scaffolding`. These are load-bearing examples; remove them ONLY after the caller explicitly confirms "this is now my MVP, not the template" (`AGENTS.md` invariant 8 + SKELETONS "Template scaffolding").

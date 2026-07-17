@@ -14,7 +14,7 @@ The project uses **Feature-Sliced Design** architecture for maximum scalability.
 app → features → entities → shared
 ```
 
-**Import Rule (one-way, strict):** a layer may import ONLY from layers below it (`app → features → entities → shared`). NEVER import upward — `shared` must never import from `entities` / `features` / `app`, and `entities` must never import from `features` / `app`. Cross-imports within the same layer (feature → feature, entity → entity) are also forbidden. Always use `@/*` aliases; parent-relative `../` is an ESLint **error** (`eslint.config.js` `no-restricted-imports`).
+**Import Rule (one-way, strict):** a layer may import ONLY from layers below it (`app → features → entities → shared`). NEVER import upward — `shared` must never import from `entities` / `features` / `app`, and `entities` must never import from `features` / `app`. Cross-imports within the same layer (feature → feature, entity → entity) are also forbidden. Always use `@/*` aliases; parent-relative `../` is an ESLint **error** (`eslint.config.js` `no-restricted-imports`). **Sole carve-out:** every file reachable from `next.config.ts` (e.g. `shared/lib/cspHeader.ts`) must use RELATIVE imports — Next transpiles the config graph standalone, before any bundler `@/` alias exists; an alias import there fails the production build (`AGENTS.md` danger zone).
 
 - **app** - topmost layer, application initialization
 - **features** - business features, use entities and shared
@@ -116,12 +116,10 @@ export type { ExampleFormData } from './model/types';
 
 ### Automatic Validation
 
-**Before commit:**
+**Before commit — canonical gate:**
 
 ```bash
-npm run lint          # ESLint check
-npm run format:check  # Prettier check
-npm test             # Tests
+npm run verify:enterprise   # alias: npm run verify — hooks check → lint → format → tsc → test → build
 ```
 
-All checks must pass without errors or warnings.
+`npm run lint` / `npm run format:check` / `npm test` remain useful as targeted iteration checks, but the gate above is what must pass without errors or warnings before every commit.

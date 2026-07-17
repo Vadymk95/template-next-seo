@@ -48,8 +48,8 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ### Error Handling
 
-- ✅ **Global error boundary** (`app/error.tsx`)
-- ✅ **404 page** (`app/not-found.tsx`)
+- ✅ **Error boundaries** (`app/[locale]/error.tsx` + root `app/global-error.tsx`)
+- ✅ **404 page** (`app/[locale]/not-found.tsx`)
 - ✅ **Component error boundary** (`shared/ui/common/ErrorBoundary`)
 - ✅ **Reusable loading primitive** (`shared/ui/common/Loading`)
 - ✅ **Error logging** - structured error tracking
@@ -115,12 +115,12 @@ app/                    # Next.js App Router (routing layer)
   ├── [locale]/         # Locale segment (next-intl SSR)
   │   ├── layout.tsx   # setRequestLocale + NextIntlClientProvider (Header/Footer)
   │   ├── page.tsx     # Home; localized generateMetadata + alternates.languages
+  │   ├── error.tsx    # Locale error boundary
+  │   ├── not-found.tsx # Locale-scoped 404
   │   └── example-form/
   ├── layout.tsx        # Root layout (fonts, title.default + title.template cascade)
   ├── providers.tsx     # Client providers (analytics)
-  ├── error.tsx         # Global error boundary
-  ├── loading.tsx       # Global loading UI
-  ├── not-found.tsx     # 404 page
+  ├── global-error.tsx  # Root catastrophic-error boundary
   ├── sitemap.ts        # Sitemap with per-route xhtml:link hreflang entries
   └── robots.ts         # Robots.txt config
 
@@ -140,7 +140,6 @@ shared/                 # Shared code (reusable)
   │   └── input.tsx
   ├── lib/             # Utilities and configs
   │   ├── logger.ts    # Structured logging
-  │   ├── web-vitals.ts # Web Vitals tracking
   │   └── test-utils/  # Test utilities (NextIntlClientProvider wrapper)
   ├── types/           # Shared TypeScript types
   └── constants/       # Shared constants

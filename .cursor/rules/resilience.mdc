@@ -9,7 +9,7 @@ priority: 92
 
 ## 1. Logging & errors
 
-- **Structured logging (NEW / touched code — mandatory)**: ALWAYS use `shared/lib/logger` (`logger.error`, `logger.warn`, …) with a clear message prefix, e.g. `[ModuleName] operation: reason`. `console.*` is an ESLint **error** everywhere except `shared/lib/logger.ts`, `shared/lib/web-vitals.ts`, and tests (`eslint.config.js` `no-console`) — a raw `console.*` elsewhere fails the lint gate.
+- **Structured logging (NEW / touched code — mandatory)**: ALWAYS use `shared/lib/logger` (`logger.error`, `logger.warn`, …) with a clear message prefix, e.g. `[ModuleName] operation: reason`. `console.*` is an ESLint **error** everywhere except `shared/lib/logger.ts` and tests/e2e (`eslint.config.js` `no-console`) — a raw `console.*` elsewhere fails the lint gate.
 - **NEVER in new / touched code**: bare `console.error(e)` without context; silent `catch {}`; `catch (error: any)` (`@typescript-eslint/no-explicit-any` is an **error** outside tests). Narrow with `unknown` + a type guard, then log via `logger.error` with module context.
 - **Legacy carve-out (narrow)**: do not drive-by-rewrite pre-existing log/catch patterns in files outside your task scope; fix them only when the file is already in scope.
 

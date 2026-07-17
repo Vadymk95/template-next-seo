@@ -7,7 +7,7 @@ alwaysApply: true
 ## Code Formatting
 
 - **Use Prettier configuration** from the project (`trailingComma: 'none'`, `singleQuote: true`, `printWidth: 100`, `tabWidth: 4`)
-- **Follow ESLint + Oxlint** — `npm run lint` runs **oxlint** (`.oxlintrc.json`) then **eslint** (`eslint.config.js`): Next core-web-vitals + TypeScript, `eslint-plugin-oxlint`, `eslint-plugin-import-x`, `eslint-plugin-react`, type-aware strict rules, Prettier via `eslint-plugin-prettier/recommended`; `@/` imports, no `FC`, console only in logger / web-vitals / allowed paths
+- **Follow ESLint + Oxlint** — `npm run lint` runs **oxlint** (`.oxlintrc.json`) then **eslint** (`eslint.config.js`): Next core-web-vitals + TypeScript, `eslint-plugin-oxlint`, `eslint-plugin-import-x`, `eslint-plugin-react`, type-aware strict rules, Prettier via `eslint-plugin-prettier/recommended`; `@/` imports, no `FC`, console only in `shared/lib/logger.ts` / tests / e2e (the removed `shared/lib/web-vitals.ts` wrapper is gone — Web Vitals go through `app/WebVitalsReporter.tsx`)
 - **Use 4 spaces** for indentation
 - **Always end files** with an empty line
 
@@ -27,7 +27,7 @@ alwaysApply: true
 
 - **NEVER** use `/** */` for local helpers, computed getters, or unexported code
 - **NEVER** restate the code (`// fetch data`, `// set loading`, `// return result`)
-- **NEVER** add `// TODO` without a ticket reference or specific action item
+- **`// TODO` comments state the domain constraint/context in plain words**, e.g. `// TODO(observability): route these payloads to the analytics vendor once one is picked` — **NEVER** ticket numbers or task IDs in code (traceability lives in the PR/branch, not comments)
 
 - Formatting and import order are enforced by ESLint + Prettier (see `eslint.config.js`, `.prettierrc.json`). Do not restate those rules here.
 

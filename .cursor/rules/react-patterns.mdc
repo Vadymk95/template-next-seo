@@ -22,7 +22,7 @@ alwaysApply: false
 - **Best for**: Static content, data fetching, SEO
 
 ```typescript
-// app/page.tsx - Server Component (default)
+// app/[locale]/page.tsx - Server Component (default)
 export default async function Page() {
     const data = await fetch('https://api.example.com/data');
     return <div>{data.title}</div>;
@@ -40,9 +40,9 @@ export default async function Page() {
 // components/InteractiveButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 
-export const InteractiveButton = () => {
+export const InteractiveButton = (): ReactElement => {
     const [count, setCount] = useState(0);
     return <button onClick={() => setCount(count + 1)}>{count}</button>;
 };
@@ -55,18 +55,21 @@ export const InteractiveButton = () => {
 - **Use arrow functions with `export default`** - consistent with other components, better tree-shaking
 - **Pages can be async** for Server Components
 - **Separate declaration and export** for better consistency
+- **Declare the return type** - `Promise<ReactElement>` for async RSC pages, `ReactElement` for sync components (`@typescript-eslint/explicit-function-return-type` is an ESLint **error**, `eslint.config.js`)
 
 ```typescript
-// app/page.tsx - Page (arrow function)
-const HomePage = async () => {
+import type { ReactElement } from 'react';
+
+// app/[locale]/page.tsx - Page (arrow function)
+const HomePage = async (): Promise<ReactElement> => {
     const data = await fetchData();
     return <div>{data}</div>;
 };
 
 export default HomePage;
 
-// app/about/page.tsx - Page
-const AboutPage = () => {
+// app/[locale]/about/page.tsx - Page
+const AboutPage = (): ReactElement => {
     return <div>About</div>;
 };
 
@@ -99,7 +102,7 @@ export const Button: FunctionComponent<ButtonProps> = ({ children, ...props }) =
 
 ```typescript
 // components/ServerCard.tsx - Server Component
-export const ServerCard = async ({ data }: Props) => {
+export const ServerCard = async ({ data }: Props): Promise<ReactElement> => {
     const processed = await processData(data);
     return <div>{processed}</div>;
 };
@@ -135,22 +138,26 @@ ComponentName/
 ## Pages (App Router)
 
 - **Pages are Server Components by default** in `app/` directory
-- **File-based routing**: `app/page.tsx` = `/`, `app/about/page.tsx` = `/about`
-- **Dynamic routes**: `app/blog/[id]/page.tsx` = `/blog/:id`
+- **File-based routing** (document routes live under the locale segment): `app/[locale]/page.tsx` = `/en`, `app/[locale]/about/page.tsx` = `/en/about`
+- **Dynamic routes**: `app/[locale]/blog/[id]/page.tsx` = `/en/blog/:id`
 - **Layouts**: `app/layout.tsx` wraps all pages
 - **Route groups**: `app/(marketing)/about/page.tsx` for organization
 
 ### Example Structures
 
 ```typescript
-// app/page.tsx - Home page (Server Component)
-export default async function HomePage() {
+// app/[locale]/page.tsx - Home page (Server Component)
+export default async function HomePage(): Promise<ReactElement> {
     const data = await fetchData();
     return <div>{data}</div>;
 }
 
 // app/blog/[id]/page.tsx - Dynamic route
-export default async function BlogPost({ params }: { params: Promise<{ id: string }> }) {
+export default async function BlogPost({
+    params
+}: {
+    params: Promise<{ id: string }>;
+}): Promise<ReactElement> {
     const { id } = await params;
     const post = await getPost(id);
     return <article>{post.content}</article>;
@@ -166,7 +173,7 @@ export default async function BlogPost({ params }: { params: Promise<{ id: strin
 ### Example
 
 ```typescript
-// app/page.tsx
+// app/[locale]/page.tsx
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -178,12 +185,16 @@ export const metadata: Metadata = {
     }
 };
 
-export default function HomePage() {
+export default function HomePage(): ReactElement {
     return <div>...</div>;
 }
 
 // app/blog/[id]/page.tsx - Dynamic metadata
-export async function generateMetadata({ params }): Promise<Metadata> {
+export async function generateMetadata({
+    params
+}: {
+    params: Promise<{ id: string }>;
+}): Promise<Metadata> {
     const { id } = await params;
     const post = await getPost(id);
     return {
