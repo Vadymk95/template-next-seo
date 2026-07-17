@@ -14,6 +14,24 @@ interface LogEntry {
     error?: SerializedError;
 }
 
+// TODO(observability): wire Sentry / Datadog / other log drain here.
+// Implementation should keep this shape so call sites stay untouched.
+const report = {
+    breadcrumb: (
+        _level: 'info' | 'warn',
+        _message: string,
+        _data?: Record<string, unknown>
+    ): void => {
+        void _level;
+        void _message;
+        void _data;
+    },
+    capture: (_error: Error, _context?: Record<string, unknown>): void => {
+        void _error;
+        void _context;
+    }
+};
+
 class Logger {
     private formatLog(
         level: LogLevel,
@@ -65,14 +83,17 @@ class Logger {
     }
 
     info(message: string, context?: Record<string, unknown>): void {
+        report.breadcrumb('info', message, context);
         this.log('info', message, context);
     }
 
     warn(message: string, context?: Record<string, unknown>): void {
+        report.breadcrumb('warn', message, context);
         this.log('warn', message, context);
     }
 
     error(message: string, error?: Error, context?: Record<string, unknown>): void {
+        report.capture(error ?? new Error(message), { ...context, message });
         this.log('error', message, context, error);
     }
 }
