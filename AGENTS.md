@@ -75,6 +75,12 @@ npm run lint                # oxlint (--deny-warnings) → eslint (--max-warning
 npm run type-check          # tsc --noEmit
 ```
 
+**Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
+scripts as a supply-chain guard, so husky hooks don't install themselves; the
+verify gate fails loudly if hooks are missing. Dependency cooldown is also on
+(`.npmrc` `min-release-age=3`, DAYS): a brand-new package or urgent patch needs
+`npm install <pkg> --min-release-age=0`.
+
 `verify:enterprise` is authoritative. If it fails, fix the cause — do **not**
 downgrade rules, silence warnings, or add `eslint-disable`. If a rule is wrong
 for a real reason, raise it with the caller first. Production `build` requires

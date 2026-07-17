@@ -75,6 +75,9 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 # Install dependencies
 npm install
 
+# Install git hooks once (lifecycle scripts are disabled via .npmrc)
+npm run prepare
+
 # Create .env.local only if your project needs environment variables
 
 # Run development server
