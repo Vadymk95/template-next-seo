@@ -4,6 +4,29 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 **Architecture:** Feature-Sliced Design (FSD) for maximum scalability.
 
+## Forking this template — rename checklist
+
+This scaffold ships with placeholder branding. When you start a real project from
+it, replace every spot below — grep the old strings afterwards to be sure none are
+missed (a missed brand string in `<title>` or the dev banner is the usual slip):
+
+- `package.json` **and** `package-lock.json` — `name`
+- `app/layout.tsx` — `title.default`, `title.template`, `keywords`, `authors`, `creator`
+- `messages/<locale>.json` — `home.title` / `home.description`, and `meta.root.*`
+  (`titleDefault`, `titleTemplate`, `description`, `siteName`) + `meta.home.description`
+- `shared/ui/common/Footer` — copyright line
+- `scripts/startup.js` — dev-banner display name
+- `e2e/*.spec.ts` — expected document titles
+- `README.md` — heading + description
+- `.cursor/rules/global.mdc` — header; `project-config.mdc` — palette + locale assumptions
+- `.github/workflows/ci.yml` — the `NEXT_PUBLIC_APP_URL` build placeholder (`*.invalid`)
+- `NEXT_PUBLIC_APP_URL` — set to your real origin (drives `metadataBase`, sitemap, `hreflang`)
+- `LICENSE` — MIT is fine for an open project; for a **proprietary/commercial** app
+  remove `LICENSE` and set `package.json` `"license": "UNLICENSED"` (repo is already `private`)
+
+Placeholder brands currently in the scaffold: `React Enterprise Foundation`
+(layout + messages) and `Next.js SEO Template` (README + banner).
+
 ## 🚀 Features
 
 ### Core Stack

@@ -24,12 +24,16 @@ const colors = {
 };
 
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+// Major from a semver range ("^16.2.10" -> "16") so the banner never goes stale on upgrade.
+const major = (range) => (String(range).match(/\d+/) || ['?'])[0];
 
 function printStartupMessage() {
     console.log('\n');
     console.log(
         `${colors.cyan}${colors.bright}╔═══════════════════════════════════════════════════════════╗${colors.reset}`
     );
+    // Display name — rename on fork (see README "Forking — rename checklist").
     console.log(
         `${colors.cyan}${colors.bright}║${colors.reset}  ${colors.bright}Next.js SEO Template${colors.reset} ${colors.dim}v${packageJson.version}${colors.reset}                    ${colors.cyan}${colors.bright}║${colors.reset}`
     );
@@ -41,10 +45,10 @@ function printStartupMessage() {
         `${colors.green}${colors.bright}✓${colors.reset} ${colors.bright}Architecture:${colors.reset} Feature-Sliced Design (FSD)`
     );
     console.log(
-        `${colors.green}${colors.bright}✓${colors.reset} ${colors.bright}Stack:${colors.reset} Next.js 15+ | React 19 | TypeScript`
+        `${colors.green}${colors.bright}✓${colors.reset} ${colors.bright}Stack:${colors.reset} Next.js ${major(deps.next)} | React ${major(deps.react)} | TypeScript`
     );
     console.log(
-        `${colors.green}${colors.bright}✓${colors.reset} ${colors.bright}Performance:${colors.reset} 141 kB First Load JS`
+        `${colors.green}${colors.bright}✓${colors.reset} ${colors.bright}Performance:${colors.reset} ISR + vendor-split + Web Vitals`
     );
     console.log('');
     console.log(`${colors.blue}${colors.bright}📚 Useful Links:${colors.reset}`);

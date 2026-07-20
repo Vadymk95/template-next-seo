@@ -22,6 +22,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     metadataBase,
+    // TEMPLATE PLACEHOLDER (rename on fork): brand, keywords, authors, creator.
+    // Full list of spots to change: README "Forking — rename checklist".
     title: {
         default: 'React Enterprise Foundation',
         template: '%s | React Enterprise Foundation'
