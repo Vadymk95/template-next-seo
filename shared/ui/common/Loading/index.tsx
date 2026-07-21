@@ -9,7 +9,7 @@ export const Loading = (): ReactElement => {
             aria-live="polite"
         >
             <div
-                className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+                className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
                 aria-hidden="true"
             />
         </div>

@@ -5,6 +5,7 @@ import pluginImport from 'eslint-plugin-import-x';
 import oxlintPlugin from 'eslint-plugin-oxlint';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import pluginReact from 'eslint-plugin-react';
+import tailwind from 'eslint-plugin-tailwindcss';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -98,6 +99,31 @@ export default defineConfig([
                 }
             ],
             'import-x/no-cycle': 'error',
+            'import-x/no-restricted-paths': [
+                'error',
+                {
+                    zones: [
+                        {
+                            target: './shared',
+                            from: ['./app', './features', './entities'],
+                            message:
+                                'FSD: shared is the lowest layer; it must not import from app, features, or entities.'
+                        },
+                        {
+                            target: './entities',
+                            from: ['./app', './features'],
+                            message: 'FSD: entities may only import from shared.'
+                        },
+                        {
+                            target: './features',
+                            from: ['./app'],
+                            except: ['./actions'],
+                            message:
+                                'FSD: features may only import from entities/shared; the only allowed app import is a Server Action from app/actions.'
+                        }
+                    ]
+                }
+            ],
             'no-console': 'error',
             'no-restricted-imports': [
                 'error',
@@ -154,6 +180,37 @@ export default defineConfig([
             ]
         }
     },
+    {
+        files: ['shared/ui/**/*.{ts,tsx}', 'features/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        'Literal[value=/#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b/]',
+                    message: 'No raw hex colors in components; use a design token.'
+                },
+                {
+                    selector:
+                        'TemplateElement[value.raw=/#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\\b/]',
+                    message: 'No raw hex colors in components; use a design token.'
+                }
+            ]
+        }
+    },
+    {
+        files: ['**/*.tsx'],
+        plugins: { tailwindcss: tailwind },
+        settings: {
+            tailwindcss: { cssConfigPath: './app/globals.css' }
+        },
+        rules: {
+            'tailwindcss/no-contradicting-classname': 'error',
+            'tailwindcss/classnames-order': 'error',
+            'tailwindcss/enforces-shorthand': 'error',
+            'tailwindcss/no-unnecessary-arbitrary-value': 'error'
+        }
+    },
     prettierRecommended,
     {
         files: ['shared/lib/logger.ts'],
@@ -174,7 +231,8 @@ export default defineConfig([
             '@typescript-eslint/no-unsafe-assignment': 'off',
             '@typescript-eslint/no-floating-promises': 'off',
             '@typescript-eslint/no-misused-promises': 'off',
-            'no-console': 'off'
+            'no-console': 'off',
+            'no-restricted-syntax': 'off'
         }
     },
     {
