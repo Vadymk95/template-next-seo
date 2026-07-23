@@ -17,7 +17,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed              |
 | Forms         | react-hook-form + Zod                                                                   |
 | i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                 |
-| Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`, `npm run test:e2e`)                    |
+| Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`; local `test:e2e`, gate/CI `test:e2e:prod`) |
 | Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)     |
 | Security      | Static document CSP + nonce **`strict-dynamic`** on **`proxy`** matcher paths, COOP/CORP, optional **Upstash** in **`proxy`** |
 
@@ -38,6 +38,11 @@ Imports use the `@/*` path alias (repo root).
 - **Optional**: `npm run build:turbo` for Turbopack-only experiments (no custom webpack chunks).
 - **Dev**: `npm run dev` (Turbopack); `npm run dev:webpack` if webpack parity is needed.
 
+## Local gate
+
+- **`npm run verify` / `verify:enterprise`**: lint → format → tsc → vitest → build → **`test:e2e:prod`** (Playwright vs `next start`).
+- **Husky pre-push** runs the same gate. First-time browsers: `npm run test:e2e:install`.
+
 ## CI
 
-GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
+GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server; same mode as local `test:e2e:prod`). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.

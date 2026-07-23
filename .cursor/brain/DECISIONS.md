@@ -176,8 +176,17 @@ no nonce path for ISR'd HTML:
 
 ## Verification benchmarks
 
-- **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build).
+- **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build, **e2e** via `test:e2e:prod` / `CI=true` → `next start`).
 - **`npm run bench:verify`** — same steps with **per-step timings** (`scripts/bench-verify.mjs`) for local regression checks.
+- **Husky `pre-push`** — runs the full `verify` gate (not typecheck-only).
+
+## [2026-07] Playwright e2e inside `verify:enterprise` + pre-push
+
+**Decision**: append `npm run test:e2e:prod` after `build` in `verify:enterprise`, and point `.husky/pre-push` at full `npm run verify` (with `NEXT_PUBLIC_APP_URL` default for the build).
+
+**Why**: CI was the first place that caught nav/runtime regressions; local gate stopped at build. Prod-mode Playwright after build matches CI's `CI=true` webServer and fails the push before the PR.
+
+**Trade-off**: verify is slower (~extra e2e minutes); first-time clones need `npm run test:e2e:install`. Accepted so e2e cannot be skipped by habit.
 
 ## Button primitive
 
