@@ -10,7 +10,8 @@ const steps = [
     ['format', 'npm', ['run', 'format:check']],
     ['tsc', 'npx', ['tsc', '--noEmit']],
     ['test', 'npm', ['test']],
-    ['build', 'npm', ['run', 'build']]
+    ['build', 'npm', ['run', 'build']],
+    ['e2e', 'npm', ['run', 'test:e2e:prod']]
 ];
 
 console.log('Enterprise verify benchmark (per step)\n');
