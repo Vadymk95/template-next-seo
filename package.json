@@ -58,7 +58,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^1.24.0",
-        "next": "^16.2.10",
+        "next": "^16.2.11",
         "next-intl": "^4.13.2",
         "react": "^19.2.7",
         "react-dom": "^19.2.7",
@@ -108,9 +108,11 @@
         "vitest": "^4.1.7"
     },
     "overrides": {
+        "fast-uri": ">=3.1.4",
         "next": {
             "postcss": ">=8.5.10"
-        }
+        },
+        "sharp": ">=0.35.0"
     },
     "lint-staged": {
         "*.{ts,tsx,js,jsx}": [
