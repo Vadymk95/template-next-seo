@@ -45,10 +45,11 @@
         "test:e2e:ui": "playwright test --ui",
         "test:e2e:headed": "playwright test --headed",
         "test:e2e:install": "playwright install --with-deps chromium",
-        "verify:enterprise": "node scripts/check-hooks.mjs && npm run lint && npm run format:check && npx tsc --noEmit && npm test && npm run build",
+        "verify:enterprise": "node scripts/check-hooks.mjs && npm run lint && npm run format:check && npx tsc --noEmit && npm test && npm run build && npm run test:e2e:prod",
         "verify": "npm run verify:enterprise",
         "bench:verify": "node scripts/bench-verify.mjs",
-        "prepare": "husky"
+        "prepare": "husky",
+        "test:e2e:prod": "CI=true playwright test"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.4.0",

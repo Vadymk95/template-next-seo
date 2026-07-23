@@ -40,8 +40,10 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
 2. **One task = one commit.** Conventional Commits, **≤ 96 chars** on the subject
    line. No `Co-authored-by` tags. Never skip hooks (no `--no-verify`).
 3. **`verify:enterprise` is the gate** (alias: `npm run verify`). Every commit
-   must pass it locally before it lands. CI runs the same plus Playwright. The
-   gate is zero-warnings (`eslint --max-warnings 0`, `oxlint --deny-warnings`).
+   must pass it locally before it lands. CI runs the same plus coverage/audit.
+   Local gate is lint → format → tsc → vitest → build → **e2e** (Playwright vs
+   `next start`). Zero-warnings (`eslint --max-warnings 0`, `oxlint --deny-warnings`).
+   Husky **pre-push** runs the full `verify` gate automatically.
 4. **English only in code, comments, commits, docs.** Chat may be Russian; the
    repo is not.
 5. **Locale set stays `['en']`** until the caller explicitly asks to expand it.
@@ -68,9 +70,11 @@ npm run dev:webpack         # webpack parity dev (debug splitChunks)
 npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
 npm run verify              # alias of verify:enterprise (cross-template muscle memory)
-npm run verify:enterprise   # lint → format:check → tsc → vitest → build (commit gate)
+npm run verify:enterprise   # lint → format:check → tsc → vitest → build → e2e (commit/push gate)
 npm run test                # vitest run
-npm run test:e2e            # Playwright (builds + serves prod implicitly)
+npm run test:e2e            # Playwright (dev server locally unless CI=true)
+npm run test:e2e:prod       # Playwright against `next start` (same as CI / verify gate)
+npm run test:e2e:install    # one-time Chromium install for Playwright
 npm run lint                # oxlint (--deny-warnings) → eslint (--max-warnings 0)
 npm run type-check          # tsc --noEmit
 ```

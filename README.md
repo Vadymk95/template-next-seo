@@ -117,7 +117,7 @@ npm start
 
 - **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
 - **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
-- **Enterprise verification**: **`npm run verify:enterprise`** runs lint → format → TypeScript → tests → production build (same spirit as CI). **`npm run bench:verify`** runs the same steps and prints **per-step durations** for local benchmarking.
+- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) runs lint → format → TypeScript → vitest → production build → Playwright e2e (`test:e2e:prod`, same as CI). Husky **pre-push** runs the same gate. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
 
 ### Security (production)
 

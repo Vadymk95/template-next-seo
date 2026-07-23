@@ -9,11 +9,12 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
     set -e
 fi
 
-echo "→ format:check"
-npm run format:check || { echo "❌ Formatting check failed. Run 'npm run format' and re-commit."; exit 1; }
+# Match CI: build + Playwright prod server need a base URL.
+export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://template-next-seo.invalid}"
 
-echo "→ lint"
-npm run lint || { echo "❌ Lint failed. Fix errors before push."; exit 1; }
-
-echo "→ type-check"
-npm run type-check || { echo "❌ TypeScript type-check failed. Fix errors before push."; exit 1; }
+echo "→ verify:enterprise (lint → format → tsc → vitest → build → e2e)"
+npm run verify || {
+    echo "❌ verify:enterprise failed. Fix before push."
+    echo "   First-time Playwright browsers: npm run test:e2e:install"
+    exit 1
+}

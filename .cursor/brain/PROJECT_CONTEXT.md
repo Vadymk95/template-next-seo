@@ -6,29 +6,29 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 
 ## Tech Stack
 
-| Layer         | Choice                                                                                  |
-| ------------- | --------------------------------------------------------------------------------------- |
-| Framework     | Next.js **16** (App Router)                                                             |
-| UI            | React **19**                                                                            |
-| Language      | TypeScript **6.0** strict                                                               |
-| Styling       | Tailwind CSS **v4** (`app/globals.css`, PostCSS)                                        |
-| Components    | shadcn-style primitives under `shared/ui/`                                              |
-| Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)              |
-| Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed              |
-| Forms         | react-hook-form + Zod                                                                   |
-| i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                 |
-| Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`, `npm run test:e2e`)                    |
-| Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)     |
+| Layer         | Choice                                                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Framework     | Next.js **16** (App Router)                                                                                                   |
+| UI            | React **19**                                                                                                                  |
+| Language      | TypeScript **6.0** strict                                                                                                     |
+| Styling       | Tailwind CSS **v4** (`app/globals.css`, PostCSS)                                                                              |
+| Components    | shadcn-style primitives under `shared/ui/`                                                                                    |
+| Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)                                                  |
+| Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed                                                      |
+| Forms         | react-hook-form + Zod                                                                                                         |
+| i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                                                      |
+| Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`; local `test:e2e`, gate/CI `test:e2e:prod`)                                  |
+| Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)                                          |
 | Security      | Static document CSP + nonce **`strict-dynamic`** on **`proxy`** matcher paths, COOP/CORP, optional **Upstash** in **`proxy`** |
 
 ## Layout (FSD-ish)
 
-| Path        | Role                                                   |
-| ----------- | ------------------------------------------------------ |
-| `app/`      | Routes, layouts, providers, Server Actions, API routes |
-| `features/` | Feature slices (e.g. `example-form`)                   |
+| Path        | Role                                                                     |
+| ----------- | ------------------------------------------------------------------------ |
+| `app/`      | Routes, layouts, providers, Server Actions, API routes                   |
+| `features/` | Feature slices (e.g. `example-form`)                                     |
 | `entities/` | Optional domain slices (directory is created on first domain extraction) |
-| `shared/`   | UI kit, `lib/`, constants, types                       |
+| `shared/`   | UI kit, `lib/`, constants, types                                         |
 
 Imports use the `@/*` path alias (repo root).
 
@@ -38,6 +38,11 @@ Imports use the `@/*` path alias (repo root).
 - **Optional**: `npm run build:turbo` for Turbopack-only experiments (no custom webpack chunks).
 - **Dev**: `npm run dev` (Turbopack); `npm run dev:webpack` if webpack parity is needed.
 
+## Local gate
+
+- **`npm run verify` / `verify:enterprise`**: lint → format → tsc → vitest → build → **`test:e2e:prod`** (Playwright vs `next start`).
+- **Husky pre-push** runs the same gate. First-time browsers: `npm run test:e2e:install`.
+
 ## CI
 
-GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
+GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server; same mode as local `test:e2e:prod`). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.

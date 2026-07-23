@@ -7,11 +7,13 @@
 **Audit result — narrow extraction surface**: this template has minimal magic-string duplication. Server Components + Server Actions remove most client-side string fan-out. The only duplicated strings with external-contract semantics are the CSP Reporting-Endpoint name and the `/api/csp-report` path, which must stay in lock-step between `next.config.ts` (header announcement) and `shared/lib/cspHeader.ts` (`report-to <name>` directive) plus the route handler filesystem path.
 
 **Extraction sites added this commit**:
+
 - `shared/constants/index.ts` extended with:
-  - `CSP_REPORTING_ENDPOINT_NAME = 'csp-endpoint'` — referenced by `next.config.ts` `Reporting-Endpoints` header AND `shared/lib/cspHeader.ts` `report-to` directive. Drift between the two silently drops CSP violation reports.
-  - `API_PATHS = { CSP_REPORT: '/api/csp-report' } as const` — referenced by `next.config.ts` header. Browser sends CSP reports here; must match `app/api/csp-report/route.ts` filesystem path. Single source for the URL string.
+    - `CSP_REPORTING_ENDPOINT_NAME = 'csp-endpoint'` — referenced by `next.config.ts` `Reporting-Endpoints` header AND `shared/lib/cspHeader.ts` `report-to` directive. Drift between the two silently drops CSP violation reports.
+    - `API_PATHS = { CSP_REPORT: '/api/csp-report' } as const` — referenced by `next.config.ts` header. Browser sends CSP reports here; must match `app/api/csp-report/route.ts` filesystem path. Single source for the URL string.
 
 **Items LEFT INLINE (scope discipline proof)**:
+
 - `/api/vitals` — 1 call site (`app/WebVitalsReporter.tsx`); single use, route handler self-documents
 - `/api/example-form` — 0 production call sites (form uses Server Action `app/actions/example-form.ts`); only test fixtures reference it
 - `/api/health` — 0 production call sites (only `e2e/health.spec.ts` and `proxy.test.ts`)
@@ -32,12 +34,14 @@
 **Decision**: validate ALL external boundary crossings using Zod schemas. Wrapper: `shared/lib/api/safeFetch.ts`. Reference example: `app/actions/example-form.ts` (Server Action output schema). Pattern is opt-in for consumer forks — add per boundary.
 
 **Why (Next 16-specific)**:
+
 1. **Server Components fetching**: `await fetch()` in RSC returns untyped `Response`; consumers cast to expected shape. Zod parse = runtime guarantee.
 2. **Server Action returns**: Server Actions return `Promise<unknown>` to client; client must trust the shape. `ServerActionResultSchema.parse(result)` before return = client-side runtime contract.
 3. **Route handlers**: incoming body via `await request.json()` is `unknown`. Standard Zod input validation — already convention.
 4. **External APIs**: when consumer pulls from Stripe/Twilio/etc — boundary validation = SLA against vendor schema drift.
 
 **Scope**:
+
 - Route handlers (input + output) — `request.json()` → `Schema.safeParse(...)` + return `Schema.parse(result)`
 - Server Actions — input via `formData` schema (already pattern) + **output** via result schema (new pattern this ADR adds)
 - RSC `fetch()` calls — wrap with `safeFetch(url, schema)`
@@ -132,7 +136,7 @@ no nonce path for ISR'd HTML:
 
 - **ISR / static document routes** (`/[locale]`, `/[locale]/example-form`,
   `/sitemap.xml`, `/robots.txt`, `/dev/ui` in dev): `script-src 'self'
-  'unsafe-inline'` from `next.config.ts` `headers()` via
+'unsafe-inline'` from `next.config.ts` `headers()` via
   `buildStaticContentSecurityPolicy`. Required because Next emits inline
   `<script>self.__next_f.push(...)` scripts into prerendered HTML at BUILD
   time; ISR HTML is cached and a per-request nonce in the response header
@@ -144,7 +148,7 @@ no nonce path for ISR'd HTML:
   `base-uri 'self'`, `connect-src 'self'`, `form-action 'self'`.
 
 - **Dynamic routes** (`/api/*`, `/dev/*`): `script-src 'strict-dynamic'
-  'nonce-<random>'` from `proxy.ts` via `buildContentSecurityPolicy`.
+'nonce-<random>'` from `proxy.ts` via `buildContentSecurityPolicy`.
   Each request gets a fresh nonce; Next renders fresh HTML server-side
   and (when given the `x-nonce` request header in middleware) automatically
   attaches `nonce` to its inline scripts. Strictest setting available for
@@ -176,8 +180,17 @@ no nonce path for ISR'd HTML:
 
 ## Verification benchmarks
 
-- **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build).
+- **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build, **e2e** via `test:e2e:prod` / `CI=true` → `next start`).
 - **`npm run bench:verify`** — same steps with **per-step timings** (`scripts/bench-verify.mjs`) for local regression checks.
+- **Husky `pre-push`** — runs the full `verify` gate (not typecheck-only).
+
+## [2026-07] Playwright e2e inside `verify:enterprise` + pre-push
+
+**Decision**: append `npm run test:e2e:prod` after `build` in `verify:enterprise`, and point `.husky/pre-push` at full `npm run verify` (with `NEXT_PUBLIC_APP_URL` default for the build).
+
+**Why**: CI was the first place that caught nav/runtime regressions; local gate stopped at build. Prod-mode Playwright after build matches CI's `CI=true` webServer and fails the push before the PR.
+
+**Trade-off**: verify is slower (~extra e2e minutes); first-time clones need `npm run test:e2e:install`. Accepted so e2e cannot be skipped by habit.
 
 ## Button primitive
 
