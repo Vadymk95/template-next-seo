@@ -85,7 +85,7 @@ The individual commands above are targeted iteration checks. **The canonical pre
 
 - **MUST follow commitlint rules** from `commitlint.config.mjs`
 - Use conventional commit format: `type(scope): subject`
-- Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`
+- Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`, `build`, `ci`
 - Header maximum length: 96 characters
 - Format: `type(scope): subject` (scope is optional)
 
