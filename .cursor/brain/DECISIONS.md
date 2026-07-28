@@ -30,6 +30,20 @@ fails on every high or critical advisory, on an expired allowance, on an allowan
 disappeared, and on its own inability to complete. Lowering a threshold to make a finding go away is not
 available; writing the reason down with an expiry is.
 
+**An allowance is the last resort, not the first, and the allowlist is now EMPTY.**
+`GHSA-mh99-v99m-4gvg` (brace-expansion, unbounded expansion → OOM) was allowlisted on the reading that
+`minimatch@3` is pinned by eslint's own dependencies and by the plugins arriving through
+`eslint-config-next`, so nothing could be bumped. True of the *direct* dependencies, wrong about the
+*transitive* one: `brace-expansion@5.0.8` is outside the advisory range `<=5.0.7`, so a root override
+`"brace-expansion": ">=5.0.8"` closes it with `minimatch@3` untouched — 5.0.8 is dual-published, so
+`require()` still resolves a CommonJS build. `npm audit` reports zero. What made the allowance look
+inevitable was npm's own suggested remediation, a semver-major **downgrade** of a lint plugin. Read the
+advisory's fixed range directly instead of trusting `fixAvailable`.
+
+**Removing an allowance and adding the override are ONE commit.** The moment the override lands the
+advisory disappears from the audit, which makes the allowance **stale**, which fails the gate by design.
+That is the stale check working — it is what stops allowances outliving the problem they described.
+
 **Pre-commit is repo-scoped.** `lint-staged` fixes and re-stages the staged set, but for a partially
 staged file it restores the unstaged hunks *after* fixing, so formatting drift survived the commit and
 only failed at push — leaving files already fixed and never committed. The hook now also runs the TDD

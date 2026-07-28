@@ -115,6 +115,7 @@
         "vitest": "^4.1.7"
     },
     "overrides": {
+        "brace-expansion": ">=5.0.8",
         "fast-uri": ">=3.1.4",
         "next": {
             "postcss": ">=8.5.10"
