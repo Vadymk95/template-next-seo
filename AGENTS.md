@@ -123,7 +123,11 @@ for a real reason, raise it with the caller first. Production `build` requires
   reach for `--legacy-peer-deps`. **`settings.react.version` must stay a literal,
   never `'detect'`** — see @.cursor/brain/DECISIONS.md.
 - **TypeScript stays `~6.0.x`** — `typescript-eslint@8.65.0` peers
-  `typescript >=4.8.4 <6.1.0`. Re-verified, not assumed.
+  `typescript >=4.8.4 <6.1.0`. Not a preference: a bump to 7.x makes **both**
+  `npm install` and `npm ci` fail with ERESOLVE, so the tree stops resolving at
+  all. That bump was merged once and reached master; `dependabot.yml` now ignores
+  `typescript >=6.1` so it cannot happen again. Lift the hold only together with a
+  `typescript-eslint` major that widens the peer.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
 - **`@types/node` stays 24.x** — types match `engines.node >= 24`.

@@ -17,19 +17,28 @@ updates:
               dependency-type: production
           development-dependencies:
               dependency-type: development
-      # ESLint 10 ecosystem: eslint-plugin-jsx-a11y@6.10.2 (latest stable) caps
-      # peer at `^9`; eslint-plugin-react@7.37.5 caps at `^9.7`. Both are pulled
-      # transitively via eslint-config-next. Bumping eslint to 10.x errors with
-      # ERESOLVE. Re-evaluate when those plugins ship ESLint 10 support.
+      # Every entry here mirrors a version hold in .cursor/brain/DECISIONS.md. An
+      # ignore that outlives its reason is worse than none: it silently withholds
+      # security patches. Check the reason before adding or keeping one.
       #
-      # @types/node held at ^24.x deliberately per .cursor/brain/DECISIONS.md —
-      # alignment with `engines.node >=24` (Node 24 LTS), not Node 26 type defs
-      # by default. Re-evaluate when this template's `engines.node` bumps.
+      # typescript: `typescript-eslint@8` peers `>=4.8.4 <6.1.0`. A bump to 7.x
+      # makes BOTH `npm install` and `npm ci` fail with ERESOLVE — the whole tree
+      # stops resolving, not just linting. This guard exists because that bump was
+      # merged once and reached master.
+      #
+      # eslint: the repo IS on 10.x. The floor is `>=11` so patches and minors
+      # inside 10 still arrive; a major would again outrun the plugin peers that
+      # `overrides` currently map to `$eslint`.
+      #
+      # @types/node: aligned with `engines.node >=24` (Node 24 LTS), not the newest
+      # type defs. Re-evaluate when `engines.node` bumps.
       ignore:
+          - dependency-name: typescript
+            versions: ['>=6.1']
           - dependency-name: eslint
-            versions: ['>=10']
+            versions: ['>=11']
           - dependency-name: '@eslint/js'
-            versions: ['>=10']
+            versions: ['>=11']
           - dependency-name: '@types/node'
             versions: ['>=25']
 
