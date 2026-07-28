@@ -1,0 +1,8 @@
+[
+    {
+        "id": "GHSA-mh99-v99m-4gvg",
+        "expires": "2026-09-01",
+        "reason": "brace-expansion <=5.0.7 can be driven into unbounded expansion and an out-of-memory crash. Every installed path is a development-time tool expanding patterns from our own configuration rather than user input: eslint itself, and the eslint-plugin-import copy that arrives transitively through eslint-config-next. Nothing in the shipped bundle reaches it.",
+        "upstream": "Blocked upstream: minimatch@^3.1.2 is pinned by eslint's own dependencies and by the eslint plugins eslint-config-next brings in, all already at their latest versions. npm's suggested remediation is eslint-plugin-jsx-a11y@6.4.1, a downgrade flagged semver-major, which is destructive rather than a fix."
+    }
+]

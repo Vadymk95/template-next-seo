@@ -17,7 +17,14 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             reporter: ['text', 'json'],
-            exclude: ['node_modules/', 'test/', '.next/', 'app/'],
+            // `scripts/` is gate tooling, not application code. Its DECISION logic
+            // is unit-tested (`audit-gate.test.mjs`, `ensure-playwright.test.mjs`);
+            // what stays uncovered is the `main()` I/O that spawns npm and writes to
+            // the console, which a unit test cannot meaningfully reach. Counting it
+            // toward the app thresholds moved statements from 196 to 331 and dropped
+            // lines from 93% to 82% without a single line of app code changing —
+            // the sibling templates avoid this by scoping coverage `include` to src.
+            exclude: ['node_modules/', 'test/', '.next/', 'app/', 'scripts/'],
             reportsDirectory: './coverage',
             thresholds: {
                 lines: 85,
@@ -28,6 +35,9 @@ export default defineConfig({
         },
         include: [
             '**/*.{test,spec}.{ts,tsx}',
+            // Gate scripts are `.mjs` (executable ESM), so the default ts/tsx glob
+            // above does not reach their tests.
+            'scripts/**/*.{test,spec}.mjs',
             'shared/**/*.{test,spec}.{ts,tsx}',
             'features/**/*.{test,spec}.{ts,tsx}'
         ]

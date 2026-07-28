@@ -28,7 +28,7 @@ as load-bearing examples, not dead code (see Danger Zones).
 | Forms     | react-hook-form + Zod                                            |
 | i18n      | **next-intl 4.13+** (SSR, `[locale]` segment, `messages/*.json`) |
 | Tests     | Vitest + Testing Library (`test/`), Playwright (`e2e/`)          |
-| Lint      | Oxlint → ESLint 9 (flat) → Prettier                              |
+| Lint      | Oxlint → ESLint 10 (flat) → Prettier                             |
 
 Detail: @.cursor/brain/PROJECT_CONTEXT.md
 
@@ -39,11 +39,20 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
    user asked for a bug fix, don't reorganize neighbours.
 2. **One task = one commit.** Conventional Commits, **≤ 96 chars** on the subject
    line. No `Co-authored-by` tags. Never skip hooks (no `--no-verify`).
-3. **`verify:enterprise` is the gate** (alias: `npm run verify`). Every commit
-   must pass it locally before it lands. CI runs the same plus coverage/audit.
-   Local gate is lint → format → tsc → vitest → build → **e2e** (Playwright vs
-   `next start`). Zero-warnings (`eslint --max-warnings 0`, `oxlint --deny-warnings`).
-   Husky **pre-push** runs the full `verify` gate automatically.
+3. **The gate ladder.** `verify` (alias `verify:enterprise`) holds every OFFLINE
+   check: lint → format → typecheck → **`test:coverage`** → build → **e2e**
+   (Playwright vs `next start`). `verify:ci` adds the network-dependent
+   `audit:gate` and is what husky **pre-push** and the CI `validate` job both run.
+   `verify:full` adds `smoke:dev` and is the only local command that predicts the
+   whole pipeline including the `dev-smoke` job. Zero-warnings
+   (`eslint --max-warnings 0`, `oxlint --deny-warnings`).
+
+    **`verify` is a strict superset of CI's offline checks**, so a green `verify`
+    predicts a green `validate`. Keeping that true is a rule: **a new check goes
+    into the script, never only into the workflow file.** The gate used to run
+    `npm test` while CI ran `test:coverage`, so the thresholds in
+    `vitest.config.ts` were defined but unenforceable locally.
+
 4. **English only in code, comments, commits, docs.** Chat may be Russian; the
    repo is not.
 5. **Locale set stays `['en']`** until the caller explicitly asks to expand it.
@@ -64,19 +73,35 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
 
 ## Commands (exact)
 
+**Five agent commands** in `.claude/commands/`, mirrored by shims in
+`.cursor/commands/` so Cursor and Claude Code behave identically:
+
+```bash
+/onboard   # get oriented: read the brain, VERIFY it against the code, report drift, stop
+/feat      # implement a feature: reuse check -> scope -> plan -> test-first -> gate
+/test      # write tests that hunt corner cases at integration seams, not the happy path
+/review    # senior review of the diff: leaks, security (incl. proxy composition), bug hunt
+/docs      # bring AGENTS.md + .cursor/brain/ back in line with the code and master's history
+```
+
 ```bash
 npm run dev                 # Turbopack dev (fast)
 npm run dev:webpack         # webpack parity dev (debug splitChunks)
 npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
-npm run verify              # alias of verify:enterprise (cross-template muscle memory)
-npm run verify:enterprise   # lint → format:check → tsc → vitest → build → e2e (commit/push gate)
-npm run test                # vitest run
+npm run verify              # THE offline gate (alias of verify:enterprise)
+npm run verify:enterprise   # lint → format → typecheck → test:coverage → build → e2e
+npm run verify:ci           # verify + audit:gate — pre-push and the CI validate job
+npm run verify:full         # verify:ci + smoke:dev — predicts the whole CI pipeline
+npm run smoke:dev           # Turbopack dev smoke on its own (e2e/dev/, port 3003)
+npm run fix                 # oxlint --fix → eslint --fix → prettier --write, repo-wide
+npm run audit:gate          # fail-closed audit with a self-expiring allowlist
+npm run test                # vitest run (the gate uses test:coverage — thresholds need --coverage)
 npm run test:e2e            # Playwright (dev server locally unless CI=true)
 npm run test:e2e:prod       # Playwright against `next start` (same as CI / verify gate)
 npm run test:e2e:install    # one-time Chromium install for Playwright
 npm run lint                # oxlint (--deny-warnings) → eslint (--max-warnings 0)
-npm run type-check          # tsc --noEmit
+npm run typecheck           # tsc --noEmit (canonical; `type-check` is kept as an alias)
 ```
 
 **Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
@@ -92,9 +117,13 @@ for a real reason, raise it with the caller first. Production `build` requires
 
 ## Version holds (do not "fix" by bumping)
 
-- **ESLint stays 9.x / TypeScript stays `~6.0.x`** — plugin-ecosystem blocks; the
-  full ADR with re-check cadence lives in @.cursor/brain/DECISIONS.md
-  ("ESLint & TypeScript majors (hold)").
+- **ESLint is 10.x** — the 9.x hold was lifted ahead of the 2026-08-06 end of
+  life. Three plugins still cap their `eslint` peer below 10, so each has an
+  `overrides` entry mapping that peer to `$eslint`; do not remove them and do not
+  reach for `--legacy-peer-deps`. **`settings.react.version` must stay a literal,
+  never `'detect'`** — see @.cursor/brain/DECISIONS.md.
+- **TypeScript stays `~6.0.x`** — `typescript-eslint@8.65.0` peers
+  `typescript >=4.8.4 <6.1.0`. Re-verified, not assumed.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
 - **`@types/node` stays 24.x** — types match `engines.node >= 24`.

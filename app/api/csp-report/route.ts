@@ -41,12 +41,19 @@ function extractCspReportBody(parsed: unknown): Record<string, unknown> | null {
     return null;
 }
 
+// A violation report field is attacker-influenced (the blocked URI can be any
+// URL), so it is truncated before it reaches a log line.
+const MAX_REPORTED_FIELD_LENGTH = 512;
+
 function whitelistedSubset(payload: Record<string, unknown>): Record<string, string> {
     const out: Record<string, string> = {};
     for (const key of WHITELIST) {
         const val = payload[key];
         if (typeof val === 'string' && val.length > 0) {
-            out[key] = val.length > 512 ? val.slice(0, 512) : val;
+            out[key] =
+                val.length > MAX_REPORTED_FIELD_LENGTH
+                    ? val.slice(0, MAX_REPORTED_FIELD_LENGTH)
+                    : val;
         }
     }
     return out;

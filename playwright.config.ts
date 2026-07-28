@@ -9,6 +9,11 @@ const isCI = Boolean(process.env.CI);
  */
 export default defineConfig({
     testDir: 'e2e',
+    // `e2e/dev/**` belongs to playwright.dev.config.ts: it needs a Turbopack dev
+    // server, which this project does not start. Without this the specs are
+    // collected here too and run against the production server — and they can
+    // PASS in that wrong mode, which makes the Turbopack coverage an illusion.
+    testIgnore: 'dev/**',
     fullyParallel: true,
     forbidOnly: isCI,
     retries: isCI ? 2 : 0,

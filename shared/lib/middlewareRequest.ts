@@ -52,8 +52,12 @@ function emitModeWarningOnce(mode: TrustedProxyMode): void {
     }
 }
 
+// Bounds the cardinality of the anonymous bucket: a spoofed, unbounded user-agent
+// would otherwise mint a fresh rate-limit key per request and defeat the limiter.
+const ANON_KEY_USER_AGENT_LENGTH = 64;
+
 function anonKey(headers: RequestHeadersLike): string {
-    return `anon:${headers.get('user-agent')?.slice(0, 64) ?? 'na'}`;
+    return `anon:${headers.get('user-agent')?.slice(0, ANON_KEY_USER_AGENT_LENGTH) ?? 'na'}`;
 }
 
 export function getRateLimitKey(request: RateLimitRequestLike): string {

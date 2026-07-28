@@ -18,7 +18,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | Forms         | react-hook-form + Zod                                                                                                         |
 | i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                                                      |
 | Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`; local `test:e2e`, gate/CI `test:e2e:prod`)                                  |
-| Lint / format | ESLint **9** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)                                          |
+| Lint / format | ESLint **10** (flat) + **Oxlint** + Prettier **3** (`npm run lint` = oxlint → eslint)                                         |
 | Security      | Static document CSP + nonce **`strict-dynamic`** on **`proxy`** matcher paths, COOP/CORP, optional **Upstash** in **`proxy`** |
 
 ## Layout (FSD-ish)
@@ -40,9 +40,21 @@ Imports use the `@/*` path alias (repo root).
 
 ## Local gate
 
-- **`npm run verify` / `verify:enterprise`**: lint → format → tsc → vitest → build → **`test:e2e:prod`** (Playwright vs `next start`).
-- **Husky pre-push** runs the same gate. First-time browsers: `npm run test:e2e:install`.
+- **`npm run verify` / `verify:enterprise`** — every OFFLINE check: lint → format → typecheck → **`test:coverage`** → build → `ensure-playwright` → **`test:e2e:prod`** (Playwright vs `next start`).
+- **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs this, and the CI `validate` job is one step over the same script. `verify` is a strict superset of CI's offline checks, so a green `verify` predicts a green `validate` — keep that true by adding new checks to the SCRIPT, never only to the workflow.
+- **`npm run verify:full`** — `verify:ci && smoke:dev`. The only local command that also predicts the `dev-smoke` job. Run it before a PR touching routing, i18n, `proxy.ts` or `next.config.ts`.
+- **`npm run fix`** — the one remedy: `oxlint --fix` → `eslint --fix` → `prettier --write`, repo-wide.
+- Playwright browsers install on demand via `scripts/ensure-playwright.mjs`, which reads the exact build paths out of `playwright install --dry-run`.
+- **Pre-commit** is repo-scoped: `lint-staged` on the staged set, then the TDD sibling gate, then repo-wide `lint:oxlint` + `format:check` — because `lint-staged` restores unstaged hunks after fixing, which used to leave already-fixed files uncommitted.
 
 ## CI
 
-GitHub Actions on **Node 24.x**: **`npm ci --ignore-scripts`** → `npm audit --audit-level=moderate` → lint → format check → `tsc --noEmit` → **`npm run test:coverage`** (enforces vitest thresholds; see `DECISIONS.md`) → cached **`npm run build`** → Playwright Chromium install → **`npm run test:e2e`** with **`CI=true`** (production server; same mode as local `test:e2e:prod`). Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, etc.
+Two jobs, in parallel.
+
+**`validate`** — Node 24.x, `npm ci --ignore-scripts`, Next and Playwright caches, then a single **`npm run verify:ci`** step. One step on purpose: the script is the gate, and a check added to the workflow instead of the script is what made the local gate stop predicting CI.
+
+**`dev-smoke`** — `npm run smoke:dev` against a cold Turbopack dev server. It exists because `dev` runs Turbopack while `build` runs webpack with a custom `splitChunks` hook, so `validate` only ever exercises the webpack output. It is a separate job rather than a gate step because a cold Turbopack boot costs 10-30s per run.
+
+**`security.yml`** (separate workflow) — gitleaks over full history plus CodeQL `security-extended`, on push, PR and a weekly cron. CodeQL needs GitHub code scanning, which is free on public repos and paid on private ones; the workflow header spells out what a private fork must do. Exclusions live in `.github/codeql/codeql-config.yml` with their reason.
+
+Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, `min-release-age=3`.

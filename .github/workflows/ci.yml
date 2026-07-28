@@ -9,9 +9,22 @@ on:
 permissions:
     contents: read
 
+# Cancel superseded runs on the same branch. Default-branch pushes always finish.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+
+env:
+    # Required at build time (shared/lib/env.ts is strict in production): drives
+    # metadataBase / sitemap / robots / hreflang. Forks override per environment in
+    # their host. The `.invalid` TLD is reserved by RFC 6761 — it never resolves,
+    # so it can never become an accidental real production deploy.
+    NEXT_PUBLIC_APP_URL: https://template-next-seo.invalid
+
 jobs:
     validate:
         runs-on: ubuntu-latest
+        timeout-minutes: 25
 
         strategy:
             matrix:
@@ -32,40 +45,14 @@ jobs:
             # cross-platform optional-binaries bug (npm/cli#4828) this means lock
             # files generated on macOS arm64 fail Linux CI with EUSAGE
             # "Missing: <pkg>-linux-x64-gnu from lock file" for native bindings
-            # (lightningcss, @parcel/watcher, @rolldown/binding). Both issues are
-            # fully restored in npm 11.14.0 (2026-05-06) via arborist 9.5.0. Pin
-            # to ^11.14.0 explicitly — npm@latest would track future majors that
-            # may regress again.
+            # (lightningcss, @parcel/watcher). Both issues are fully restored in
+            # npm 11.14.0 (2026-05-06) via arborist 9.5.0. Pin to ^11.14.0
+            # explicitly — npm@latest would track future majors that may regress.
             - name: Upgrade npm to ^11.14 (cross-platform optional binaries fix)
               run: npm install -g npm@^11.14.0
 
             - name: Install dependencies
               run: npm ci --ignore-scripts
-
-            # `--audit-level=high` (not moderate): npm audit reports a moderate
-            # postcss <8.5.10 advisory transitively via `next 16`, but Next.js
-            # patches CSS handling on its own track — `npm audit fix --force`
-            # would downgrade next to 9.3.3, which is destructive. We accept the
-            # transitive moderate from Next's tree and gate on `high+` advisories
-            # the team would actually need to action.
-            - name: Audit dependencies
-              run: npm audit --audit-level=high
-
-            - name: Run ESLint
-              run: npm run lint
-
-            - name: Check Prettier formatting
-              run: npm run format:check
-
-            - name: TypeScript check
-              run: npm run type-check
-
-            - name: Run tests with coverage thresholds
-              # Coverage thresholds (statements 85 / branches 70 / functions 75 / lines 85)
-              # are defined in vitest.config.ts. `npm test` runs vitest WITHOUT --coverage,
-              # so the thresholds are local-only. `npm run test:coverage` enforces them on
-              # every PR. Per /consilium 2026-05-23 APPLY Item 11 (6/6 voters YES, no dissent).
-              run: npm run test:coverage
 
             - name: Cache Next.js build
               uses: actions/cache@v6
@@ -75,22 +62,66 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-            - name: Production build
-              run: npm run build
+            # Keyed on the lock file, so a @playwright/test bump invalidates the
+            # cache and scripts/ensure-playwright.mjs (inside the gate) reinstalls
+            # the builds that version actually needs.
+            - name: Cache Playwright browsers
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+            # ONE step on purpose. `verify:ci` is the same command the pre-push hook
+            # runs, and the `verify` inside it is a strict superset of every check
+            # this job used to list separately. Adding a check HERE instead of to
+            # the script is what makes a green local gate stop predicting a green CI.
+            - name: Verify (audit gate, lint, format, types, coverage, build, e2e)
+              run: npm run verify:ci
               env:
                   ANALYZE: 'false'
-                  # Required at build time (env.ts strict in production):
-                  # drives metadataBase / sitemap / robots / hreflang. Forks
-                  # override per environment in their host. The `.invalid`
-                  # TLD is reserved by RFC 6761 — never resolves, never an
-                  # accidental real production deploy.
-                  NEXT_PUBLIC_APP_URL: https://template-next-seo.invalid
 
-            - name: Install Playwright Chromium
-              run: npx playwright install --with-deps chromium
+            - name: Upload Playwright report on failure
+              uses: actions/upload-artifact@v7
+              if: failure()
+              with:
+                  name: playwright-report
+                  path: playwright-report/
+                  retention-days: 7
 
-            - name: End-to-end tests
-              run: npm run test:e2e
-              env:
-                  CI: 'true'
-                  NEXT_PUBLIC_APP_URL: https://template-next-seo.invalid
+    dev-smoke:
+        # Its own job, deliberately not part of `verify`. `dev` runs Turbopack while
+        # `build` runs webpack with a custom splitChunks hook, so the gate only ever
+        # exercises the webpack output — a Turbopack-only crash would ship unseen.
+        # A cold Turbopack boot costs 10-30s, a poor trade on every local push, so it
+        # runs here in parallel with `validate`: mandatory on every PR, free locally.
+        # `npm run verify:full` chains it for the rare local run that needs it.
+        name: Turbopack dev smoke
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Use Node.js 24.x
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24.x
+                  cache: 'npm'
+
+            - name: Upgrade npm to ^11.14 (cross-platform optional binaries fix)
+              run: npm install -g npm@^11.14.0
+
+            - name: Install dependencies
+              run: npm ci --ignore-scripts
+
+            - name: Cache Playwright browsers
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+            - name: Install Playwright browsers if the cache missed
+              run: node scripts/ensure-playwright.mjs
+
+            - name: Run Turbopack dev smoke
+              run: npm run smoke:dev

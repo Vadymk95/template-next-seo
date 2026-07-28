@@ -1,5 +1,87 @@
 # DECISIONS — template-next-seo
 
+## [2026-07] The gate ladder: `verify` ⊂ `verify:ci` ⊂ `verify:full`
+
+**Decision.** Three commands, each predicting a named part of CI. `verify` holds every offline check.
+`verify:ci` is `audit:gate && verify` and predicts the `validate` job — husky **pre-push** runs it.
+`verify:full` is `verify:ci && smoke:dev` and predicts the whole pipeline including `dev-smoke`.
+
+**Why.** `verify:enterprise` ran `npm test`, without `--coverage`, while CI ran `test:coverage`. Vitest
+only enforces thresholds when `--coverage` is passed, so the 85/70/75/85 numbers in `vitest.config.ts`
+were defined but unenforceable locally — a change could drop coverage, pass the push gate and die in CI.
+CI also ran `npm audit --audit-level=high`, which existed nowhere locally.
+
+**Consequence, accepted.** `verify` is slower: it now runs coverage instead of a bare test pass, and
+installs Playwright browsers on demand. `audit:gate` sits in `verify:ci` rather than `verify` because it
+needs the network, so an offline implementer can still run the complete offline gate.
+
+**`smoke:dev` stays out of the push gate.** `dev` runs Turbopack, `build` runs webpack with a custom
+`splitChunks` hook, so `validate` only ever exercises the webpack output and a Turbopack-only crash
+would ship unnoticed. But a cold Turbopack boot costs 10-30s, which is a poor trade on every push for a
+path that breaks mainly when routing or configuration changes. It runs as its own parallel CI job —
+mandatory on every PR, free locally — and `verify:full` chains it for the rare local run that needs it.
+
+**`playwright.config.ts` must keep `testIgnore: 'dev/**'`.** Without it the production project collects
+`e2e/dev/**` and runs the Turbopack smoke against `next start`, where it can PASS — a production build
+is quieter than a dev one — making the Turbopack coverage an illusion while looking like a win.
+
+**Advisory exceptions are data, not thresholds.** `audit:gate` replaces `npm audit --audit-level`: it
+fails on every high or critical advisory, on an expired allowance, on an allowance whose advisory has
+disappeared, and on its own inability to complete. Lowering a threshold to make a finding go away is not
+available; writing the reason down with an expiry is.
+
+**Pre-commit is repo-scoped.** `lint-staged` fixes and re-stages the staged set, but for a partially
+staged file it restores the unstaged hunks *after* fixing, so formatting drift survived the commit and
+only failed at push — leaving files already fixed and never committed. The hook now also runs the TDD
+sibling gate and repo-wide `lint:oxlint` + `format:check`, collecting both failures so one attempt
+reports everything. **Not adopted:** a hook that commits for you.
+
+**Revisit trigger:** if a PR goes red on `dev-smoke` twice in one month, move `smoke:dev` into
+`verify:ci`.
+
+## [2026-07] ESLint 10; `settings.react.version` must be a literal
+
+**Decision.** ESLint 10, ahead of the 9.x end of life on 2026-08-06 — the deadline the hold below set
+for itself. The plugin peers did NOT widen; the resolution is three `overrides` entries mapping
+`eslint-plugin-react`, `eslint-plugin-jsx-a11y` and the transitive `eslint-plugin-import` peer to
+`$eslint`. `npm install` and `npm ci` both succeed with **no `--legacy-peer-deps`**; the blanket flag
+was rejected as a permanent posture in a repo with a hardened `.npmrc`. Plan B from the hold ADR
+(`@eslint-react/eslint-plugin` + a config rewrite) was not needed.
+
+**`settings.react.version` is `'19.2'`, never `'detect'`.** `eslint-plugin-react` resolves `'detect'`
+through `detectReactVersion` -> `resolveBasedir`, which calls the `context.getFilename()` API that
+ESLint 10 removed. Pinning only our own settings block is NOT enough: `eslint-config-next` sets
+`'detect'` for its own patterns, so the run then crashes on files matched solely by that config. A
+trailing config object with no `files` key repeats the pin and wins for every linted file.
+
+**Verified not fail-open**, because a config that lints nothing looks identical to a clean run from the
+exit code: 1236 rules declared, 57 active, 9 plugins loaded on a real source file.
+
+**Note on strictness relative to the sibling templates.** 57 active rules here versus 237 in the Vite
+templates, because this repo builds on `eslint-config-next` rather than `typescript-eslint`
+`strictTypeChecked`. That is this template's existing design, not a regression — but it is why a rule
+present in a sibling is not necessarily present here.
+
+## [2026-07] `no-magic-numbers`, with HTTP status codes ignored
+
+**Decision.** `@typescript-eslint/no-magic-numbers` blocks in the gate. Ignored: the trivial set
+(-1, 0, 1, 2), universal units (60, 100, 1000), **and the HTTP status codes**. Config files
+(`*.config.{ts,js,mjs}`) and test files are exempt entirely.
+
+**Why the status codes are ignored rather than extracted.** Enabling the rule produced 54 findings, and
+the large majority were `{ status: 404 }`-shaped literals in route handlers, plus Next's own
+`images.deviceSizes` table. A status code is a standard, universally known table — `status: 404` is
+self-documenting at the use site, which this repo's own constants ADR names as a reason NOT to extract.
+Naming twenty of them would move an HTTP table into our vocabulary and buy nothing.
+
+**What was left, and named.** Five genuine values survived the exemptions, and each encoded intent the
+bare number hid: the CSP-report field truncation (an attacker-influenced value bounded before it reaches
+a log), the nonce byte length (128 bits of entropy), the rate-limit key prefix that goes into a log line
+(privacy, not convenience), and the user-agent slice in the anonymous rate-limit key (bounds bucket
+cardinality so a spoofed unbounded UA cannot mint a fresh key per request). Those are the findings the
+rule exists for.
+
+
 ## [2026-05] Magic strings → constants (CSP Reporting-Endpoint contract only)
 
 **Decision**: extract magic strings used in 2+ places OR carrying external contract to named constants in `shared/constants/`. Apply selectively per scope rules. NOT blanket extraction (Ghost Principle + existing Template scaffolding seeds stay intentionally inline as patterns for consumers to copy).
@@ -80,7 +162,12 @@
 - **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.
 - **Not enabled:** `func-style: expression` globally — Next idioms use `export async function` for routes, **`proxy`**, and Server Actions; enabling would fight the framework.
 
-## ESLint & TypeScript majors (hold — re-evaluated 2026-05-22)
+## ESLint & TypeScript majors (hold — SUPERSEDED)
+
+**Superseded by "[2026-07] ESLint 10" above.** The 9.x hold met its own 2026-08-06 deadline. Its
+analysis of the plugin peers was correct and they never widened; what it missed is that `overrides`
+resolves the install conflict, and that the single runtime crash path is
+`settings.react.version: 'detect'`. Plan B was never needed. Kept for the reasoning.
 
 - **ESLint 9.x (HOLD)** — Snapshot 2026-05-22: ESLint 10.0.0 shipped 2026-02-09; latest 10.4.0 shipped 2026-05-15. ESLint 9.x EOL is 2026-08-06 (`maintenance` dist-tag `9.39.4`). `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. ESLint 10 removed `context.getFilename()` + `sourceCode.isSpaceBetweenTokens` + `sourceCode.getAllComments` + RuleTester `type` field — `eslint-plugin-react@7.x` calls these at runtime (crash, not warning). Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. PR #3979 (eslint-plugin-react ESLint 10) blocked transitively by `import-js/eslint-plugin-import#3230`; PR #1081 (eslint-plugin-jsx-a11y) awaiting `ljharb` review since Mar 2026. Re-evaluate monthly starting 2026-07-01 (1-month buffer pre-EOL) (2026-07 cycle missed - next check 2026-08-01). Plan B if upstream still blocked: switch to `@eslint-react/eslint-plugin@5.8.4+` (peer `eslint ^10.3.0`, requires Node ≥22, NOT drop-in — config rewrite ~3-5h) + `eslint-plugin-jsx-a11y-x@0.2.0+` (es-tooling org, drop-in).
 - **TypeScript 6.0.x (ACTIVE — bumped 2026-05-09)** — `typescript-eslint@8.59.2` peer relaxed to `>=4.8.4 <6.1.0`, unblocking TS 6.0.x. Repo bumped from `~5.9.3` → `~6.0.3`. Keep within `~6.0.x` until `typescript-eslint` ships its next major widening the upper bound.

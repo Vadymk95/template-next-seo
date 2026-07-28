@@ -67,7 +67,9 @@ export default defineConfig([
             }
         },
         settings: {
-            react: { version: 'detect' },
+            // NOT 'detect' — see the trailing settings block at the end of this
+            // file for why that crashes under ESLint 10.
+            react: { version: '19.2' },
             'import-x/resolver-next': [
                 createTypeScriptImportResolver({
                     alwaysTryTypes: true,
@@ -125,6 +127,30 @@ export default defineConfig([
                 }
             ],
             'no-console': 'error',
+
+            // ─── Magic numbers — extract to a named constant (exempt below) ───
+            // Cheap models scatter literals; force named constants. Ignored:
+            // trivial (-1,0,1,2), universal units (60 s/min, 1000 ms/s, 100 %),
+            // and the HTTP status codes. A status code is a standard table, not
+            // domain magic — `{ status: 404 }` is self-documenting at the use
+            // site, which this repo's constants ADR names as a reason NOT to
+            // extract. Naming 20 of them would add indirection, not insight.
+            '@typescript-eslint/no-magic-numbers': [
+                'error',
+                {
+                    ignore: [
+                        -1, 0, 1, 2, 60, 100, 1000,
+                        // HTTP status codes
+                        200, 201, 204, 301, 302, 304, 307, 308, 400, 401, 403, 404, 405, 409, 413,
+                        422, 429, 500, 502, 503
+                    ],
+                    ignoreEnums: true,
+                    ignoreReadonlyClassProperties: true,
+                    ignoreArrayIndexes: true,
+                    ignoreDefaultValues: true,
+                    ignoreTypeIndexes: true
+                }
+            ],
             'no-restricted-imports': [
                 'error',
                 {
@@ -232,7 +258,19 @@ export default defineConfig([
             '@typescript-eslint/no-floating-promises': 'off',
             '@typescript-eslint/no-misused-promises': 'off',
             'no-console': 'off',
-            'no-restricted-syntax': 'off'
+            'no-restricted-syntax': 'off',
+            // Fixture values are the point of a test; naming them adds indirection.
+            '@typescript-eslint/no-magic-numbers': 'off'
+        }
+    },
+    // ─── Framework config files ──────────────────────────────────────────────
+    // `next.config.ts` image `deviceSizes` / `imageSizes` and the Playwright
+    // timeouts are values of a documented framework contract, not domain logic.
+    // Naming them would move a Next.js table into our vocabulary for no gain.
+    {
+        files: ['*.config.{ts,js,mjs}'],
+        rules: {
+            '@typescript-eslint/no-magic-numbers': 'off'
         }
     },
     {
@@ -249,5 +287,20 @@ export default defineConfig([
             'import-x/order': 'off',
             'no-console': 'off'
         }
+    },
+    /*
+     * REQUIRED for ESLint 10, do not set back to 'detect'. `eslint-plugin-react`
+     * resolves `version: 'detect'` through `detectReactVersion` -> `resolveBasedir`,
+     * which calls the `context.getFilename()` API that ESLint 10 removed; every
+     * react rule needing the version then throws at load. An explicit string skips
+     * that path entirely (`lib/util/version.js`).
+     * This block deliberately has NO `files` key, so it applies to every linted file
+     * and wins over `eslint-config-next`, which sets 'detect' for its own patterns —
+     * pinning only the settings block above is NOT enough, the run then crashes on
+     * files matched solely by the Next config.
+     * Keep it in step with the `react` major/minor in package.json.
+     */
+    {
+        settings: { react: { version: '19.2' } }
     }
 ]);

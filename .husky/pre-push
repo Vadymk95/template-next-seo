@@ -12,9 +12,15 @@ fi
 # Match CI: build + Playwright prod server need a base URL.
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://template-next-seo.invalid}"
 
-echo "→ verify:enterprise (lint → format → tsc → vitest → build → e2e)"
-npm run verify || {
-    echo "❌ verify:enterprise failed. Fix before push."
-    echo "   First-time Playwright browsers: npm run test:e2e:install"
+# verify:ci, not verify — pushing implies network, so the audit gate can run here.
+# If this hook ran only `verify`, a green pre-push would stop predicting a green CI,
+# which is the property the gate exists to hold.
+echo "→ verify:ci (audit → lint → format → tsc → coverage → build → e2e)"
+npm run verify:ci || {
+    echo "❌ verify:ci failed. Fix before push."
+    echo "   Lint or formatting: npm run fix && git add -u"
+    echo "   Playwright browsers are installed by scripts/ensure-playwright.mjs"
+    echo "   Touched routing, i18n or next.config.ts? Also run: npm run verify:full"
+    echo "   Port 3000 busy (another Next repo running dev)? PORT=3100 PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run verify:ci"
     exit 1
 }

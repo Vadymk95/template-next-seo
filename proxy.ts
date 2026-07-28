@@ -16,8 +16,15 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 100;
 
+// 16 bytes = 128 bits of entropy, the floor the CSP spec's nonce guidance assumes.
+const NONCE_BYTES = 16;
+
+// A rate-limit key can contain a client IP. Only a prefix goes into a log line —
+// enough to correlate two entries, not enough to be a stored identifier.
+const KEY_HINT_LENGTH = 24;
+
 function generateNonce(): string {
-    const bytes = new Uint8Array(16);
+    const bytes = new Uint8Array(NONCE_BYTES);
     crypto.getRandomValues(bytes);
     let binary = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -54,7 +61,7 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
             logger.error(
                 '[proxy] Upstash rate limit failed; falling back to in-memory limiter',
                 err instanceof Error ? err : new Error(String(err)),
-                { keyHint: key.slice(0, 24) }
+                { keyHint: key.slice(0, KEY_HINT_LENGTH) }
             );
         }
     }
