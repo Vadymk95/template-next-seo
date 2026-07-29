@@ -5,12 +5,17 @@
 
 import { spawnSync } from 'node:child_process';
 
+// Mirrors `verify:enterprise`. If you change one, change the other — a bench that
+// benchmarks a different set of steps than the gate is worse than no bench.
 const steps = [
+    ['hooks', 'node', ['scripts/check-hooks.mjs']],
     ['lint', 'npm', ['run', 'lint']],
     ['format', 'npm', ['run', 'format:check']],
-    ['tsc', 'npx', ['tsc', '--noEmit']],
-    ['test', 'npm', ['test']],
+    ['typecheck', 'npm', ['run', 'typecheck']],
+    ['coverage', 'npm', ['run', 'test:coverage']],
+    ['build-env', 'node', ['scripts/check-build-env.mjs']],
     ['build', 'npm', ['run', 'build']],
+    ['playwright', 'node', ['scripts/ensure-playwright.mjs']],
     ['e2e', 'npm', ['run', 'test:e2e:prod']]
 ];
 

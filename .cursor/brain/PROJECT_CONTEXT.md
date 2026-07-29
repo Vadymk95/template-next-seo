@@ -44,6 +44,7 @@ Imports use the `@/*` path alias (repo root).
 - **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs this, and the CI `validate` job is one step over the same script. `verify` is a strict superset of CI's offline checks, so a green `verify` predicts a green `validate` — keep that true by adding new checks to the SCRIPT, never only to the workflow.
 - **`npm run verify:full`** — `verify:ci && smoke:dev`. The only local command that also predicts the `dev-smoke` job. Run it before a PR touching routing, i18n, `proxy.ts` or `next.config.ts`.
 - **`npm run fix`** — the one remedy: `oxlint --fix` → `eslint --fix` → `prettier --write`, repo-wide.
+- **`.env.local` is a bootstrap step, not optional**: `verify` builds, and the production build requires `NEXT_PUBLIC_APP_URL`. `cp .env.example .env.local` once. `scripts/check-build-env.mjs` runs before the build and reports the fix in one line instead of letting a Zod error surface from inside page-data collection; it reads `.env*` via `@next/env` so its view of the env matches the build's.
 - Playwright browsers install on demand via `scripts/ensure-playwright.mjs`, which reads the exact build paths out of `playwright install --dry-run`.
 - **Pre-commit** is repo-scoped: `lint-staged` on the staged set, then the TDD sibling gate, then repo-wide `lint:oxlint` + `format:check` — because `lint-staged` restores unstaged hunks after fixing, which used to leave already-fixed files uncommitted.
 

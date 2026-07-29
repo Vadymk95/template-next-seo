@@ -112,8 +112,16 @@ verify gate fails loudly if hooks are missing. Dependency cooldown is also on
 
 `verify:enterprise` is authoritative. If it fails, fix the cause — do **not**
 downgrade rules, silence warnings, or add `eslint-disable`. If a rule is wrong
-for a real reason, raise it with the caller first. Production `build` requires
-`NEXT_PUBLIC_APP_URL` (CI uses `https://template-next-seo.invalid`).
+for a real reason, raise it with the caller first.
+
+**The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
+step, `cp .env.example .env.local`, after cloning. `next dev` needs nothing (the
+schema defaults to localhost outside production), and CI injects
+`https://template-next-seo.invalid` at the workflow level.
+`scripts/check-build-env.mjs` runs before the build and says exactly that when the
+value is missing or points at localhost — which `shared/lib/env.ts` rejects on
+purpose. It loads `.env*` through `@next/env`, the same loader `next build` uses,
+so it cannot report "not set" for a value the build would have found.
 
 ## Version holds (do not "fix" by bumping)
 

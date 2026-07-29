@@ -44,6 +44,25 @@ advisory's fixed range directly instead of trusting `fixAvailable`.
 advisory disappears from the audit, which makes the allowance **stale**, which fails the gate by design.
 That is the stale check working — it is what stops allowances outliving the problem they described.
 
+**The gate must be runnable from a clean clone.** `verify` builds, the production
+build requires `NEXT_PUBLIC_APP_URL`, and `.env.example` used to suggest
+`http://localhost:3000` — a value `shared/lib/env.ts` deliberately REJECTS in
+production. So following the repo's own instructions produced a red gate, and the
+failure surfaced as a Zod trace under "Failed to collect configuration for
+/_not-found" with no hint about what to set. Three changes, none of which weaken the
+production check: `.env.example` now carries the reserved `.invalid` placeholder so
+`cp .env.example .env.local` leaves a passing gate; `scripts/check-build-env.mjs`
+runs before the build and prints the one-line remedy; the README and AGENTS.md name
+the copy as a bootstrap step next to `npm run prepare`.
+**The guard loads `.env*` through `@next/env`, the same loader `next build` uses.**
+Reading `process.env` alone would report "not set" for a value sitting in
+`.env.local`, because Node does not read `.env.local` — only Next does. That is a
+worse failure than the one being fixed: a gate that blocks a valid state.
+`@next/env` is therefore an explicit devDependency rather than a borrowed
+transitive of `next`, and it is CommonJS — a named ESM import throws
+`SyntaxError: Named export 'loadEnvConfig' not found`, so the default import is
+destructured.
+
 **Pre-commit is repo-scoped.** `lint-staged` fixes and re-stages the staged set, but for a partially
 staged file it restores the unstaged hunks *after* fixing, so formatting drift survived the commit and
 only failed at push — leaving files already fixed and never committed. The hook now also runs the TDD

@@ -472,12 +472,23 @@ See `.cursor/rules/` for comprehensive guidelines:
 
 ### Environment Variables
 
-Create `.env.local` only for variables your project actually uses, for example:
+**Do this once after cloning** — the verify gate builds, and the production build
+requires `NEXT_PUBLIC_APP_URL`:
 
-```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=Next.js SEO Template
+```bash
+cp .env.example .env.local
 ```
+
+`next dev` needs nothing: the schema in `shared/lib/env.ts` defaults to
+`http://localhost:3000` outside production. The production build is the strict
+path — it requires the variable **and rejects localhost values**, because a
+localhost origin would bake into prerendered metadata, the sitemap and `hreflang`
+and ship to crawlers. That is why `.env.example` carries a `.invalid` placeholder
+rather than a localhost URL: copying it has to leave you with a gate that passes.
+
+`scripts/check-build-env.mjs` runs before the build and reports this in one line
+if the value is missing or local. CI injects the same placeholder at the workflow
+level, so it never needs a file.
 
 ### Next.js Config
 
