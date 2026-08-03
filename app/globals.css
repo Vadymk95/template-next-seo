@@ -131,5 +131,31 @@
     }
     body {
         @apply bg-background text-foreground min-h-screen font-sans antialiased;
+        /*
+         * A single unbroken token — a URL, an untranslated identifier, a long product name — has
+         * nothing to wrap on and pushes the page sideways. Measured on the sibling template before this
+         * line existed: 172px of overflow in a 292px column from a 40-character token, and only at
+         * 390, which is why a guard proven at one width proves nothing.
+         *
+         * `break-word` and not `anywhere`: `anywhere` also shrinks intrinsic min-content size, which
+         * would silently change how flex and grid items size themselves everywhere. Where a flex item
+         * needs that, it opts in locally with `min-w-0`.
+         */
+        overflow-wrap: break-word;
+    }
+}
+
+/*
+ * Reduced-motion: collapse `tw-animate-css` animations and transitions for users who opt out
+ * (WCAG 2.3.3). Motion resolves to the END state, never to a faster animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

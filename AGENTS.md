@@ -160,6 +160,21 @@ Full file map: @.cursor/brain/MAP.md
 an existing equivalent and extend it. **Consistency beats preference** — match the
 surrounding file's style and patterns.
 
+**Content variance** — anything that renders authored copy is proven against content it has NOT seen:
+`minimal` / `typical` / `long` / `unbroken` for text, `none` / `one` / `many` for collections. The fixture
+is `/dev/ui/content-stress` (dev-only, 404 in production), measured by `e2e/dev/content-stress.spec.ts` at
+390 / 640 / 768 / 1024 / 1440; the assembled pages are measured by `e2e/layout-geometry.spec.ts`. Add a
+case when you add a content-bearing component, and keep a chrome LABEL separate from PROSE — feeding a
+paragraph to a `whitespace-nowrap` button measures the wrong thing (568px of content in a 292px column
+here, which reads as a broken primitive and is not one). Two rules earned the hard way: the RANGE of
+widths a guard covers is part of its specification, and a wrap class with no red-to-green proof gets
+deleted rather than kept "to be safe".
+
+**Rendering differences are measured, not predicted** — engines disagree about intrinsic sizing, font
+metrics (so any `ch` measure), scrollbar gutters and `forced-colors`. `CROSS_BROWSER=1` adds Firefox and
+WebKit to the geometry specs; CI runs that as its own job. Never reason about what an engine does — run
+it.
+
 ## i18n contract (next-intl SSR)
 
 - **Single source of truth:** `messages/<locale>.json`. No `public/locales/*`,

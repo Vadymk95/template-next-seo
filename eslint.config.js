@@ -1,6 +1,7 @@
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import nextTypescript from 'eslint-config-next/typescript';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
+import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
 import pluginImport from 'eslint-plugin-import-x';
 import oxlintPlugin from 'eslint-plugin-oxlint';
 import prettierRecommended from 'eslint-plugin-prettier/recommended';
@@ -38,6 +39,7 @@ const reactRecommended = {
 
 export default defineConfig([
     globalIgnores([
+        '.next-dev',
         '.next',
         'dist',
         'node_modules',
@@ -275,7 +277,7 @@ export default defineConfig([
     },
     {
         ...tseslint.configs.disableTypeChecked,
-        files: ['e2e/**/*.ts', 'playwright.config.ts'],
+        files: ['e2e/**/*.ts', 'playwright.config.ts', 'playwright.dev.config.ts'],
         languageOptions: {
             ...tseslint.configs.disableTypeChecked.languageOptions,
             globals: { ...globals.node }
@@ -286,6 +288,25 @@ export default defineConfig([
             'import-x/no-cycle': 'off',
             'import-x/order': 'off',
             'no-console': 'off'
+        }
+    },
+    /*
+     * Tailwind class HYGIENE, alongside `eslint-plugin-tailwindcss` rather than instead of it — the two
+     * rule sets do not overlap. Adopted on a measured pre-flight: `no-deprecated-classes` earns its
+     * place immediately because a Tailwind MINOR can rename a utility, the build emits no warning, and
+     * `outline-none` -> `outline-hidden` proved a rename can be an accessibility change wearing a
+     * rename's clothes.
+     *
+     * `no-unknown-classes` stays OFF: in a TEMPLATE its failure mode is a false positive on the first
+     * hand-written CSS class a consumer adds.
+     */
+    {
+        files: ['**/*.tsx'],
+        plugins: { 'better-tailwindcss': betterTailwindcss },
+        settings: { 'better-tailwindcss': { entryPoint: './app/globals.css' } },
+        rules: {
+            'better-tailwindcss/no-deprecated-classes': 'error',
+            'better-tailwindcss/enforce-canonical-classes': 'error'
         }
     },
     /*

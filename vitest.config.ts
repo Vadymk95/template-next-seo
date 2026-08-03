@@ -12,7 +12,11 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
-        exclude: ['**/node_modules/**', '**/e2e/**', '.next/**'],
+        // Only the browser SPECS are excluded, not all of `e2e/`: the pure predicates under
+        // `e2e/support/` are unit-tested here, which is why the two runners split on the
+        // extension (`.spec.ts` = Playwright, `.test.ts` = Vitest) and both configs carry the
+        // matching ignore. Excluding the whole directory silently dropped those tests.
+        exclude: ['**/node_modules/**', '**/e2e/**/*.spec.ts', '.next/**', '.next-dev/**'],
         setupFiles: ['./shared/lib/test-utils/setup.ts'],
         coverage: {
             provider: 'v8',

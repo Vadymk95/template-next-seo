@@ -28,7 +28,7 @@ import { existsSync } from 'node:fs';
 // 404 for in production — the sibling templates treat their own playground the same
 // way.
 const EXEMPT =
-    /(\.test\.[tj]sx?$|\.d\.ts$|\/index\.tsx?$|constants\.ts$|\/_example[^/]*$|\/layout\.tsx$|\/loading\.tsx$|\/error\.tsx$|\/global-error\.tsx$|\/not-found\.tsx$|\/template\.tsx$|\/sitemap\.ts$|\/robots\.ts$|-image\.tsx$|^shared\/ui\/[^/]+\.tsx$|\/test-utils\/|types\.ts$|^app\/dev\/)/;
+    /(\.test\.[tj]sx?$|\.d\.ts$|\/index\.ts$|constants\.ts$|\/_example[^/]*$|\/layout\.tsx$|\/loading\.tsx$|\/error\.tsx$|\/global-error\.tsx$|\/not-found\.tsx$|\/template\.tsx$|\/sitemap\.ts$|\/robots\.ts$|-image\.tsx$|^shared\/ui\/[^/]+\.tsx$|\/test-utils\/|types\.ts$|^app\/dev\/)/;
 
 // Repo logic lives in these top-level layers (no `src/` in a Next App Router repo).
 export const isSrcLogic = (file) =>
@@ -40,14 +40,31 @@ export const isSrcLogic = (file) =>
  * likely to be edited later (usually to widen an exemption), so it is the piece
  * that needs a spec.
  */
+/**
+ * Every path that would count as this file's test. `Dir/index.tsx` is a component here, not a barrel
+ * (the barrels are `index.ts`), and its test is named after the DIRECTORY — the convention the existing
+ * components already follow. Exported so the naming rules are testable on their own.
+ */
+export const siblingCandidates = (file) => {
+    const base = file.replace(/\.(ts|tsx)$/, '');
+    const candidates = [`${base}.test.ts`, `${base}.test.tsx`];
+
+    const componentDirectory = /^(.*)\/index\.tsx$/.exec(file)?.[1];
+    if (componentDirectory) {
+        const name = componentDirectory.split('/').at(-1);
+        candidates.push(
+            `${componentDirectory}/${name}.test.tsx`,
+            `${componentDirectory}/${name}.test.ts`
+        );
+    }
+
+    return candidates;
+};
+
 export const findMissingSiblings = (files, exists) =>
-    files.filter((file) => {
-        if (!isSrcLogic(file)) {
-            return false;
-        }
-        const base = file.replace(/\.(ts|tsx)$/, '');
-        return !exists(`${base}.test.ts`) && !exists(`${base}.test.tsx`);
-    });
+    files.filter(
+        (file) => isSrcLogic(file) && !siblingCandidates(file).some((path) => exists(path))
+    );
 
 const stagedFiles = () =>
     execSync('git diff --cached --name-only --diff-filter=ACM', { encoding: 'utf8' })

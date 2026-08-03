@@ -57,3 +57,21 @@ This repo is a template, not a shipped product. Several files, deps, and config 
 - **Web Vitals pipeline** — `app/WebVitalsReporter.tsx` + `app/api/vitals/route.ts` kept minimal on purpose (log-only sink). Expand to analytics when the MVP picks a vendor; do not collapse further.
 
 **Rule:** when in doubt, search for `Template scaffolding` inline comments — every protected site is marked. Only strip after the caller confirms "this is now my MVP, not the template".
+
+## `playwright.config.ts` must keep `dev/**` in `testIgnore`
+
+- **Risk:** the content-variance fixture is mounted only under `process.env.NODE_ENV !== 'production'` (`app/dev/ui/layout.tsx` calls `notFound()`). If the production
+  project collects `e2e/dev/**`, it runs those specs against `next start`, where the route 404s. The
+  spec then measures nothing and still reports a pass, so the coverage becomes an illusion that looks
+  like a win.
+- **Mitigation:** keep the ignore. `playwright.dev.config.ts` owns `e2e/dev/**` and brings its own dev
+  server on its own port with `reuseExistingServer: false` — never attach to a stray server from another
+  branch, or the run measures the wrong tree and looks clean.
+
+## Layout measurements can pass by measuring nothing
+
+- **Risk:** `the shell not having rendered yet` hides the whole document while i18next loads. A
+  measurement taken mid-boot finds NO visible element, so every geometry invariant passes vacuously.
+- **Mitigation:** both geometry specs assert a non-empty measurement before checking anything, and the
+  content-stress spec allows an empty measurement ONLY for the `none` collection state (an empty list
+  legitimately has no box). Do not relax either assertion to make a flake go away.

@@ -18,7 +18,17 @@ const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true'
 });
 
+/*
+ * The dev smoke and the production gate must not share a build directory. Next documents `lockDistDir`
+ * precisely because two processes writing one `distDir` "can mangle the state of the directory", and
+ * `verify:full` does exactly that: it builds into `.next`, serves production from it, then starts
+ * `next dev` on the same path. The third observed failure shape leaks into the NEXT run, as a
+ * `.next/dev/types/routes.d.ts` truncated mid-write that fails the following `tsc`.
+ */
+const distDir = process.env.NEXT_DIST_DIR ?? '.next';
+
 const nextConfig: NextConfig = {
+    distDir,
     headers: async () => {
         const isDev = process.env.NODE_ENV !== 'production';
         const staticCsp = buildStaticContentSecurityPolicy(isDev);
