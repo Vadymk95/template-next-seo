@@ -21,13 +21,22 @@ parallel one.
 
 ## 2. Reuse this repo's test infrastructure — do not invent
 
-- `src/test/test-utils.tsx` — `renderWithProviders` (QueryClient + i18n with real translation files).
-- `src/test/server.ts` + `src/test/handlers.ts` — MSW. Override per test with `server.use(...)`; the
-  setup fails on an unhandled request, so a missing handler is a test bug not a flake.
-- `src/test/setup.ts` — jest-dom matchers and MSW lifecycle, already wired.
+- `shared/lib/test-utils/test-utils.tsx` — `renderWithProviders` (RTL `render` inside
+  `NextIntlClientProvider` with the real `messages/en.json` and `routing.defaultLocale`). Use it for
+  any component that calls `useTranslations`.
+- `shared/lib/test-utils/setup.ts` — jest-dom matchers and RTL cleanup, already wired through
+  `setupFiles` in `vitest.config.ts`.
+- Server Actions and anything else on `getTranslations`: mock `next-intl/server` with the
+  messages-indexed resolver in `app/actions/example-form.test.ts` — it resolves `namespace.key`
+  against the real `messages/en.json` and falls back to the key, so assertions pin real copy.
+- Route handlers and `proxy.ts` need no provider: build the `Request` by hand and mock the boundary
+  modules (`@/shared/lib/logger`, `@/shared/lib/upstashRateLimit`, `next-intl/middleware`);
+  `app/api/csp-report/route.test.ts` and `proxy.test.ts` are the references.
+- There is no MSW and no network-stub layer — the form flow goes through a Server Action and API
+  routes are tested by invoking their handlers directly. Do not introduce one for a unit test.
 - A recent nearby spec is the reference for imports, wrapper and assertion style.
 
-Hardcoding a literal where a handler or helper already provides it is a violation.
+Hardcoding a translated string where the real `messages/en.json` already provides it is a violation.
 
 ## 3. Decide the coverage LEVEL before writing
 
