@@ -487,7 +487,10 @@ full run costs 2m28s locally and more on CI runners. **Scope mirrors the coverag
 `features`/`shared`/`i18n`; `app/` stays out of BOTH for the same measured reason (the coverage
 exclude comment in `vitest.config.ts`: including `app/` moved statements 196→331 and dropped lines
 93%→82%), and `app/` regressions are what the Playwright suite is for. Stated honestly: mutants in
-route handlers and Server Actions are invisible to this score. Hardenings from an external review:
+route handlers and Server Actions are invisible to this score. Also stated honestly: the score
+measures only the KILL side — whether the suite would catch a breakage — and cannot detect an
+over-strict test that wrongly rejects a legitimate implementation; that side stays with review
+discipline. Hardenings from an external review:
 `.stryker-tmp`/`reports` are gitignored AND `ignorePatterns` keeps `.env*` out of Stryker's sandbox
 copy (Stryker does not read `.gitignore`); the runner's tree enters the fail-closed audit gate — if
 it ever carries a high advisory, the remedy is an override floor with a major cap, not an allowlist
