@@ -118,6 +118,7 @@ npm start
 - **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
 - **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
 - **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) runs lint → format → TypeScript → vitest → production build → Playwright e2e (`test:e2e:prod`, same as CI). Husky **pre-push** runs the same gate. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
+- **Mutation testing**: **`npm run test:mutation`** (StrykerJS) measures test strength — whether the suite would catch a wrong implementation, not just execute the code. Runs as a weekly `mutation.yml` CI job with a measured floor (`thresholds.break` in `stryker.config.json`), deliberately outside `verify` because a full run costs minutes.
 
 ### Security (production)
 
@@ -433,6 +434,7 @@ Next.js does **not** apply `title.template` to the segment that defines it — o
 npm test                 # Run all tests
 npm run test:watch       # Watch mode
 npm run test:coverage    # Coverage report
+npm run test:mutation    # StrykerJS mutation score (test strength) — weekly CI job
 ```
 
 ### Example Test

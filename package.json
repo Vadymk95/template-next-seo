@@ -41,6 +41,7 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "node scripts/check-coverage.mjs",
+        "test:mutation": "stryker run",
         "test:coverage:raw": "vitest run --coverage",
         "test:e2e": "playwright test",
         "test:e2e:ui": "playwright test --ui",
@@ -84,6 +85,8 @@
         "@next/bundle-analyzer": "^16.2.12",
         "@next/env": "16.2.12",
         "@playwright/test": "^1.62.0",
+        "@stryker-mutator/core": "^9.6.1",
+        "@stryker-mutator/vitest-runner": "^9.6.1",
         "@tailwindcss/postcss": "^4.3.3",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
@@ -118,10 +121,10 @@
         "vitest": "^4.1.7"
     },
     "overrides": {
-        "brace-expansion": ">=5.0.8",
-        "fast-uri": ">=3.1.4",
+        "brace-expansion": ">=5.0.9 <6",
+        "fast-uri": ">=4.1.2 <5",
         "next": {
-            "postcss": ">=8.5.10"
+            "postcss": ">=8.5.10 <9"
         },
         "sharp": ">=0.35.0",
         "eslint-plugin-react": {
@@ -132,6 +135,13 @@
         },
         "eslint-plugin-import": {
             "eslint": "$eslint"
+        },
+        "undici": ">=7.29.0 <8",
+        "cosmiconfig": {
+            "js-yaml": ">=4.3.1 <5"
+        },
+        "postcss": {
+            "nanoid": ">=3.3.17 <4"
         }
     },
     "lint-staged": {

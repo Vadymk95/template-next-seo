@@ -102,6 +102,7 @@ npm run test:e2e:prod       # Playwright against `next start` (same as CI / veri
 npm run test:e2e:install    # one-time Chromium install for Playwright
 npm run lint                # oxlint (--deny-warnings) → eslint (--max-warnings 0)
 npm run typecheck           # tsc --noEmit (canonical; `type-check` is kept as an alias)
+npm run test:mutation       # StrykerJS strength gate — weekly `mutation.yml` job, NOT in verify
 ```
 
 **Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
@@ -113,6 +114,20 @@ verify gate fails loudly if hooks are missing. Dependency cooldown is also on
 `verify:enterprise` is authoritative. If it fails, fix the cause — do **not**
 downgrade rules, silence warnings, or add `eslint-disable`. If a rule is wrong
 for a real reason, raise it with the caller first.
+
+**Complexity ratchet** — `complexity` 15 / `max-depth` 4 / `max-params` 6 /
+`max-lines-per-function` 130 / `max-lines` 200 over `app`/`features`/`shared`/`i18n`,
+tests exempt. Thresholds sit above the measured ceiling (see `DECISIONS.md`), so a
+hit means new drift: split the function first; raising a number needs a fresh
+measurement and a `DECISIONS.md` line.
+
+**Mutation testing** — `npm run test:mutation` (StrykerJS, weekly `mutation.yml` CI
+job). Coverage proves code RUNS under tests; the mutation score proves tests would
+CATCH a wrong implementation (85% coverage floor vs 40.2% baseline score here, by
+design). `thresholds.break` in `stryker.config.json` is a measured floor-of-record:
+raise it after a good run, never lower it to go green. Scope mirrors the coverage
+scope — `app/` stays out of both (measured: including it drops lines 93%→82%);
+`app/` regressions are the e2e suite's job.
 
 **The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
 step, `cp .env.example .env.local`, after cloning. `next dev` needs nothing (the
@@ -139,8 +154,11 @@ so it cannot report "not set" for a value the build would have found.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
 - **`@types/node` stays 24.x** — types match `engines.node >= 24`.
-- **`overrides.next.postcss >= 8.5.10`** is a security floor for the postcss
-  copy nested inside `next` (GHSA-qx2v-qp2m-jg93) — do not remove to quiet npm.
+- **`overrides` in `package.json` are security floors WITH major caps**
+  (`">=fixed <next-major"`). Two of our own uncapped floors (brace-expansion,
+  fast-uri) aged into their advisories' vulnerable ranges and turned the audit
+  gate red — an uncapped floor is a delayed regression. Do not remove a floor to
+  quiet npm, and never write one without a cap; details in `DECISIONS.md`.
 
 ## Architecture
 
