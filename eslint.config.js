@@ -310,6 +310,40 @@ export default defineConfig([
         }
     },
     /*
+     * Complexity ratchet — thresholds sit ABOVE the measured ceiling, so the tree is
+     * clean today and only future drift can trip them. Measured 2026-08-09 over
+     * app/features/shared/i18n excluding tests (ESLint API probe, every rule warn-zero):
+     *   complexity              max 12  (worst: app/api/csp-report/route.ts, features/example-form/ui/ExampleForm.tsx)
+     *   max-depth               max 3
+     *   max-params              max 5   (worst: shared/lib/rateLimitCore.ts)
+     *   max-lines-per-function  max 102 (worst: features/example-form/ui/ExampleForm.tsx)
+     *   max-lines               max 143 (worst: app/dev/ui/content-stress/ContentStressPage.tsx)
+     * Tests and shared/lib/test-utils are exempt on purpose: a describe block is one
+     * function and table-driven suites are long by design, so these rules there would
+     * only teach people to split tests for the linter's sake. When a threshold fires,
+     * the first answer is to split the function, not to raise the number; raising it
+     * needs a fresh measurement and a DECISIONS.md line ("Complexity ratchet" entry).
+     */
+    {
+        files: [
+            'app/**/*.{ts,tsx}',
+            'features/**/*.{ts,tsx}',
+            'shared/**/*.{ts,tsx}',
+            'i18n/**/*.{ts,tsx}'
+        ],
+        ignores: ['**/*.test.*', '**/*.spec.*', 'shared/lib/test-utils/**'],
+        rules: {
+            complexity: ['error', 15],
+            'max-depth': ['error', 4],
+            'max-params': ['error', 6],
+            'max-lines-per-function': [
+                'error',
+                { max: 130, skipBlankLines: true, skipComments: true }
+            ],
+            'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }]
+        }
+    },
+    /*
      * REQUIRED for ESLint 10, do not set back to 'detect'. `eslint-plugin-react`
      * resolves `version: 'detect'` through `detectReactVersion` -> `resolveBasedir`,
      * which calls the `context.getFilename()` API that ESLint 10 removed; every
