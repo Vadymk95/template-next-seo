@@ -3,8 +3,13 @@
 **Goal:** match checks to the change. Do **not** run the full gate for every tiny edit — but never
 declare a task done on a targeted check alone.
 
-## The three rungs
+## The four rungs
 
+- **`npm run verify:iter`** — the iteration rung: `lint:oxlint` → `typecheck` (incremental) →
+  `vitest run --changed --passWithNoTests` (only tests reachable from the uncommitted diff). Seconds;
+  run it after every change. Two deliberate properties: while `package.json` or a vitest config is
+  dirty, `--changed` runs the FULL suite (force-rerun triggers); and `--changed` follows the import
+  graph only, so cross-cutting suites surface at the full-gate run, not during iteration.
 - **`npm run verify`** (alias `verify:enterprise`) — every OFFLINE check: `check-hooks` → lint → format
   → typecheck → `test:coverage` → `check-build-env` → build (webpack) → `ensure-playwright` →
   `test:e2e:prod` (Playwright vs `next start`).
@@ -23,7 +28,7 @@ workflow file.**
 ## Minimal check by task type
 
 - **Docs only** — `npm run format:check`
-- **TS/TSX / tests** — `npm run lint && npm run typecheck && npm test`
+- **TS/TSX / tests** — `npm run verify:iter`
 - **Routing, i18n, `proxy.ts`, `next.config.ts`** — `npm run verify:full`
 - **A shared UI primitive, the chrome (`Header`/`Footer`), or `app/globals.css`** —
   `npm run verify:full`. Anything content-bearing has to be measured against content it has not seen;

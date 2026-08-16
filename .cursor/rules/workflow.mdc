@@ -33,15 +33,14 @@ alwaysApply: true
 
 ## Code Quality Checks (MANDATORY)
 
-**After EVERY code change, you MUST:**
+**After EVERY code change, run the iteration tier — seconds, not minutes:**
 
 1. ✅ **Check FSD architecture** - ensure imports follow layer rules
-2. ✅ **Run Prettier**: `npm run format:check` - should have no formatting errors
-3. ✅ **Run ESLint**: `npm run lint` - should have no errors or warnings
-4. ✅ **Check TypeScript**: `npx tsc --noEmit` — should have no type errors
-5. ✅ **Fix all found issues** before committing
+2. ✅ **Run `npm run verify:iter`** — oxlint → tsc (incremental) → `vitest --changed` (only the tests your uncommitted diff reaches)
+3. ✅ **Affected Playwright surface?** Run that one spec against your running dev server: `npx playwright test e2e/<file>.spec.ts`
+4. ✅ **Fix all found issues** before the next batch
 
-The individual commands above are targeted iteration checks. **The canonical pre-commit gate is `npm run verify:enterprise`** (alias `npm run verify`) — it additionally runs `scripts/check-hooks.mjs`, tests, and the production build; run it before every commit.
+The iteration tier is not the gate. **The canonical gate is `npm run verify:enterprise`** (alias `npm run verify`) — it additionally runs `scripts/check-hooks.mjs`, coverage tests, the production build and e2e; run it ONCE, before the commit, not per edit. Heavy verification belongs to code being accepted: hand-over and pre-push (`verify:ci`) are the full-gate moments.
 
 **Rules:**
 
@@ -77,8 +76,8 @@ The individual commands above are targeted iteration checks. **The canonical pre
 
 ### Before Committing
 
-- **ALWAYS run the canonical gate before committing and pushing**: `npm run verify:enterprise` (alias `npm run verify`) — `scripts/check-hooks.mjs` → lint → format:check → tsc → test → build
-- Individual commands (`npm run lint`, `npm run format:check`, `npm test`) are fine for iterating on a fix, but do not replace the gate
+- **ALWAYS run the canonical gate ONCE before committing**: `npm run verify:enterprise` (alias `npm run verify`) — `scripts/check-hooks.mjs` → lint → format:check → tsc → test → build. Pushing re-runs the ladder via the pre-push hook (`verify:ci`)
+- `npm run verify:iter` is the loop between batches; individual commands (`npm run lint`, `npm run format:check`, `npm test`) are drill-downs on a specific failure — none replace the gate
 - Fix any errors or warnings before committing
 
 ### Commit Message Format

@@ -87,15 +87,13 @@ Before any reasoning about implementation:
 
 ### 4.1 Automated checks
 
-**Canonical gate: `npm run verify:enterprise`** (alias `npm run verify`) — starts with `scripts/check-hooks.mjs`, then lint → format:check → tsc → vitest → build. It must pass before any commit; the raw commands below are targeted iteration checks between batches, not a substitute:
+**Canonical gate: `npm run verify:enterprise`** (alias `npm run verify`) — starts with `scripts/check-hooks.mjs`, then lint → format:check → tsc → vitest → build. It must pass ONCE, before the commit — the full gate is not an iteration tool. Between batches and on fix rounds use the iteration tier:
 
 ```bash
-npm run verify:enterprise   # canonical pre-commit gate (hooks check → lint → format → tsc → test → build)
-npm run lint                # targeted iteration
-npm run format:check
-npx tsc --noEmit
-npm test
-npm run build   # webpack; required if next.config webpack splitChunks changed
+npm run verify:iter         # iteration tier: oxlint → tsc (incremental) → vitest --changed (seconds)
+npx playwright test e2e/<file>.spec.ts   # only the spec the change affects, against the running dev server
+npm run build               # webpack; only if next.config webpack splitChunks changed
+npm run verify:enterprise   # ONCE before the commit; on fix rounds only when the reviewer demands a full re-run
 ```
 
 ### 4.2 On failure

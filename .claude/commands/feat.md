@@ -44,7 +44,9 @@ transpiles that graph before the `@/` alias exists.
   code. Say what the test asserted while it was red.
 - **UI**: implement, then cover it through `renderWithProviders` from `shared/lib/test-utils/`, which
   wraps `NextIntlClientProvider`.
-- Max two files per iteration without an intermediate check.
+- Max two files per iteration without an intermediate check — the check is `npm run verify:iter`
+  (seconds), plus the one affected Playwright spec against the running dev server when the surface has
+  one. The full gate is not an iteration tool.
 - Every `src` logic file needs a co-located `*.test.*` — the pre-commit hook refuses otherwise. Write
   the test because it is worth having, not to satisfy the hook.
 - Match the surrounding file exactly: 4-space indent, arrow functions, `FunctionComponent`, `@/`
@@ -52,6 +54,8 @@ transpiles that graph before the `@/` alias exists.
   `console`.
 
 ## 4. Verify
+
+The full gate runs ONCE, here — iteration between batches used `verify:iter` (§3):
 
 ```bash
 npm run verify > /tmp/verify.log 2>&1; echo $?

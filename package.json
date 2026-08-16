@@ -49,6 +49,7 @@
         "test:e2e:install": "playwright install --with-deps chromium",
         "verify:enterprise": "node scripts/check-hooks.mjs && npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && node scripts/check-build-env.mjs && npm run build && node scripts/ensure-playwright.mjs && npm run test:e2e:prod",
         "verify": "npm run verify:enterprise",
+        "verify:iter": "npm run lint:oxlint && npm run typecheck && vitest run --changed --passWithNoTests",
         "bench:verify": "node scripts/bench-verify.mjs",
         "prepare": "husky",
         "test:e2e:prod": "CI=true playwright test",

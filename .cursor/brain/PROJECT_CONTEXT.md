@@ -40,6 +40,7 @@ Imports use the `@/*` path alias (repo root).
 
 ## Local gate
 
+- **`npm run verify:iter`** — the iteration rung: oxlint → tsc (incremental) → `vitest --changed` (seconds). Run per change; the gate runs ONCE before hand-over.
 - **`npm run verify` / `verify:enterprise`** — every OFFLINE check: lint → format → typecheck → **`test:coverage`** → build → `ensure-playwright` → **`test:e2e:prod`** (Playwright vs `next start`).
 - **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs this, and the CI `validate` job is one step over the same script. `verify` is a strict superset of CI's offline checks, so a green `verify` predicts a green `validate` — keep that true by adding new checks to the SCRIPT, never only to the workflow.
 - **`npm run verify:full`** — `verify:ci && smoke:dev`. The only local command that also predicts the `dev-smoke` job. Run it before a PR touching routing, i18n, `proxy.ts` or `next.config.ts`.

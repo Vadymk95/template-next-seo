@@ -39,13 +39,20 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
    user asked for a bug fix, don't reorganize neighbours.
 2. **One task = one commit.** Conventional Commits, **≤ 96 chars** on the subject
    line. No `Co-authored-by` tags. Never skip hooks (no `--no-verify`).
-3. **The gate ladder.** `verify` (alias `verify:enterprise`) holds every OFFLINE
-   check: lint → format → typecheck → **`test:coverage`** → build → **e2e**
-   (Playwright vs `next start`). `verify:ci` adds the network-dependent
-   `audit:gate` and is what husky **pre-push** and the CI `validate` job both run.
-   `verify:full` adds `smoke:dev` and is the only local command that predicts the
-   whole pipeline including the `dev-smoke` job. Zero-warnings
-   (`eslint --max-warnings 0`, `oxlint --deny-warnings`).
+3. **The gate ladder — TIERED by moment, not run per edit.** Iterating:
+   `npm run verify:iter` (oxlint → tsc incremental → `vitest --changed`, seconds)
+   plus the one Playwright spec the change affects, against the running dev
+   server. Handing over: the full `verify` (alias `verify:enterprise`) runs ONCE
+   before the task is reported done, and the reviewer re-runs it at acceptance —
+   heavy verification belongs to code being accepted, not to every iteration.
+   `verify` holds every OFFLINE check: lint → format → typecheck →
+   **`test:coverage`** → build → **e2e** (Playwright vs `next start`).
+   `verify:ci` adds the network-dependent `audit:gate` and is what husky
+   **pre-push** and the CI `validate` job both run — exactly one green full run
+   before the prod boundary, never zero. `verify:full` adds `smoke:dev` and is
+   the only local command that predicts the whole pipeline including the
+   `dev-smoke` job. Zero-warnings (`eslint --max-warnings 0`,
+   `oxlint --deny-warnings`).
 
     **`verify` is a strict superset of CI's offline checks**, so a green `verify`
     predicts a green `validate`. Keeping that true is a rule: **a new check goes
@@ -89,6 +96,7 @@ npm run dev                 # Turbopack dev (fast)
 npm run dev:webpack         # webpack parity dev (debug splitChunks)
 npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
+npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; not a hand-over gate)
 npm run verify              # THE offline gate (alias of verify:enterprise)
 npm run verify:enterprise   # lint → format → typecheck → test:coverage → build → e2e
 npm run verify:ci           # verify + audit:gate — pre-push and the CI validate job
