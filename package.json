@@ -35,7 +35,7 @@
         "lint": "npm run lint:oxlint && eslint . --max-warnings 0 --cache --cache-location .eslintcache",
         "lint:oxlint": "oxlint --config .oxlintrc.json --deny-warnings .",
         "type-check": "npm run typecheck",
-        "format": "prettier --write .",
+        "format": "prettier --write . --cache --cache-location .prettiercache",
         "format:check": "prettier --check . --cache --cache-location .prettiercache",
         "lint:staged": "lint-staged",
         "test": "vitest run",
@@ -54,7 +54,7 @@
         "prepare": "husky",
         "test:e2e:prod": "PLAYWRIGHT_PROD_SERVER=1 playwright test",
         "typecheck": "tsc --noEmit",
-        "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix && prettier --write .",
+        "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix --cache --cache-location .eslintcache && prettier --write .",
         "audit:gate": "node scripts/audit-gate.mjs",
         "verify:ci": "npm run audit:gate && npm run verify",
         "smoke:dev": "NEXT_DIST_DIR=.next-dev playwright test --config playwright.dev.config.ts",
@@ -148,11 +148,11 @@
     "lint-staged": {
         "*.{ts,tsx,js,jsx}": [
             "oxlint --config .oxlintrc.json --fix",
-            "eslint --fix",
-            "prettier --write"
+            "eslint --fix --cache --cache-location .eslintcache",
+            "prettier --write --cache --cache-location .prettiercache"
         ],
         "*.{json,md,yml,yaml}": [
-            "prettier --write"
+            "prettier --write --cache --cache-location .prettiercache"
         ]
     }
 }
