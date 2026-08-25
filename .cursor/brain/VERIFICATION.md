@@ -30,7 +30,9 @@ workflow file.**
 
 - **Docs only** — `npm run format:check`
 - **TS/TSX / tests** — `npm run verify:iter`
-- **Routing, i18n, `proxy.ts`, `next.config.ts`** — `npm run verify:full`
+- **i18n copy only** (VALUE edits in `messages/<locale>/*.json`, no key changes) — `npm run format:check`.
+  A key add/rename is a TS/TSX-class change: the typed messages make `verify:iter` catch it.
+- **Routing, i18n INFRA (`i18n/*.ts`, the locale set), `proxy.ts`, `next.config.ts`** — `npm run verify:full`
 - **A shared UI primitive, the chrome (`Header`/`Footer`), or `app/globals.css`** —
   `npm run verify:full`. Anything content-bearing has to be measured against content it has not seen;
   the unit suite cannot do it because jsdom has no layout.
