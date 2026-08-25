@@ -10,8 +10,9 @@ declare a task done on a targeted check alone.
   run it after every change. Two deliberate properties: while `package.json` or a vitest config is
   dirty, `--changed` runs the FULL suite (force-rerun triggers); and `--changed` follows the import
   graph only, so cross-cutting suites surface at the full-gate run, not during iteration.
-- **`npm run verify`** (alias `verify:enterprise`) — every OFFLINE check: `check-hooks` → lint → format
-  → typecheck → `test:coverage` → `check-build-env` → build (webpack) → `ensure-playwright` →
+- **`npm run verify`** (alias `verify:enterprise`) — every OFFLINE check: `check-hooks` →
+  `check-gate-env` (preflight: build env via `check-build-env`, e2e port free — prints the fix) →
+  format → typecheck → lint (cheap independent stages first) → `test:coverage` → build (webpack) → `ensure-playwright` →
   `test:e2e:prod` (Playwright vs `next start`).
 - **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs it; the CI `validate` job is
   one step over the same script.

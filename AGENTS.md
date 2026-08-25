@@ -45,7 +45,7 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
    server. Handing over: the full `verify` (alias `verify:enterprise`) runs ONCE
    before the task is reported done, and the reviewer re-runs it at acceptance —
    heavy verification belongs to code being accepted, not to every iteration.
-   `verify` holds every OFFLINE check: lint → format → typecheck →
+   `verify` holds every OFFLINE check: gate preflight → format → typecheck → lint (cached) →
    **`test:coverage`** → build → **e2e** (Playwright vs `next start`).
    `verify:ci` adds the network-dependent `audit:gate` and is what husky
    **pre-push** and the CI `validate` job both run — exactly one green full run
@@ -98,7 +98,7 @@ npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
 npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; not a hand-over gate)
 npm run verify              # THE offline gate (alias of verify:enterprise)
-npm run verify:enterprise   # lint → format → typecheck → test:coverage → build → e2e
+npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → e2e
 npm run verify:ci           # verify + audit:gate — pre-push and the CI validate job
 npm run verify:full         # verify:ci + smoke:dev — predicts the whole CI pipeline
 npm run smoke:dev           # Turbopack dev smoke on its own (e2e/dev/, port 3003)
