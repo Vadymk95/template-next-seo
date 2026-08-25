@@ -52,7 +52,7 @@
         "verify:iter": "npm run lint:oxlint && npm run typecheck && vitest run --changed --passWithNoTests",
         "bench:verify": "node scripts/bench-verify.mjs",
         "prepare": "husky",
-        "test:e2e:prod": "CI=true playwright test",
+        "test:e2e:prod": "PLAYWRIGHT_PROD_SERVER=1 playwright test",
         "typecheck": "tsc --noEmit",
         "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix && prettier --write .",
         "audit:gate": "node scripts/audit-gate.mjs",

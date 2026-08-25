@@ -4,10 +4,16 @@ import { isCrossBrowserEnabled, LAYOUT_SPEC_PATTERN } from './e2e/support/cross-
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
 const isCI = Boolean(process.env.CI);
+// Server mode and runner sizing are two unrelated concerns and carry separate
+// flags. PLAYWRIGHT_PROD_SERVER picks `next start` over `next dev` (the gate's
+// `test:e2e:prod` sets it); the real CI keeps retries/video and pins one worker
+// for a two-core runner. When one `CI` flag carried both meanings, a local gate
+// that wanted the production server also inherited the single worker.
+const isProdServer = Boolean(process.env.PLAYWRIGHT_PROD_SERVER);
 
 /**
  * Local: starts `next dev` (Turbopack) unless a server already listens (reuseExistingServer).
- * CI: after `npm run build`, starts `next start` for production-like E2E (GitHub Actions sets CI=true).
+ * Gate/CI: after `npm run build`, PLAYWRIGHT_PROD_SERVER=1 starts `next start` for production-like E2E.
  */
 export default defineConfig({
     testDir: 'e2e',
@@ -17,7 +23,8 @@ export default defineConfig({
     // PASS in that wrong mode, which makes the Turbopack coverage an illusion.
     testIgnore: ['dev/**', '**/*.test.ts'],
     fullyParallel: true,
-    forbidOnly: isCI,
+    // A forgotten `.only` must fail the local gate too, not only CI.
+    forbidOnly: isCI || isProdServer,
     retries: isCI ? 2 : 0,
     ...(isCI ? { workers: 1 } : {}),
     reporter: [['html', { open: 'never' }], ['list']],
@@ -65,9 +72,9 @@ export default defineConfig({
             : [])
     ],
     webServer: {
-        command: isCI ? 'npm run start' : 'npm run dev',
+        command: isProdServer ? 'npm run start' : 'npm run dev',
         url: baseURL,
-        reuseExistingServer: !isCI,
+        reuseExistingServer: !isProdServer,
         timeout: isCI ? 90_000 : 120_000,
         stdout: 'pipe',
         stderr: 'pipe'
