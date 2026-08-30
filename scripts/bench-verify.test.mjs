@@ -72,8 +72,25 @@ describe('resolveScript', () => {
         );
     });
 
+    it('follows the gate-trace wrapper to its inner script — the steps live there', () => {
+        const scripts = {
+            verify: 'npm run verify:enterprise',
+            'verify:enterprise':
+                'node scripts/gate-trace.mjs verify:enterprise -- npm run verify:enterprise:inner',
+            'verify:enterprise:inner': 'npm run lint && npm run build'
+        };
+
+        expect(resolveScript(scripts, 'verify')).toBe('npm run lint && npm run build');
+    });
+
     it('throws on a cycle instead of looping forever', () => {
         expect(() => resolveScript({ a: 'npm run b', b: 'npm run a' }, 'a')).toThrow(/cycle/);
+    });
+
+    it('throws on a cycle routed through the gate-trace wrapper form too', () => {
+        expect(() =>
+            resolveScript({ a: 'node scripts/gate-trace.mjs a -- npm run a' }, 'a')
+        ).toThrow(/cycle/);
     });
 
     it('throws when the script does not exist', () => {
