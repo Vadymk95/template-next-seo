@@ -117,6 +117,8 @@ npm run verify:iter         # iteration tier: oxlint → tsc → vitest --change
 npm run verify:measure      # MEASURE moment: build + look; add `-- e2e/<f>.spec.ts` for one prod-mode spec
 npm run e2e:one -- <spec>   # one Playwright spec, FREE port, through the tracer
 npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
+npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
+npm run test:one -- <file>  # one unit test file, through the tracer (not around it)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
 npm run verify              # THE offline gate (alias of verify:enterprise) — the push/CI chain, not a desk tool
 npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → e2e
@@ -289,8 +291,38 @@ Committed configs must never contain absolute local paths. The VS Code i18next
 extension rewrites `i18next.i18nPaths` with absolute paths when it can't resolve
 the configured ones — keep them relative and existing (here: `messages,i18n`).
 
+## Entering this repo cheaply (read this before sweeping the source)
+
+Measured on a sibling project 2026-08-30: an agent's entry is ~93% READING SOURCE to find where
+things are and whether the task is still needed, and ~7% the documents that load automatically. So
+the levers are pointing and looking, in this order:
+
+1. **Open `.cursor/brain/READING_INDEX.md` first** — it maps a SITUATION ("about to change a shared
+   primitive") to the two or three files that answer it. It is a pointer file: it never restates a
+   rule, so it cannot go stale in the way a summary does.
+2. **Check the work is still needed** — `git log --oneline -15` plus one grep for the thing the task
+   names. Two of five lanes in that measurement returned "already done" after ~430k tokens; both
+   were five minutes of grep.
+3. **LOOK instead of inferring** — `npm run probe -- <route> [widths]` renders the route, saves a PNG
+   per width under `.probe/` and prints the quantities the layout guards measure. One measurement
+   replaces a round of reasoning about pixels; it is an instrument, never a gate.
+4. **Name the files when you dispatch work to another agent.** The largest observed difference
+   between a 33-tool-call lane and a 191-tool-call lane was how precisely the task pointed.
+
+**Where a rule must live, because the two tools do not read the same repo.** Claude Code loads
+`CLAUDE.md` → `AGENTS.md` → the brain files `AGENTS.md` `@`-imports. Cursor loads `AGENTS.md` plus
+every `.cursor/rules/*.mdc` marked `alwaysApply: true`. **`AGENTS.md` is the only file both read**, so
+a rule that must reach both belongs HERE; a rule placed only in a `.mdc` is invisible to Claude Code,
+and one moved down into a brain file may be invisible to Cursor. On the sibling project three copies
+of one gate rule sat in `.cursor/rules/*.mdc` and a fix to the shared preamble never reached the
+agent it was written for — a day of 40-minute rounds. Verify what each tool loads before moving a
+rule between files.
+
 ## Brain docs (entry points)
 
+- `.cursor/brain/READING_INDEX.md` — situation → the files that answer it. **Read on demand, NOT
+  `@`-imported on purpose:** a pointer file only earns its tokens when a task actually needs it, and
+  importing it would put the index inside the budget it exists to protect.
 - @.cursor/brain/PROJECT_CONTEXT.md — purpose, stack, layout, CI
 - @.cursor/brain/MAP.md — every route, file, and responsibility
 - @.cursor/brain/SKELETONS.md — danger zones

@@ -87,3 +87,5 @@ pnpm-debug.log*
 .claude/settings.json
 
 .gate-trace.log
+
+.probe/
