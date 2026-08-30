@@ -12,15 +12,17 @@ fi
 # Match CI: build + Playwright prod server need a base URL.
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://template-next-seo.invalid}"
 
-# verify:ci, not verify — pushing implies network, so the audit gate can run here.
-# If this hook ran only `verify`, a green pre-push would stop predicting a green CI,
-# which is the property the gate exists to hold.
-echo "→ verify:ci (audit → lint → format → tsc → coverage → build → e2e)"
-npm run verify:ci || {
-    echo "❌ verify:ci failed. Fix before push."
+# verify:push is PHASE-AWARE (scripts/verify-push.mjs reads scripts/gate-tiers.json):
+# phase 0 (scaffold, pre-deploy) runs audit + hooks + format + tsc + lint + coverage and
+# loudly SKIPS build/e2e/smoke — no prod boundary exists yet to guard; phase 1 (deployed)
+# runs the full verify:ci chain. Pushing implies network, so the audit gate runs in both.
+# GATE_PHASE=full forces the full chain (how gate machinery itself gets pushed).
+echo "→ verify:push (phase-aware gate — see scripts/gate-tiers.json)"
+npm run verify:push || {
+    echo "❌ verify:push failed. Fix before push."
     echo "   Lint or formatting: npm run fix && git add -u"
     echo "   Playwright browsers are installed by scripts/ensure-playwright.mjs"
     echo "   Touched routing, i18n or next.config.ts? Also run: npm run verify:full"
-    echo "   Port 3000 busy (another Next repo running dev)? PORT=3100 PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run verify:ci"
+    echo "   Port 3000 busy? The gate kills its own stray servers; a foreign one: PORT=3100 PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run verify:ci"
     exit 1
 }
