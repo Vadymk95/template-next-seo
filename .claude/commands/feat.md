@@ -45,8 +45,9 @@ transpiles that graph before the `@/` alias exists.
 - **UI**: implement, then cover it through `renderWithProviders` from `shared/lib/test-utils/`, which
   wraps `NextIntlClientProvider`.
 - Max two files per iteration without an intermediate check — the check is `npm run verify:iter`
-  (seconds), plus the one affected Playwright spec against the running dev server when the surface has
-  one. The full gate is not an iteration tool.
+  (seconds), plus `npm run e2e:one -- e2e/<file>.spec.ts` when the surface has a spec (free port,
+  traced). Need to LOOK at a built result: `npm run verify:measure` — legal at any time. The full
+  chain is never run by hand (tier law: `AGENTS.md` Invariants #3).
 - Every `src` logic file needs a co-located `*.test.*` — the pre-commit hook refuses otherwise. Write
   the test because it is worth having, not to satisfy the hook.
 - Match the surrounding file exactly: 4-space indent, arrow functions, `FunctionComponent`, `@/`
@@ -55,17 +56,18 @@ transpiles that graph before the `@/` alias exists.
 
 ## 4. Verify
 
-The full gate runs ONCE, here — iteration between batches used `verify:iter` (§3):
+Hand-over runs the ITERATION tier plus the touched specs — the full chain belongs to the push hook
+and CI, and is not run by hand (tier law: `AGENTS.md` Invariants #3):
 
 ```bash
-npm run verify > /tmp/verify.log 2>&1; echo $?
+npm run verify:iter > /tmp/verify.log 2>&1; echo $?
+npm run e2e:one -- e2e/<touched>.spec.ts
 ```
 
-If the change touched routing, i18n, `proxy.ts` or `next.config.ts`, also run `npm run verify:full` —
-that is the only local command that exercises the Turbopack dev path the CI `dev-smoke` job covers.
-
-Exit code **without a pipe**. Then: revert your change mentally and ask which of your new tests would
-still pass. Any that would is worthless — fix it before reporting.
+Exit code **without a pipe**. If the change touched routing, i18n, `proxy.ts` or `next.config.ts`,
+SAY SO in the report — the push gate (phase 1) and CI cover the build/e2e/smoke surface; flag it,
+do not run it. Then: revert your change mentally and ask which of your new tests would still pass.
+Any that would is worthless — fix it before reporting.
 
 If the gate fails, fix the cause. Do not lower a severity, add an `eslint-disable`, move a threshold, or
 extend an ignore list to get green.

@@ -116,10 +116,12 @@ export type { ExampleFormData } from './model/types';
 
 ### Automatic Validation
 
-**Before commit — canonical gate:**
+**Before commit:**
 
 ```bash
-npm run verify:enterprise   # alias: npm run verify — hooks check → lint → format → tsc → test → build
+npm run verify:iter   # oxlint → tsc (incremental) → vitest --changed (seconds)
 ```
 
-`npm run lint` / `npm run format:check` / `npm test` remain useful as targeted iteration checks, but the gate above is what must pass without errors or warnings before every commit.
+The pre-commit hook enforces the commit moment; the full chain belongs to the push. The tier law
+lives in `AGENTS.md`, Invariants #3 — not restated here. `npm run lint` / `npm run format:check` /
+`npm test` remain useful as drill-downs on a specific failure.

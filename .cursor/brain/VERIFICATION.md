@@ -1,28 +1,61 @@
 # Verification — when to run what (agents & humans)
 
-**Goal:** match checks to the change. Do **not** run the full gate for every tiny edit — but never
-declare a task done on a targeted check alone.
+**Goal:** match checks to the MOMENT. The tier law itself lives in `AGENTS.md`, Invariants #3 —
+one place, everything else points. This file holds the mechanics and the phase table.
 
-## The four rungs
+## The moments and their commands
 
-- **`npm run verify:iter`** — the iteration rung: `lint:oxlint` → `typecheck` (incremental) →
-  `vitest run --changed --passWithNoTests` (only tests reachable from the uncommitted diff). Seconds;
-  run it after every change. Two deliberate properties: while `package.json` or a vitest config is
-  dirty, `--changed` runs the FULL suite (force-rerun triggers); and `--changed` follows the import
-  graph only, so cross-cutting suites surface at the full-gate run, not during iteration.
-- **`npm run verify`** (alias `verify:enterprise`) — every OFFLINE check: `check-hooks` →
-  `check-gate-env` (preflight: build env via `check-build-env`, e2e port free — prints the fix) →
-  format → typecheck → lint (cheap independent stages first) → `test:coverage` → build (webpack) → `ensure-playwright` →
-  `test:e2e:prod` (Playwright vs `next start`).
-- **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs it; the CI `validate` job is
-  one step over the same script.
-- **`npm run verify:full`** — `verify:ci && smoke:dev`. `smoke:dev` drives the Turbopack dev server and
-  is the only thing that exercises the content-variance fixture, which is mounted only outside
-  production. CI runs it as its own `dev-smoke` job.
+- **Iterate — `npm run verify:iter`**: `lint:oxlint` → `typecheck` (incremental) →
+  `vitest run --changed --passWithNoTests`. Seconds; run after every change. Two deliberate
+  properties: while `package.json` or a vitest config is dirty, `--changed` runs the FULL suite
+  (force-rerun triggers); and `--changed` follows the import graph only, so cross-cutting suites
+  surface at the push chain, not during iteration. One touched spec: `npm run e2e:one -- <spec>`.
+- **Measure — `npm run verify:measure [-- <spec>]`**: build + look (optionally one prod-mode spec
+  on a free port). Legal at ANY moment, unlimited runs — a measurement is work, not a violation.
+  It deliberately runs no lint/types/tests: measuring is not verifying.
+- **Commit — the pre-commit hook**: staged autofix → TDD sibling gate → repo-wide
+  oxlint/format/tsc. Nothing to run by hand.
+- **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below.
+- The full chains (`verify`/`verify:enterprise` = offline gate incl. build + prod e2e;
+  `verify:ci` = + audit; `verify:full` = + Turbopack smoke) belong to the push hook and CI — they
+  are not desk tools and are never run by hand.
+
+## Phases — what a push proves, and the trigger that adds more
+
+`scripts/gate-tiers.json` `"phase"` decides; `scripts/verify-push.mjs` dispatches; the skip is
+printed on every phase-0 push. `GATE_PHASE=full` overrides per run (how gate machinery itself is
+pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
+
+| Check | Runs at phase 0 (scaffold) | Added when (the trigger) |
+| --- | --- | --- |
+| audit, hooks-check, format, tsc, lint, coverage | yes — every push, ~10s | day one |
+| production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
+| prod-mode e2e + Turbopack smoke | no | same flip — a prod boundary now exists |
+| coverage thresholds | already on (suite ships with real tests) | — |
+| cross-browser geometry job | CI-only (`CROSS_BROWSER=1`) | unchanged by phases |
+| mutation score (weekly CI) | unchanged by phases | — |
 
 **`verify` is a strict superset of CI's offline checks**, so a green `verify` predicts a green
 `validate`. The rule that keeps it true: **a new check goes into the script, never only into the
 workflow file.**
+
+## The tracer, and what silence means
+
+Every `verify:*` and `test:e2e` run appends one TSV row to `.gate-trace.log` (gitignored);
+`npm run trace:report` turns rows into findings — a forbidden stage run standalone, a run over its
+moment's budget, a code check against a docs-only change, a push from a linked worktree. The
+discipline changes by editing `scripts/gate-tiers.json`, never the analyser. Telemetry sees WHO ran
+WHAT and HOW LONG; whether a check CAN fail is mutation-proving's job, not the tracer's.
+**After a push: gate output present in the terminal is part of the contract — silence is a
+failure, not a pass.** A push that printed no gate ran no gate, whatever the exit code says.
+
+## Ports — busy means MOVE; only the gate kills
+
+Parallel lanes share one machine: `e2e:one` and `verify:measure` take the next free port
+(`scripts/run-on-free-port.mjs`) and Playwright tears down the server it started. Never kill a
+server you did not start. The push gate alone clears its own port
+(`check-gate-env --kill-port` — SIGTERM, re-probe, refuse if it will not die). Stray hunting by
+hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 ---
 

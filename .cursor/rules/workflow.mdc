@@ -40,7 +40,10 @@ alwaysApply: true
 3. ✅ **Affected Playwright surface?** Run that one spec against your running dev server: `npx playwright test e2e/<file>.spec.ts`
 4. ✅ **Fix all found issues** before the next batch
 
-The iteration tier is not the gate. **The canonical gate is `npm run verify:enterprise`** (alias `npm run verify`) — it additionally runs `scripts/check-hooks.mjs`, coverage tests, the production build and e2e; run it ONCE, before the commit, not per edit. Heavy verification belongs to code being accepted: hand-over and pre-push (`verify:ci`) are the full-gate moments.
+The iteration tier is not the full gate — and nobody runs the full gate by hand. **The tier law
+(what runs at which moment, the measure rung, the phase-aware push) lives in ONE place:
+`AGENTS.md`, Invariants #3.** This file deliberately does not restate it; a restated pipeline rule
+drifts, and a stale mandate here once cost a sibling repo a day of 40-minute rounds.
 
 **Rules:**
 
@@ -76,8 +79,11 @@ The iteration tier is not the gate. **The canonical gate is `npm run verify:ente
 
 ### Before Committing
 
-- **ALWAYS run the canonical gate ONCE before committing**: `npm run verify:enterprise` (alias `npm run verify`) — `scripts/check-hooks.mjs` → lint → format:check → tsc → test → build. Pushing re-runs the ladder via the pre-push hook (`verify:ci`)
-- `npm run verify:iter` is the loop between batches; individual commands (`npm run lint`, `npm run format:check`, `npm test`) are drill-downs on a specific failure — none replace the gate
+- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment
+  (staged autofix → TDD sibling gate → repo-wide oxlint/format/tsc); the pre-push hook owns the
+  full chain. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is `AGENTS.md`
+  Invariants #3, and it is not restated here
+- Individual commands (`npm run lint`, `npm run format:check`, `npm test`) are drill-downs on a specific failure — none replace the tiers
 - Fix any errors or warnings before committing
 
 ### Commit Message Format

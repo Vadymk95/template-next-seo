@@ -39,26 +39,43 @@ Detail: @.cursor/brain/PROJECT_CONTEXT.md
    user asked for a bug fix, don't reorganize neighbours.
 2. **One task = one commit.** Conventional Commits, **≤ 96 chars** on the subject
    line. No `Co-authored-by` tags. Never skip hooks (no `--no-verify`).
-3. **The gate ladder — TIERED by moment, not run per edit.** Iterating:
-   `npm run verify:iter` (oxlint → tsc incremental → `vitest --changed`, seconds)
-   plus the one Playwright spec the change affects, against the running dev
-   server. Handing over: the full `verify` (alias `verify:enterprise`) runs ONCE
-   before the task is reported done, and the reviewer re-runs it at acceptance —
-   heavy verification belongs to code being accepted, not to every iteration.
-   `verify` holds every OFFLINE check: gate preflight → format → typecheck → lint (cached) →
-   **`test:coverage`** → build → **e2e** (Playwright vs `next start`).
-   `verify:ci` adds the network-dependent `audit:gate` and is what husky
-   **pre-push** and the CI `validate` job both run — exactly one green full run
-   before the prod boundary, never zero. `verify:full` adds `smoke:dev` and is
-   the only local command that predicts the whole pipeline including the
-   `dev-smoke` job. Zero-warnings (`eslint --max-warnings 0`,
-   `oxlint --deny-warnings`).
+3. **The gate is TIERED by moment, and this invariant is the ONLY place the tier
+   law lives** — every other file (rules, commands, brain) points here and must
+   not restate it, because a restated pipeline rule is how a stale mandate costs
+   a day of 40-minute rounds. Four moments:
+    - **Iterate** (per change): `npm run verify:iter`, seconds. Need the one
+      Playwright spec the change touches: `npm run e2e:one -- e2e/<file>.spec.ts`
+      (runs on a FREE port through the tracer).
+    - **Measure** (whenever a rendered result must answer a question):
+      `npm run verify:measure [-- e2e/<file>.spec.ts]` — build + look, legal at
+      ANY time, never a violation. Measuring is not verifying.
+    - **Commit**: the pre-commit hook owns it (staged autofix → TDD sibling gate →
+      repo-wide oxlint/format/tsc, seconds). Nothing to run by hand.
+    - **Push**: the pre-push hook runs `verify:push` — PHASE-AWARE
+      (`scripts/gate-tiers.json`): phase 0 (scaffold, before the first deploy)
+      runs audit + hooks + format + tsc + lint + coverage and loudly skips
+      build/e2e/smoke; phase 1 (from the first deploy) runs the full `verify:ci`.
+      CI always runs the full chain regardless of phase.
 
-    **`verify` is a strict superset of CI's offline checks**, so a green `verify`
-    predicts a green `validate`. Keeping that true is a rule: **a new check goes
-    into the script, never only into the workflow file.** The gate used to run
-    `npm test` while CI ran `test:coverage`, so the thresholds in
-    `vitest.config.ts` were defined but unenforceable locally.
+    **Prohibitions, stated as such:** an implementer or reviewer NEVER runs
+    `verify` / `verify:enterprise` / `verify:ci` / `verify:full` / `build` /
+    `test:e2e` by hand — the full chain belongs to the push hook and CI, and a
+    result an agent cannot act on is not worth its minutes. A review round gets
+    the diff plus `verify:iter`; acceptance does not re-run the full gate — the
+    push does. Parallel lanes never run heavy stages (one machine, shared
+    caches); heavy work serialises at the push. Zero-warnings stands
+    (`eslint --max-warnings 0`, `oxlint --deny-warnings`), and a new check goes
+    into the SCRIPT, never only into the workflow file.
+
+    **Every gate run is traced** to `.gate-trace.log` (`npm run trace:report`
+    reads it). After a push, gate output present in the terminal is part of the
+    contract: **silence is a failure, not a pass** — a push that printed no gate
+    ran no gate, whatever the exit code says.
+
+    **Ports:** a busy port means MOVE (the tooling does it — `e2e:one` and
+    `verify:measure` pick the next free port), never kill a server you did not
+    start; the push gate alone clears its own port (`check-gate-env
+ --kill-port`). A server you started is yours to stop.
 
 4. **English only in code, comments, commits, docs.** Chat may be Russian; the
    repo is not.
@@ -96,10 +113,14 @@ npm run dev                 # Turbopack dev (fast)
 npm run dev:webpack         # webpack parity dev (debug splitChunks)
 npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
-npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; not a hand-over gate)
-npm run verify              # THE offline gate (alias of verify:enterprise)
+npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; run per change)
+npm run verify:measure      # MEASURE moment: build + look; add `-- e2e/<f>.spec.ts` for one prod-mode spec
+npm run e2e:one -- <spec>   # one Playwright spec, FREE port, through the tracer
+npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
+npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
+npm run verify              # THE offline gate (alias of verify:enterprise) — the push/CI chain, not a desk tool
 npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → e2e
-npm run verify:ci           # verify + audit:gate — pre-push and the CI validate job
+npm run verify:ci           # verify + audit:gate — phase-1 pre-push and the CI validate job
 npm run verify:full         # verify:ci + smoke:dev — predicts the whole CI pipeline
 npm run smoke:dev           # Turbopack dev smoke on its own (e2e/dev/, port 3003)
 npm run fix                 # oxlint --fix → eslint --fix → prettier --write, repo-wide

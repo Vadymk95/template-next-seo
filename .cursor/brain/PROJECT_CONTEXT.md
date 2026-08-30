@@ -40,7 +40,13 @@ Imports use the `@/*` path alias (repo root).
 
 ## Local gate
 
-- **`npm run verify:iter`** — the iteration rung: oxlint → tsc (incremental) → `vitest --changed` (seconds). Run per change; the gate runs ONCE before hand-over.
+**The tier law — what runs at which moment — lives in `AGENTS.md` Invariants #3, and the mechanics
+plus the phase table in `.cursor/brain/VERIFICATION.md`. This list is a POINTER, not a second copy.**
+(Until 2026-08-30 it said the gate runs "ONCE before hand-over", which was one of three different
+rules live in several files at the same time — the drift that costs 40-minute rounds.)
+
+- **`npm run verify:iter`** — the iteration rung: oxlint → tsc (incremental) → `vitest --changed` (seconds). Run per change; one touched spec via `npm run e2e:one -- <spec>`; need to LOOK at a built result: `npm run verify:measure`.
+- **The full chain belongs to the push hook and CI**, and the local push is PHASE-AWARE (`scripts/gate-tiers.json`: phase 0 skips build/e2e/smoke until the first deploy).
 - **`npm run verify` / `verify:enterprise`** — every OFFLINE check: `check-gate-env` preflight (build env + free e2e port, prints the fix) → format → typecheck → lint (cached; cheap independent stages first) → **`test:coverage`** → build → `ensure-playwright` → **`test:e2e:prod`** (Playwright vs `next start`, `PLAYWRIGHT_PROD_SERVER=1` — real `CI` keeps retries and the single worker).
 - **`npm run verify:ci`** — `audit:gate && verify`. Husky **pre-push** runs this, and the CI `validate` job is one step over the same script. `verify` is a strict superset of CI's offline checks, so a green `verify` predicts a green `validate` — keep that true by adding new checks to the SCRIPT, never only to the workflow.
 - **`npm run verify:full`** — `verify:ci && smoke:dev`. The only local command that also predicts the `dev-smoke` job. Run it before a PR touching routing, i18n, `proxy.ts` or `next.config.ts`.

@@ -30,10 +30,12 @@ Do not take the reading at face value. Check, cheaply:
 
 - **The command list**: every `npm run` named in `AGENTS.md` exists in `package.json`, and every script
   that gates something is documented. Check both directions.
-- **The gate ladder**: read `package.json` `verify` / `verify:ci` / `verify:full` and
-  `.github/workflows/ci.yml`. `verify:ci` predicts the `validate` job; only `verify:full` also predicts
-  the `dev-smoke` job, because the Turbopack path is deliberately outside the push gate. A check that
-  lives only in a workflow is the defect this repo has a written decision about.
+- **The tier law FIRST**: `AGENTS.md` Invariants #3 (the one place it lives) and the phase in
+  `scripts/gate-tiers.json` — what a push proves depends on it. Then the ladder: `package.json`
+  `verify:push` / `verify` / `verify:ci` / `verify:full` and `.github/workflows/ci.yml`. `verify:ci`
+  predicts the `validate` job (CI is phase-blind); only `verify:full` also predicts the `dev-smoke`
+  job, because the Turbopack path is deliberately outside the push gate. A check that lives only in
+  a workflow is the defect this repo has a written decision about.
 - **The stack table**: versions in `AGENTS.md` against `package.json`. Stack tables rot first.
 - **The layout**: `ls src/` against `MAP.md`. A directory in one and not the other is a finding.
 
