@@ -63,6 +63,8 @@
         "verify:ci": "node scripts/gate-trace.mjs verify:ci -- npm run verify:ci:inner",
         "verify:ci:inner": "npm run audit:gate && npm run verify",
         "verify:push": "node scripts/gate-trace.mjs verify:push -- node scripts/verify-push.mjs",
+        "verify:measure": "node scripts/gate-trace.mjs verify:measure -- node scripts/verify-measure.mjs",
+        "e2e:one": "node scripts/gate-trace.mjs test:e2e -- node scripts/run-on-free-port.mjs npx --no-install playwright test",
         "verify:scaffold": "node scripts/check-hooks.mjs && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage",
         "verify:scaffold:push": "npm run audit:gate && npm run verify:scaffold",
         "smoke:dev": "NEXT_DIST_DIR=.next-dev playwright test --config playwright.dev.config.ts",
