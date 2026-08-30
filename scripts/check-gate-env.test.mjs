@@ -10,9 +10,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 const SCRIPT = resolve(process.cwd(), 'scripts/check-gate-env.mjs');
 const APP_URL = 'https://template-next-seo.invalid';
 
-const runPreflight = (env, cwd = process.cwd()) => {
+const runPreflight = (env, cwd = process.cwd(), extraArgs = []) => {
     try {
-        const output = execFileSync('node', [SCRIPT], {
+        const output = execFileSync('node', [SCRIPT, ...extraArgs], {
             encoding: 'utf8',
             cwd,
             /* A clean environment, so the developer's own shell cannot make this pass or fail. */
@@ -74,6 +74,68 @@ describe('gate preflight', () => {
         expect(busy.output).toContain('Port 3179 is busy');
         expect(busy.output).toContain('PORT=3100');
         expect(free.code).toBe(0);
+    });
+
+    it('without --kill-port a busy port only REFUSES — manual runs never kill anything', async () => {
+        held = await listenOn(3179);
+        const verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+        expect(verdict.code).toBe(1);
+        /* The holder here is THIS vitest process; surviving the run is the assertion. */
+        expect(verdict.output).toContain('--kill-port');
+    });
+
+    it('--kill-port clears a stray listener and proceeds, naming the pid it killed', async () => {
+        /* The holder is a SEPARATE child process, never the suite's own server: the gate kills
+           the port's owner, and killing the suite would prove the wrong thing the hard way. */
+        const { spawn } = await import('node:child_process');
+        const holder = spawn(
+            'node',
+            [
+                '-e',
+                'require("net").createServer().listen(3181, () => {}); setInterval(() => {}, 1000)'
+            ],
+            { stdio: 'ignore' }
+        );
+        await new Promise((resolvePromise) => {
+            const probe = () => {
+                const socket = createServer();
+                socket.once('error', () => {
+                    resolvePromise(null);
+                });
+                socket.once('listening', () => {
+                    socket.close(() => setTimeout(probe, 50));
+                });
+                socket.listen(3181);
+            };
+            probe();
+        });
+
+        const verdict = runPreflight(
+            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3181' },
+            process.cwd(),
+            ['--kill-port']
+        );
+        try {
+            expect(verdict.code).toBe(0);
+            expect(verdict.output).toContain('Cleared port 3181');
+            expect(verdict.output).toContain(String(holder.pid));
+        } finally {
+            try {
+                holder.kill('SIGKILL');
+            } catch {
+                /* already dead — that is the expected case */
+            }
+        }
+    });
+
+    it('--kill-port on a FREE port stays silent and passes', () => {
+        const verdict = runPreflight(
+            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3182' },
+            process.cwd(),
+            ['--kill-port']
+        );
+        expect(verdict.code).toBe(0);
+        expect(verdict.output).not.toContain('Cleared');
     });
 
     it('reports BOTH problems at once rather than one per run', async () => {
