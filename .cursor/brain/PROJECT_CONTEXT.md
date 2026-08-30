@@ -42,8 +42,6 @@ Imports use the `@/*` path alias (repo root).
 
 **The tier law — what runs at which moment — lives in `AGENTS.md` Invariants #3, and the mechanics
 plus the phase table in `.cursor/brain/VERIFICATION.md`. This list is a POINTER, not a second copy.**
-(Until 2026-08-30 it said the gate runs "ONCE before hand-over", which was one of three different
-rules live in several files at the same time — the drift that costs 40-minute rounds.)
 
 - **`npm run verify:iter`** — the iteration rung: oxlint → tsc (incremental) → `vitest --changed` (seconds). Run per change; one touched spec via `npm run e2e:one -- <spec>`; need to LOOK at a built result: `npm run verify:measure`.
 - **The full chain belongs to the push hook and CI**, and the local push is PHASE-AWARE (`scripts/gate-tiers.json`: phase 0 skips build/e2e/smoke until the first deploy).

@@ -37,7 +37,7 @@ alwaysApply: true
 
 1. ✅ **Check FSD architecture** - ensure imports follow layer rules
 2. ✅ **Run `npm run verify:iter`** — oxlint → tsc (incremental) → `vitest --changed` (only the tests your uncommitted diff reaches)
-3. ✅ **Affected Playwright surface?** Run that one spec against your running dev server: `npx playwright test e2e/<file>.spec.ts`
+3. ✅ **Affected Playwright surface?** Run that one spec through the tracer, on a free port: `npm run e2e:one -- e2e/<file>.spec.ts`
 4. ✅ **Fix all found issues** before the next batch
 
 The iteration tier is not the full gate — and nobody runs the full gate by hand. **The tier law

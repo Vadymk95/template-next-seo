@@ -65,13 +65,16 @@ hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 - **TS/TSX / tests** — `npm run verify:iter`
 - **i18n copy only** (VALUE edits in `messages/<locale>/*.json`, no key changes) — `npm run format:check`.
   A key add/rename is a TS/TSX-class change: the typed messages make `verify:iter` catch it.
-- **Routing, i18n INFRA (`i18n/*.ts`, the locale set), `proxy.ts`, `next.config.ts`** — `npm run verify:full`
-- **A shared UI primitive, the chrome (`Header`/`Footer`), or `app/globals.css`** —
-  `npm run verify:full`. Anything content-bearing has to be measured against content it has not seen;
-  the unit suite cannot do it because jsdom has no layout.
-- **A geometry invariant, a wrap guard, or anything about how text lays out** — additionally
-  `CROSS_BROWSER=1 npm run smoke:dev` and `CROSS_BROWSER=1 npm run test:e2e:prod`.
-- **Added or bumped a dependency** — `npm run audit:gate`, plus `npm run build`.
+- **Routing, i18n INFRA (`i18n/*.ts`, the locale set), `proxy.ts`, `next.config.ts`** —
+  `npm run verify:iter`, and SAY SO in the hand-over: the build/e2e/smoke surface belongs to the push
+  chain and CI, not to a hand-run.
+- **A shared UI primitive, the chrome (`Header`/`Footer`), or `app/globals.css`** — content-bearing
+  work has to be MEASURED against content it has not seen (jsdom has no layout), so this is the
+  measure moment: `npm run verify:measure -- e2e/layout-geometry.spec.ts`, or `npm run smoke:dev` for
+  the dev-only content-stress fixture.
+- **A geometry invariant, a wrap guard, or anything about how text lays out** — measure with
+  `CROSS_BROWSER=1 npm run smoke:dev`; the CI cross-browser job is what gates it.
+- **Added or bumped a dependency** — `npm run audit:gate` (it is the one network check, and cheap).
 
 ---
 
@@ -103,7 +106,7 @@ That is how the form-field handling once landed in one and not the other. Change
 ## Capturing results honestly
 
 ```bash
-npm run verify > /tmp/verify.log 2>&1; echo $?
+npm run verify:iter > /tmp/verify.log 2>&1; echo $?
 ```
 
 **Without a pipe.** Piping to `tail` returns the pipe's exit status, so a failed build reads as a pass.
@@ -123,6 +126,7 @@ measurement); a Playwright `testMatch` that selects nothing collects zero tests 
 
 ## Brain sync
 
-If you add or change a script, a CI step or a hook, update this file **and** `PROJECT_CONTEXT.md`
-**and** the `AGENTS.md` command list in the same change. Three places describe the gate, and all three
-have been stale at the same time before.
+If you add or change a script, a CI step or a hook: the tier LAW is `AGENTS.md` Invariants #3 and
+lives there alone; the MECHANICS are this file; `PROJECT_CONTEXT.md` and the `AGENTS.md` command list
+carry only the command names. Update what the change actually touches — and never re-state the law in
+a second file, which is how three descriptions of one gate were stale at the same time.
