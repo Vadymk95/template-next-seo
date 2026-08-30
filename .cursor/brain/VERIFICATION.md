@@ -39,23 +39,21 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 `validate`. The rule that keeps it true: **a new check goes into the script, never only into the
 workflow file.**
 
-## The tracer, and what silence means
+## The tracer — how it works (the RULES it enforces are the tier law)
 
 Every `verify:*` and `test:e2e` run appends one TSV row to `.gate-trace.log` (gitignored);
 `npm run trace:report` turns rows into findings — a forbidden stage run standalone, a run over its
-moment's budget, a code check against a docs-only change, a push from a linked worktree. The
-discipline changes by editing `scripts/gate-tiers.json`, never the analyser. Telemetry sees WHO ran
-WHAT and HOW LONG; whether a check CAN fail is mutation-proving's job, not the tracer's.
-**After a push: gate output present in the terminal is part of the contract — silence is a
-failure, not a pass.** A push that printed no gate ran no gate, whatever the exit code says.
+moment's budget, a code check against a docs-only change, a push from a linked worktree. Moments,
+budgets and classes are DATA in `scripts/gate-tiers.json`; the analyser names no stage, so the
+discipline changes by editing that JSON. Telemetry sees WHO ran WHAT and HOW LONG; whether a check
+CAN fail is mutation-proving's job, not the tracer's.
 
-## Ports — busy means MOVE; only the gate kills
+## Ports — the mechanics
 
-Parallel lanes share one machine: `e2e:one` and `verify:measure` take the next free port
-(`scripts/run-on-free-port.mjs`) and Playwright tears down the server it started. Never kill a
-server you did not start. The push gate alone clears its own port
-(`check-gate-env --kill-port` — SIGTERM, re-probe, refuse if it will not die). Stray hunting by
-hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
+`e2e:one` and `verify:measure` route through `scripts/run-on-free-port.mjs`, which probes up from
+the base port and exports `PORT` + `PLAYWRIGHT_BASE_URL`; Playwright tears down the server it
+started. The push gate's preflight takes `--kill-port` (SIGTERM, re-probe, refuse if it will not
+die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 ---
 
