@@ -87,6 +87,26 @@ export const waitForServer = async (probeOnce, { attempts = 60, delayMs = 500 } 
     );
 };
 
+/**
+ * A measurement of a page that has not rendered passes every eye and means nothing — the SPA sibling
+ * reported "0 controls, 0 headings" at `load`, because `load` fires before the app mounts. So the
+ * probe waits for CONTENT, and when none arrives it says so instead of printing zeros as if they
+ * were data. Pure over an injected reader, so the give-up path is testable.
+ */
+export const hasRenderedContent = (measurement) =>
+    measurement.controls > 0 || measurement.headings > 0;
+
+export const waitForContent = async (readMeasurement, { attempts = 20, delayMs = 250 } = {}) => {
+    let measurement = await readMeasurement();
+    for (let attempt = 1; attempt < attempts && !hasRenderedContent(measurement); attempt += 1) {
+        await new Promise((resolve) => {
+            setTimeout(resolve, delayMs);
+        });
+        measurement = await readMeasurement();
+    }
+    return { measurement, rendered: hasRenderedContent(measurement) };
+};
+
 const run = async () => {
     const { path, widths, useDev } = parseProbeArgs(process.argv.slice(2));
 
@@ -131,10 +151,12 @@ const run = async () => {
         for (const width of widths) {
             await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
             await page.goto(`${baseUrl}${path}`, { waitUntil: 'load' });
-            const measurement = await page.evaluate(measureInPage);
+            const { measurement, rendered } = await waitForContent(() =>
+                page.evaluate(measureInPage)
+            );
             const file = join(OUT_DIR, `${slugForPath(path)}-${String(width)}.png`);
             await page.screenshot({ path: file, fullPage: true });
-            rows.push({ width, file, ...measurement });
+            rows.push({ width, file, rendered, ...measurement });
         }
     } finally {
         await browser.close();
@@ -147,6 +169,14 @@ const run = async () => {
         console.log(
             `      overflow ${String(row.horizontalOverflowPx)}px · controls ${String(row.controls)} · smallest ${row.smallestControl} · headings ${String(row.headings)}`
         );
+        if (!row.rendered) {
+            console.log(
+                '      ⚠ NOTHING RENDERED — no control and no heading. Either the route is genuinely'
+            );
+            console.log(
+                '        empty, or the app had not mounted. Read the PNG before believing the numbers.'
+            );
+        }
     }
     console.log(`\n  title: ${rows[0]?.title ?? '(none)'}\n`);
 };

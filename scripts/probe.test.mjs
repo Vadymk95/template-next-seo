@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { measureInPage, parseProbeArgs, slugForPath, waitForServer } from './probe.mjs';
+import {
+    hasRenderedContent,
+    measureInPage,
+    parseProbeArgs,
+    slugForPath,
+    waitForContent,
+    waitForServer
+} from './probe.mjs';
 
 describe('parseProbeArgs', () => {
     it('defaults to the root path and the three-width sweep', () => {
@@ -53,6 +60,42 @@ describe('waitForServer', () => {
         await expect(
             waitForServer(() => Promise.resolve(false), { attempts: 2, delayMs: 0 })
         ).rejects.toThrow(/never answered/);
+    });
+});
+
+describe('waitForContent', () => {
+    /* The SPA sibling reported "0 controls, 0 headings" on its first live run: `load` fires before
+       the app mounts, so the probe measured an empty shell and printed it like data. These cases pin
+       both halves — wait for content, and when none comes, SAY so rather than report zeros. */
+    const empty = { controls: 0, headings: 0 };
+    const mounted = { controls: 5, headings: 1 };
+
+    it('returns as soon as content appears, without waiting out the attempts', async () => {
+        let reads = 0;
+        const result = await waitForContent(
+            () => {
+                reads += 1;
+                return Promise.resolve(reads < 3 ? empty : mounted);
+            },
+            { attempts: 20, delayMs: 0 }
+        );
+        expect(result.rendered).toBe(true);
+        expect(reads).toBe(3);
+    });
+
+    it('gives up and reports NOT rendered rather than passing an empty page off as a measurement', async () => {
+        const result = await waitForContent(() => Promise.resolve(empty), {
+            attempts: 3,
+            delayMs: 0
+        });
+        expect(result.rendered).toBe(false);
+        expect(result.measurement).toEqual(empty);
+    });
+
+    it('counts a heading-only page as rendered — not every route has a control', () => {
+        expect(hasRenderedContent({ controls: 0, headings: 1 })).toBe(true);
+        expect(hasRenderedContent({ controls: 1, headings: 0 })).toBe(true);
+        expect(hasRenderedContent(empty)).toBe(false);
     });
 });
 
