@@ -36,7 +36,7 @@ const coverageExcludeSource = /coverage:\s*\{[\s\S]*?exclude:\s*\[([\s\S]*?)\]/.
 const coverageExclude = [...(coverageExcludeSource ?? '').matchAll(/['"]([^'"]+)['"]/g)].map(
     (match) => match[1]
 );
-const coverageExcludedDirs = coverageExclude.map((entry) => entry.replace(/\/$/, ''));
+const coverageExcludedDirs = coverageExclude.map((entry) => entry.replace(/\/(\*\*)?$/, ''));
 
 const includes = mutate.filter((glob) => !glob.startsWith('!'));
 const negations = mutate.filter((glob) => glob.startsWith('!'));

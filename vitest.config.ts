@@ -28,7 +28,7 @@ export default defineConfig({
             // toward the app thresholds moved statements from 196 to 331 and dropped
             // lines from 93% to 82% without a single line of app code changing —
             // the sibling templates avoid this by scoping coverage `include` to src.
-            exclude: ['node_modules/', 'test/', '.next/', 'app/', 'scripts/'],
+            exclude: ['node_modules/**', 'test/**', '.next/**', 'app/**', 'scripts/**'],
             reportsDirectory: './coverage',
             thresholds: {
                 lines: 85,
