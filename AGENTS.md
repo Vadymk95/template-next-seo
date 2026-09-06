@@ -205,9 +205,8 @@ CATCH a wrong implementation. `thresholds.break` in `stryker.config.json` is a
 measured floor-of-record (currently 35): raise it after a good run, never lower it
 to go green. Scope mirrors the coverage scope — `app/` stays out of both (measured:
 including it drops lines 93%→82%); `app/` regressions are the e2e suite's job.
-**Currently broken under vitest 5** (mutants universally survive regardless of test
-quality) — see `DECISIONS.md` § "[2026-09] Test toolchain majors" before trusting a
-score from this job.
+Re-measured 2026-09-06: 40.24 on Stryker 10 with vitest 4.1.11 — vitest is held at 4.1.x
+here because under 5.0.0 the Stryker runner ran zero tests per mutant (see Version holds).
 
 **The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
 step, `cp .env.example .env.local`, after cloning. `next dev` needs nothing (the
@@ -233,6 +232,12 @@ so it cannot report "not set" for a value the build would have found.
   `typescript-eslint` major that widens the peer.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
+- **vitest and `@vitest/coverage-v8` stay `^4.1.x` in this repo** — under vitest 5.0.0
+  `@stryker-mutator/vitest-runner@10.0.0` ran zero tests per mutant here (2.94% score, every
+  mutant survived) while the same pair kills mutants in the sibling Vite templates; on 4.1.11 the
+  score is 40.24. `dependabot.yml` ignores `vitest >=5` for that reason. Lift only with a runner
+  release dated after 2026-09-03 AND the one-file probe in `DECISIONS.md` § "[2026-09]" killing
+  mutants again — same commit drops the ignore.
 - **`@types/node` stays 24.x** — types match `engines.node >= 24`.
 - **`overrides` in `package.json` are security floors WITH major caps**
   (`">=fixed <next-major"`). Two of our own uncapped floors (brace-expansion,

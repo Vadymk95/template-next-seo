@@ -2,8 +2,10 @@
 
 ## [2026-09] Test toolchain majors: vitest 5, Stryker 10, jsdom 30
 
-**Decision**: take the three majors in one pass, one commit each, measured on the same tree.
-TypeScript stays `~6.0.x` because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
+**Decision**: take the three majors in one pass, one commit each, measured on the same tree — and
+then hold vitest back at `4.1.x` in THIS repo only, because the measurement below showed the mutation
+gate cannot run under vitest 5 here (the sibling templates took vitest 5 and their mutation runs still
+kill mutants). TypeScript stays `~6.0.x` because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
 `~1.81.0` in lockstep with `eslint-plugin-oxlint` in the preceding compatible-updates commit, and
 `@next/env`'s exact pin was realigned to the `next` version `npm update` picked (16.3.4) — it has to
 match, because `scripts/check-build-env.mjs` reads `.env*` through it to mirror what `next build`
@@ -24,31 +26,32 @@ plans to default to; harmless either way, but it removes the warning and it is t
 message names. jsdom 30 needs Node `^24.15.0`; `.nvmrc` says `24`, so `nvm use` resolves to the newest
 installed 24.x — a machine on an older 24.x fails `engine-strict` at install, the intended signal.
 
-**What did NOT move: the mutation score, and it needs a decision.** `npm run test:mutation` measured
-2.94% (17 killed of 567 mutants) against the 2026-08-09 baseline of 40.21% (228 of 567) — not a normal
-mutant-set drift, a near-total collapse. Isolated before committing: reproducible with
-`@stryker-mutator/core`+`vitest-runner` at BOTH 9.6.1 and 10.0.0 once `vitest` is 5.x (so this is not
-a Stryker-10-specific regression); unaffected by `coverageAnalysis: "all"` vs the default `"perTest"`;
-unaffected by clearing `node_modules/.vite`; unaffected by the `import.meta.dirname` fix above. The
-dry run still finds and runs the same 56 tests it always did (the ones that transitively reach
-`features/`, `shared/`, `i18n/` — Stryker's normal import-graph test filtering, not the anomaly), but
-mutants in files with real, passing, dedicated tests (`rateLimitCore.ts`, `middlewareRequest.ts`) now
-universally SURVIVE where they used to be killed — the tests run, but the mutated code does not
-appear to be what they execute. Reads as a vitest-5 incompatibility in how
-`@stryker-mutator/vitest-runner` switches the active mutant, not a genuine test-strength regression;
-not root-caused further here (third-party interop, not this repo's source). `thresholds.break` in
-`stryker.config.json` stays at **35** — not lowered to go green, and not raised on an unreliable
-number. **Consequence, stated plainly: the weekly `mutation.yml` job will fail on every run until this
-is resolved**, and a red run there should be read as "known tool break", not "test strength dropped
-to zero", until an upstream fix lands or a workaround is found. Revisit trigger: a
-`@stryker-mutator/vitest-runner` release that changelogs vitest 5 support, or a repro narrow enough to
-file upstream.
+**What did NOT move under vitest 5: the mutation gate, so vitest was put back.** With vitest 5.0.0
+`npm run test:mutation` measured 2.94% (17 killed of 567) against the 2026-08-09 baseline of 40.21%,
+and a one-file probe (`stryker run --mutate shared/lib/rateLimitCore.ts`) printed `Ran 0.00 tests per
+mutant` with all 48 mutants surviving — the runner's per-test coverage came back empty, so it selected
+no test for any mutant. Ruled out before deciding: Stryker 9.6.1 vs 10.0.0 (same result on both once
+vitest is 5.x), `coverageAnalysis: "all"` vs `"perTest"`, the Vite dep cache, the `import.meta.dirname`
+alias change, and a leaked alias into the original tree (a plain vitest run from a sandbox copy with a
+broken module fails as it should — the copy IS what runs). The debug log shows the runner loading
+`vitest.config.ts` from the Stryker sandbox with cwd switched there, as designed. Same tree, vitest
+4.1.11 + coverage-v8 4.1.11, Stryker 10.0.0: the one-file probe kills 37 of 48 (79.17%, 1.75 tests per
+mutant) and the full run scores **40.24%** (1.65 tests per mutant) against the unchanged floor of 35.
+`@stryker-mutator/vitest-runner@10.0.0` (2026-08-14) predates `vitest@5.0.0` (2026-09-03); the two
+sibling Vite templates run the same pair and kill mutants, so the incompatibility is specific to this
+repo's shape (Next.js, `resolve.alias['@']` to the repo root, tests reaching modules through `@/`) and
+was not root-caused further here.
 
-**Why take vitest 5 and jsdom 30 anyway, given the mutation break.** Both are otherwise-green
-(coverage suite: 34 files / 269 tests, same 93.82/83.78/92/93.72 numbers as before the bump); holding
-the whole toolchain back for one weekly, non-gating job would leave the compatible majors unapplied
-indefinitely. Mutation testing is deliberately outside `verify`/`verify:ci`/pre-push (see the ADR
-below), so this does not touch what gates a push.
+**Why hold vitest rather than ship a red weekly job.** A strength gate that cannot fail is worse than
+a test runner one minor behind: the weekly `mutation.yml` job would have gone red on every run and
+taught everyone to ignore it. So vitest and `@vitest/coverage-v8` stay `^4.1.11` in this repo, the
+compatible fixes made for vitest 5 stay (they hold on 4.1 too: `vi.stubGlobal` in `scripts/probe.test.mjs`,
+the glob-form `coverage.exclude`, `import.meta.dirname`), `.github/dependabot.yml` ignores `vitest >=5`
+and `@vitest/coverage-v8 >=5` with this reason, and the hold is listed under "Version holds" in
+`AGENTS.md`. **Lift trigger**: a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
+`npm install -D vitest@5 @vitest/coverage-v8@5` and the one-file probe above — take vitest 5 when it
+kills mutants again, in the same commit that drops the Dependabot ignore. Coverage under 4.1.11 with the
+glob excludes: 52 files / 350 tests, 92.91 / 74.21 / 91.34 / 92.96 against 85 / 70 / 75 / 85.
 
 ---
 
@@ -535,10 +538,11 @@ number requires a fresh measurement recorded here.
 
 ## Mutation testing: weekly strength gate, deliberately outside `verify`
 
-**Superseded in part (2026-09)**: the 40.21% baseline below is no longer trustworthy — the vitest 5
-bump broke mutant switching under `@stryker-mutator/vitest-runner` (any version), so the score reads
-2.94% regardless of test quality. Detail, what was ruled out, and the revisit trigger: `DECISIONS.md`
-§ "[2026-09] Test toolchain majors" (top of this file). The scope-mirror reasoning below stands.
+**Re-measured 2026-09-06 on Stryker 10.0.0 + vitest 4.1.11: 40.24%** (1.65 tests per mutant), the
+same floor of 35. Under vitest 5 the runner ran zero tests per mutant here, which is why vitest is held
+at 4.1.x in this repo — detail and the lift trigger: § "[2026-09] Test toolchain majors" at the top of
+this file. The scope-mirror reasoning below stands; "StrykerJS 9.6.1" below is the version of the
+2026-08-09 baseline run.
 
 `npm run test:mutation` (StrykerJS 9.6.1 + vitest runner) measures what coverage cannot: whether the
 tests would CATCH a wrong implementation. Baseline measured 2026-08-09: **mutation score 40.21%** —
