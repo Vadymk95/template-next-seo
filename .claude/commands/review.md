@@ -30,14 +30,15 @@ Every round — findings or acceptance — gets the diff read plus targeted chec
 pipeline: run `npm run verify:iter` yourself (never on the author's word) and
 `npm run e2e:one -- e2e/<touched>.spec.ts` where the diff has a spec. The full chain belongs to the
 push hook and CI, and acceptance does not pre-run it — a result you cannot act on is not worth its
-minutes (tier law: `AGENTS.md` Invariants #3, not restated here).
+minutes (tier law: `AGENTS.md` § Commands (exact) › _The tier law_, not restated here).
 
 ```bash
 npm run verify:iter > /tmp/verify.log 2>&1; echo $?
 ```
 
-Exit code **without a pipe**: piping to `tail` returns the pipe's status, so a failed build reads as a
-pass.
+Exit code without a pipe, and the rest of the verification-integrity checklist (prove the gate can
+go red, name the condition under which a green would have been red): `.cursor/rules/agent-pipeline.mdc`
+§ 4.1a — the single home, not repeated here.
 
 ## 2. Leak hunt (React + browser)
 

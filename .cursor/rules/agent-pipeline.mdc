@@ -97,8 +97,9 @@ npm run e2e:one -- e2e/<file>.spec.ts    # only the spec the change affects — 
 npm run verify:measure                   # need to LOOK at a built result? legal at any time
 ```
 
-The full chain is never run by hand: the pre-push hook and CI own it (phase-aware — see
-`scripts/gate-tiers.json`). The commit moment is the pre-commit hook's job.
+Everything else about the gate — the push and its phases, CI, what is forbidden by hand, the
+superset rule, which scripts are drill-downs rather than moments — is `AGENTS.md` § Commands (exact)
+› _The tier law_, and is not repeated here.
 
 ### 4.2 On failure
 

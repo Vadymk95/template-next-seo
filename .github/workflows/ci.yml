@@ -71,10 +71,11 @@ jobs:
                   path: ~/.cache/ms-playwright
                   key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-            # ONE step on purpose. `verify:ci` is the same command the pre-push hook
-            # runs, and the `verify` inside it is a strict superset of every check
-            # this job used to list separately. Adding a check HERE instead of to
-            # the script is what makes a green local gate stop predicting a green CI.
+            # ONE step on purpose. `verify:ci` is the chain the pre-push hook runs in
+            # phase 1 (`verify:push` dispatches to it), and the `verify` inside it is
+            # a strict superset of every check this job used to list separately.
+            # Adding a check HERE instead of to the script is what makes a green
+            # local gate stop predicting a green CI.
             - name: Verify (audit gate, lint, format, types, coverage, build, e2e)
               run: npm run verify:ci
               env:

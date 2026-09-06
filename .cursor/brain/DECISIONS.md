@@ -312,6 +312,12 @@ no nonce path for ISR'd HTML:
 
 **Trade-off**: verify is slower (~extra e2e minutes); first-time clones need `npm run test:e2e:install`. Accepted so e2e cannot be skipped by habit.
 
+**Superseded in part (2026-08-30)**: `.husky/pre-push` now runs `npm run verify:push`, which is
+phase-aware (`scripts/gate-tiers.json`): phase 0 skips build, e2e and smoke until the first deploy;
+phase 1 runs the full `verify:ci`. CI always runs the full chain regardless of phase. The
+e2e-inside-`verify:enterprise` half of this decision stands. Tier law: `AGENTS.md` § Commands
+(exact) › _The tier law_.
+
 ## Button primitive
 
 - Base variant omits **`ring-offset-background`** (aligns with enterprise template; focus ring stays via `ring-*`).
