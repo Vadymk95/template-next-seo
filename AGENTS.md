@@ -201,11 +201,13 @@ measurement and a `DECISIONS.md` line.
 
 **Mutation testing** — `npm run test:mutation` (StrykerJS, weekly `mutation.yml` CI
 job). Coverage proves code RUNS under tests; the mutation score proves tests would
-CATCH a wrong implementation (85% coverage floor vs 40.2% baseline score here, by
-design). `thresholds.break` in `stryker.config.json` is a measured floor-of-record:
-raise it after a good run, never lower it to go green. Scope mirrors the coverage
-scope — `app/` stays out of both (measured: including it drops lines 93%→82%);
-`app/` regressions are the e2e suite's job.
+CATCH a wrong implementation. `thresholds.break` in `stryker.config.json` is a
+measured floor-of-record (currently 35): raise it after a good run, never lower it
+to go green. Scope mirrors the coverage scope — `app/` stays out of both (measured:
+including it drops lines 93%→82%); `app/` regressions are the e2e suite's job.
+**Currently broken under vitest 5** (mutants universally survive regardless of test
+quality) — see `DECISIONS.md` § "[2026-09] Test toolchain majors" before trusting a
+score from this job.
 
 **The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
 step, `cp .env.example .env.local`, after cloning. `next dev` needs nothing (the

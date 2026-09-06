@@ -1,5 +1,57 @@
 # DECISIONS — template-next-seo
 
+## [2026-09] Test toolchain majors: vitest 5, Stryker 10, jsdom 30
+
+**Decision**: take the three majors in one pass, one commit each, measured on the same tree.
+TypeScript stays `~6.0.x` because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
+`~1.81.0` in lockstep with `eslint-plugin-oxlint` in the preceding compatible-updates commit, and
+`@next/env`'s exact pin was realigned to the `next` version `npm update` picked (16.3.4) — it has to
+match, because `scripts/check-build-env.mjs` reads `.env*` through it to mirror what `next build`
+sees.
+
+**What moved cleanly.** vitest 5 exposes `document` as a getter-only global in the jsdom
+environment, so a plain `globalThis.document = stub` throws — `scripts/probe.test.mjs` now uses
+`vi.stubGlobal` / `vi.unstubAllGlobals`. `vitest.config.ts` also needed its `coverage.exclude`
+entries changed from bare directory prefixes (`'app/'`, `'scripts/'`) to real globs (`'app/**'`,
+`'scripts/**'`) — coverage-v8 5 stopped treating a trailing-slash string as an implicit prefix match,
+so without this fix `scripts/` and `app/` silently re-entered the coverage scope (statements dropped
+from 93.82% to 68.2%, the exact regression the exclude list exists to prevent). `scripts/mutation-scope.test.mjs`
+parses that same array as text to mirror it against `stryker.config.json`'s `mutate` list, so its
+trailing-segment regex was widened to strip `/**` as well as a bare `/`, or that mirror check would
+itself go stale-red. `vitest.config.ts`'s `resolve.alias['@']` also dropped `path.resolve(__dirname, './')`
+for `import.meta.dirname` — vitest 5 warns that `__dirname` is unsupported by the config loader it
+plans to default to; harmless either way, but it removes the warning and it is the fix vitest's own
+message names. jsdom 30 needs Node `^24.15.0`; `.nvmrc` says `24`, so `nvm use` resolves to the newest
+installed 24.x — a machine on an older 24.x fails `engine-strict` at install, the intended signal.
+
+**What did NOT move: the mutation score, and it needs a decision.** `npm run test:mutation` measured
+2.94% (17 killed of 567 mutants) against the 2026-08-09 baseline of 40.21% (228 of 567) — not a normal
+mutant-set drift, a near-total collapse. Isolated before committing: reproducible with
+`@stryker-mutator/core`+`vitest-runner` at BOTH 9.6.1 and 10.0.0 once `vitest` is 5.x (so this is not
+a Stryker-10-specific regression); unaffected by `coverageAnalysis: "all"` vs the default `"perTest"`;
+unaffected by clearing `node_modules/.vite`; unaffected by the `import.meta.dirname` fix above. The
+dry run still finds and runs the same 56 tests it always did (the ones that transitively reach
+`features/`, `shared/`, `i18n/` — Stryker's normal import-graph test filtering, not the anomaly), but
+mutants in files with real, passing, dedicated tests (`rateLimitCore.ts`, `middlewareRequest.ts`) now
+universally SURVIVE where they used to be killed — the tests run, but the mutated code does not
+appear to be what they execute. Reads as a vitest-5 incompatibility in how
+`@stryker-mutator/vitest-runner` switches the active mutant, not a genuine test-strength regression;
+not root-caused further here (third-party interop, not this repo's source). `thresholds.break` in
+`stryker.config.json` stays at **35** — not lowered to go green, and not raised on an unreliable
+number. **Consequence, stated plainly: the weekly `mutation.yml` job will fail on every run until this
+is resolved**, and a red run there should be read as "known tool break", not "test strength dropped
+to zero", until an upstream fix lands or a workaround is found. Revisit trigger: a
+`@stryker-mutator/vitest-runner` release that changelogs vitest 5 support, or a repro narrow enough to
+file upstream.
+
+**Why take vitest 5 and jsdom 30 anyway, given the mutation break.** Both are otherwise-green
+(coverage suite: 34 files / 269 tests, same 93.82/83.78/92/93.72 numbers as before the bump); holding
+the whole toolchain back for one weekly, non-gating job would leave the compatible majors unapplied
+indefinitely. Mutation testing is deliberately outside `verify`/`verify:ci`/pre-push (see the ADR
+below), so this does not touch what gates a push.
+
+---
+
 ## [2026-07] The gate ladder: `verify` ⊂ `verify:ci` ⊂ `verify:full`
 
 **Decision.** Three commands, each predicting a named part of CI. `verify` holds every offline check.
@@ -482,6 +534,11 @@ killed this rule set in a sibling repo's review. When a threshold fires, split t
 number requires a fresh measurement recorded here.
 
 ## Mutation testing: weekly strength gate, deliberately outside `verify`
+
+**Superseded in part (2026-09)**: the 40.21% baseline below is no longer trustworthy — the vitest 5
+bump broke mutant switching under `@stryker-mutator/vitest-runner` (any version), so the score reads
+2.94% regardless of test quality. Detail, what was ruled out, and the revisit trigger: `DECISIONS.md`
+§ "[2026-09] Test toolchain majors" (top of this file). The scope-mirror reasoning below stands.
 
 `npm run test:mutation` (StrykerJS 9.6.1 + vitest runner) measures what coverage cannot: whether the
 tests would CATCH a wrong implementation. Baseline measured 2026-08-09: **mutation score 40.21%** —
