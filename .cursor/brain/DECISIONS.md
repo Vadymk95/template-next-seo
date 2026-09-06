@@ -53,6 +53,13 @@ and `@vitest/coverage-v8 >=5` with this reason, and the hold is listed under "Ve
 kills mutants again, in the same commit that drops the Dependabot ignore. Coverage under 4.1.11 with the
 glob excludes: 52 files / 350 tests, 92.91 / 74.21 / 91.34 / 92.96 against 85 / 70 / 75 / 85.
 
+**Gate hygiene found on the way (2026-09-06).** A Stryker debug run that crashed left
+`.stryker-tmp/sandbox-*` behind, and the next push failed with 44 lint errors that were all inside that
+copy (prettier "Delete ⏎" on the copied files, ESLint "multiple candidate TSConfigRootDirs"). `.stryker-tmp`
+was in `.gitignore` only. It is now also in `.prettierignore` and in ESLint's `globalIgnores`: a tool's
+temp directory belongs in every ignore list the gate reads, not only in git's, or a crashed tool run
+reddens the gate for an unrelated change and looks like a regression.
+
 ---
 
 ## [2026-07] The gate ladder: `verify` ⊂ `verify:ci` ⊂ `verify:full`

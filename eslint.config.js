@@ -41,6 +41,8 @@ export default defineConfig([
     globalIgnores([
         '.next-dev',
         '.next',
+        // A crashed Stryker run leaves its sandbox behind; the gate must never lint a copy of the repo.
+        '.stryker-tmp',
         'dist',
         'node_modules',
         'playwright-report',
