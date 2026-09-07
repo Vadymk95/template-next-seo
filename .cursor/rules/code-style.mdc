@@ -1,7 +1,7 @@
 ---
 description: 'Code style, formatting, file structure, and naming conventions for Next.js'
 globs: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
-alwaysApply: true
+alwaysApply: false
 ---
 
 ## Code Formatting

@@ -589,3 +589,11 @@ on a machine with every vitest worker busy takes seconds, so the budget was a un
 process-spawn test. The describe block now carries a 20 s budget with the measurement next to it. A
 quarantine (`skip`) was rejected: the cases prove the push dispatcher's phase routing and exit-code
 passthrough, the exact thing a silent pass would hide.
+
+## [2026-09] Rules load: `code-style` and `fsd-architecture` are glob-scoped again
+
+Both carried `globs` for `.ts/.tsx` (and `.js/.jsx`) AND `alwaysApply: true`, which makes the globs dead and
+loads about 210 lines on every Cursor turn regardless of what is being edited. They now load by glob, like
+the other stack rules; `agent-pipeline`, `global`, `project-config`, `workflow` and `test-driven-development`
+stay always-on (the last one is process, not a file-type rule). Measured context: always-loaded documents
+were ~7% of a lane's entry on the sibling project, so this is hygiene, not a token lever.

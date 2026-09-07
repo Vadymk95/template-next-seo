@@ -1,7 +1,7 @@
 ---
 description: 'Feature-Sliced Design (FSD) architecture rules and validation'
 globs: ['**/*.ts', '**/*.tsx']
-alwaysApply: true
+alwaysApply: false
 ---
 
 ## Feature-Sliced Design (FSD) Architecture
