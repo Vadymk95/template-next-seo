@@ -580,3 +580,12 @@ the exact failure mode the sibling doityourohm ADR predicted on 2026-08-04. All 
 major cap (`">=fixed <next-major"`), and `next.postcss` — the one uncapped floor left, which that ADR
 said to cap "the next time that line is touched" — was capped in the same pass (`>=8.5.10 <9`). An
 uncapped floor is a delayed regression.
+
+## [2026-09] Gate hygiene: a test budget is set by what the test does
+
+The `verify-push` CLI cases in `scripts/verify-push.test.mjs` timed out at vitest's 5 s default inside the
+full coverage run while passing alone in ~260 ms each. Each case boots node → npm → node, and an npm boot
+on a machine with every vitest worker busy takes seconds, so the budget was a unit-test budget applied to a
+process-spawn test. The describe block now carries a 20 s budget with the measurement next to it. A
+quarantine (`skip`) was rejected: the cases prove the push dispatcher's phase routing and exit-code
+passthrough, the exact thing a silent pass would hide.
