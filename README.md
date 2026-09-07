@@ -504,19 +504,21 @@ Key optimizations in `next.config.ts`:
 
 ## 🚦 CI/CD
 
-GitHub Actions workflow (`.github/workflows/ci.yml`):
-
-- Lint & Format check
-- TypeScript type check
-- Tests
-- Build verification
+GitHub Actions (`.github/workflows/ci.yml`, Node 24.x, `npm ci --ignore-scripts`): `validate` is a
+single `npm run verify:ci` step (the audit gate plus the whole offline gate — one step on purpose, so the
+workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks and CodeQL on push, PR and a
+weekly cron; `mutation.yml` is the weekly StrykerJS strength gate. What runs at which moment locally:
+`AGENTS.md` § Commands (exact) › _The tier law_.
 
 ## 📝 Code Quality
 
 ### Pre-commit Hooks (Husky)
 
-- **pre-commit:** Runs `lint-staged` (ESLint + Prettier)
-- **commit-msg:** Validates commit message format (commitlint)
+- **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate, then repo-wide
+  `lint:oxlint` + `format:check` (the remedy on refusal: `npm run fix && git add -u`)
+- **commit-msg:** commitlint (`type(scope): subject`, max 96 chars)
+- **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined
+  once in `AGENTS.md` § Commands (exact) › _The tier law_
 
 ### Commit Format
 
