@@ -125,6 +125,7 @@ export const ServerCard = async ({ data }: Props): Promise<ReactElement> => {
 - **Mixed logic rule**: split pure computation out first; keep hook thin and orchestration-focused
 - **Use Server Components for data fetching** when possible
 - **Hook should be in file `useComponentName.ts`** in the same folder
+- **Folder ladder**: the layers (`app → features → entities → shared`), their segments and the one-way import rule are defined once in `fsd-architecture.mdc` § Layer Structure / § Project Structure — a new file goes where that ladder says, not next to the file that happens to be open.
 
 ### Example Structure
 
@@ -241,4 +242,20 @@ const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
     loading: () => <p>Loading...</p>,
     ssr: false
 });
+```
+
+## Composition over props
+
+- **Trigger**: a component is about to gain a third boolean prop, or a second variant axis next to its `cva` variants. Stop adding props.
+- **Prefer slots**: `children`, named slot props (`icon`, `footer`), or `asChild` render delegation via `@radix-ui/react-slot` — the `Button` in `shared/ui/button.tsx` already does this.
+- **Or a compound component**: the parent owns state in a context, sub-components read it (`Panel` / `Panel.Header` / `Panel.Body`).
+- A new prop is right only when it changes the component's own behaviour, not what it renders.
+
+```tsx
+// Before: <Panel title="…" showIcon iconLeft compact />  — every combination is a branch inside Panel
+// After: the caller composes what the panel renders (sketch, not a shipped component)
+<Panel>
+    <Panel.Header icon={<Star />}>{title}</Panel.Header>
+    <Panel.Body>{children}</Panel.Body>
+</Panel>
 ```

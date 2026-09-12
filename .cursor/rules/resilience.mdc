@@ -28,3 +28,10 @@ priority: 92
 - ❌ Swallowing errors without logging.
 - ❌ `useEffect` with missing deps when values are used (fix deps or justify).
 - ❌ Logging without module/context — must be diagnosable in production JSON logs.
+
+## 5. Boundary adapter
+
+- A response is parsed **once**, at the boundary: `safeFetch` / `safeParseResponse` + a Zod schema (`shared/lib/api/safeFetch.ts`); a Server Action parses its own output the same way (`app/actions/example-form.ts`). Why: `DECISIONS.md` § "[2026-05] Boundary validation".
+- Defaults and renames live in the schema or a mapper next to it — `.default()`, `.catch()`, `.transform()`, or a `toViewModel(dto)` function beside the schema in `features/<slice>/model/` — never in a component.
+- Components and hooks receive the parsed view model: they never see a raw DTO and never supply their own fallbacks (`data?.x ?? ''` in JSX is the smell).
+- A schema change is a payload-contract change: the approval threshold applies (`workflow.mdc` § Approval & Brain).
