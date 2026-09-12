@@ -30,7 +30,8 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 | --- | --- | --- |
 | audit, hooks-check, format, tsc, lint, coverage | yes — every push, ~10s | day one |
 | production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
-| prod-mode e2e + Turbopack smoke | no | same flip — a prod boundary now exists |
+| prod-mode e2e | no | same flip — a prod boundary now exists |
+| Turbopack smoke (`smoke:dev`) | CI-only (`dev-smoke` job); never inside `verify:ci` | unchanged by phases |
 | coverage thresholds | already on (suite ships with real tests) | — |
 | cross-browser geometry job | CI-only (`CROSS_BROWSER=1`) | unchanged by phases |
 | mutation score (weekly CI) | unchanged by phases | — |
@@ -92,22 +93,8 @@ in-page measurement live: `MAP.md` § Layout invariants and content variance.
 
 ## Capturing results honestly
 
-```bash
-npm run verify:iter > /tmp/verify.log 2>&1; echo $?
-```
-
-**Without a pipe.** Piping to `tail` returns the pipe's exit status, so a failed build reads as a pass.
-
-Green also means nothing until you have seen the gate go red. When you add or change a check, break it
-once on purpose and confirm it refuses, then revert.
-
-**Before believing a green result, name the concrete condition under which it would have been RED.** If
-you cannot name one, the check proved nothing. Three real shapes here: a layout measurement of a page
-that had not rendered passes every invariant vacuously (both geometry specs assert a non-empty
-measurement); a Playwright `testMatch` that selects nothing collects zero tests and exits 0
-(`scripts/check-cross-browser-selection.mjs` asks Playwright instead of assuming); and
-`vitest --coverage` prints `Excluding it from coverage` for a file it could not parse and then exits 0
-(`scripts/check-coverage.mjs` refuses on that marker).
+The checklist (exit code without a pipe, prove the gate can go red, name the condition under which a
+green would have been red): `.cursor/rules/agent-pipeline.mdc` § 4.1a — one home.
 
 ---
 

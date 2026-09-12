@@ -68,6 +68,10 @@ reddens the gate for an unrelated change and looks like a regression.
 `verify:ci` is `audit:gate && verify` and predicts the `validate` job — husky **pre-push** runs it.
 `verify:full` is `verify:ci && smoke:dev` and predicts the whole pipeline including `dev-smoke`.
 
+**Superseded in part**: pre-push now runs `verify:push`, phase-aware (`verify:ci` from phase 1 — see
+"[2026-07] Playwright e2e inside `verify:enterprise` + pre-push" below), and the pre-commit repo-wide pass
+also runs `typecheck`; the ladder itself stands.
+
 **Why.** `verify:enterprise` ran `npm test`, without `--coverage`, while CI ran `test:coverage`. Vitest
 only enforces thresholds when `--coverage` is passed, so the 85/70/75/85 numbers in `vitest.config.ts`
 were defined but unenforceable locally — a change could drop coverage, pass the push gate and die in CI.
@@ -362,6 +366,9 @@ no nonce path for ISR'd HTML:
 
 ## Verification benchmarks
 
+**Superseded in part (2026-08-30)**: pre-push runs `verify:push`, phase-aware — not the full `verify`; the
+bench script stands.
+
 - **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build, **e2e** via `test:e2e:prod` / `CI=true` → `next start`).
 - **`npm run bench:verify`** — same steps with **per-step timings** (`scripts/bench-verify.mjs`) for local regression checks.
 - **Husky `pre-push`** — runs the full `verify` gate (not typecheck-only).
@@ -385,6 +392,9 @@ e2e-inside-`verify:enterprise` half of this decision stands. Tier law: `AGENTS.m
 - Base variant omits **`ring-offset-background`** (aligns with enterprise template; focus ring stays via `ring-*`).
 
 ## [2026-05] CI coverage enforcement (`npm test` → `npm run test:coverage`)
+
+**Superseded by "[2026-07] The gate ladder" above — CI is one `verify:ci` step and the coverage run lives
+inside `verify`; kept for the reasoning.**
 
 **Decision**: `.github/workflows/ci.yml` "Run tests" step calls **`npm run test:coverage`**, NOT `npm test`. Per /consilium 2026-05-23 APPLY Item 11 (6/6 voters YES, no dissent).
 

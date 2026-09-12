@@ -7,44 +7,26 @@ alwaysApply: true
 
 - **Always plan before implementing**: Before writing code, create a plan of changes
 - **Confirm plan when the repo gate requires it**: Present the plan and wait for user confirmation before proceeding when the task crosses the repo's approval threshold
-- **Plan should include**:
-    - List of files to be modified/created
-    - Brief description of changes for each file
-    - Test strategy (which parts use TDD, which use hybrid approach)
-    - Any dependencies or considerations
+- **The plan's shape**: `.cursor/<feature-slug>/PLAN.md`, copied from `.cursor/templates/PLAN.md` (law: `AGENTS.md` › Before code)
 - **Only after required confirmation**: Proceed with implementation once the required repo approval has been given
 - **Exception**: For trivial leaf edits (self-contained, no danger-zone / contract surface), planning can be skipped, but still inform user about the change
 
-## Approval & Brain (see `agent-pipeline.mdc`)
+## Approval & Brain
 
-- **Threshold (by risk, not LOC)**: Changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits** — brief notification is enough (Phase 2 gate).
-- **Brain**: After meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Phase 5).
+- **Threshold (by risk, not LOC)**: Changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits** — brief notification is enough (Step 2 gate).
+- **Above the chat gate**: for a task bigger than a one-sentence diff the approval is the non-author PR review of `SPEC.md`/`PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate for tasks below that size.
+- **Brain**: After meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Step 5).
 
-## Implementation Workflow (TDD Integration)
+## Implementation Workflow
 
-**Follow Test-First Development** (see `test-driven-development.mdc` for details):
-
-1. **Plan** (if needed) - describe changes and test strategy
-2. **Describe requirements** - clearly state what code should do
-3. **Write tests first** - for business logic (stores, hooks, utils) use strict TDD
-4. **Implement code** - write minimal code to pass tests
-5. **Refactor** - improve code quality while keeping tests green
-6. **Verify** - ensure all tests pass, linting passes, no errors
+The steps: `agent-pipeline.mdc` (Discover → Simulate → Execute → Verify → Brain Sync → Confidence); the
+Approve step sits between Simulate and Execute and is § Approval & Brain above. Test-first inside Execute:
+`test-driven-development.mdc` (strict TDD for logic, hybrid for UI).
 
 ## Code Quality Checks (MANDATORY)
 
-**After EVERY code change, run the iteration tier — seconds, not minutes:**
-
-1. ✅ **Check FSD architecture** - ensure imports follow layer rules
-2. ✅ **Run `npm run verify:iter`** — oxlint → tsc (incremental) → `vitest --changed` (only the tests your uncommitted diff reaches)
-3. ✅ **Affected Playwright surface?** Run that one spec through the tracer, on a free port: `npm run e2e:one -- e2e/<file>.spec.ts`
-4. ✅ **Fix all found issues** before the next batch
-
-The iteration tier is not the full gate — and nobody runs the full gate by hand. **The tier law
-(what runs at which moment, the measure rung, the phase-aware push) lives in ONE place:
-`AGENTS.md` § Commands (exact) › _The tier law_.** This file deliberately does not restate it; a
-restated pipeline rule drifts, and a stale mandate here once cost a sibling repo a day of 40-minute
-rounds.
+After every change: `agent-pipeline.mdc` § 4.1 (the iteration tier); fix what it finds before the next
+batch.
 
 **Rules:**
 
@@ -53,13 +35,7 @@ rounds.
 - ✅ **ALWAYS** check code before committing
 - ✅ **ALWAYS** fix found issues
 
-**For UI components**, use hybrid approach:
-
-- Extract runtime orchestration logic to hook (TDD for hook)
-- Extract pure deterministic computation to utility (TDD for utility)
-- Create component structure
-- Write component integration tests
-- Complete component implementation
+**For UI components**: the hybrid approach in `test-driven-development.mdc` § Hybrid Approach for UI Components.
 
 ## Hook vs Utility Extraction Policy (MANDATORY)
 

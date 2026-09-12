@@ -11,11 +11,11 @@ priority: 100
 
 ---
 
-## Phase 1: Deep Discovery (mandatory)
+## Step 1: Deep Discovery (mandatory)
 
-### Phase 1 Fast-Track
+### Step 1 Fast-Track
 
-If the task targets **only** files matching `*.styled.ts`, `*.styled.tsx`, `*.scss`, `*.css`, `*.i18n.*`, `*.spec.ts`, `*.test.ts`, or `*.md` — skip Brain reads and proceed directly to Phase 3. State: `"Phase 1 skipped — styling/i18n/test/docs task."` Still emit the **Rule Receipt** (step 7) for the conditional rules the task area maps to. When in doubt → run full Phase 1.
+If the task targets **only** files matching `*.styled.ts`, `*.styled.tsx`, `*.scss`, `*.css`, `*.i18n.*`, `*.spec.ts`, `*.test.ts`, or `*.md` — skip Brain reads and proceed directly to Step 3. State: `"Step 1 skipped — styling/i18n/test/docs task."` Still emit the **Rule Receipt** (step 7) for the conditional rules the task area maps to. When in doubt → run full Step 1.
 
 ---
 
@@ -29,11 +29,11 @@ Before any reasoning about implementation:
 6. **Rule Routing**: Load the matching conditional rules using **`global.mdc` §0.1** before planning edits.
 7. **Rule Receipt**: Produce a list of the conditional rules actually loaded (e.g. `Rules loaded: react-patterns, performance, routing`). If none apply, state `"Rule Receipt: none — always-on rules only."`
 
-> **Gate**: If task touches a SKELETONS zone — flag risk and propose mitigation before Phase 2.
+> **Gate**: If task touches a SKELETONS zone — flag risk and propose mitigation before Step 2.
 
 ---
 
-## Phase 2: Architectural Simulation
+## Step 2: Architectural Simulation
 
 ### Inference-Time Scaling
 
@@ -53,11 +53,11 @@ Before any reasoning about implementation:
 - 1–2 traces per non-trivial function: happy path + edge case.
 - If a trace fails — revise the plan before coding.
 
-> **Gate (by risk, not LOC)**: Wait for approval when the change touches a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse. **Trivial leaf edits** (self-contained, no danger-zone / contract surface) — proceed with a brief notice (**workflow.mdc**).
+> **Gate (by risk, not LOC)**: wait for approval when the change is on the risk list — `workflow.mdc` § Approval & Brain (danger zones, the frozen security surface, contract changes, anything hard to reverse). **Trivial leaf edits** (self-contained, no danger-zone / contract surface) — proceed with a brief notice.
 
 ---
 
-## Phase 3: TDD-First Execution
+## Step 3: TDD-First Execution
 
 ### Business logic (`entities`, `shared/lib`, hooks)
 
@@ -69,7 +69,7 @@ Before any reasoning about implementation:
 
 ### Iteration
 
-- **1–2 files** per batch; verify between batches.
+- **1–2 files** per batch (a batch is what sits between two `verify:iter` runs, INSIDE one PLAN slice — the slice is the 2-7 × <400-line unit of `AGENTS.md` › Before code); verify between batches.
 - Surgical edits; match local style (4 spaces in this repo).
 
 ### Per-file checklist
@@ -83,7 +83,7 @@ Before any reasoning about implementation:
 
 ---
 
-## Phase 4: Autonomous Verification Loop
+## Step 4: Autonomous Verification Loop
 
 ### 4.1 Automated checks
 
@@ -118,7 +118,7 @@ Plan alignment, ghost principle, regression on callers.
 
 ---
 
-## Phase 5: Brain Auto-Sync
+## Step 5: Brain Auto-Sync
 
 | File            | When to update                       |
 | --------------- | ------------------------------------ |
@@ -131,7 +131,7 @@ If nothing applies: **"Brain sync: none needed."**
 
 ---
 
-## Phase 6: Confidence Declaration
+## Step 6: Confidence Declaration
 
 End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 
@@ -139,7 +139,7 @@ End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 
 ## Anti-patterns (FORBIDDEN)
 
-- Skipping Phase 1
+- Skipping Step 1
 - Batches > 2 files without verification
 - Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause)
 - Finishing without Brain sync declaration
@@ -156,9 +156,9 @@ Green means nothing until you know the gate can go red.
    stage you run. **And after a push: gate output present in the terminal is part of the contract —
    silence is a failure, not a pass.**
 2. **Mutation-check the tests**: if mentally reverting your change leaves the suite green, the test is
-   worthless. Writing a test is Phase 3; proving it would have failed is this step.
+   worthless. Writing a test is Step 3; proving it would have failed is this step.
 3. **Prove a new gate gates**: break it on purpose once — an expired entry in
-   `scripts/audit-allowlist.json`, a raw hex in a component, a staged `src` logic file with no
+   `scripts/audit-allowlist.json`, a raw hex in a component, a staged logic file with no
    `*.test.*` sibling — and watch it refuse. Then revert the sabotage.
 4. **A check that reports success when it could not run is fail-OPEN.** Ask what it does on a missing
    directory, an empty result, or no network — not only on the failure it was written for.
@@ -174,7 +174,5 @@ Green means nothing until you know the gate can go red.
    `npm run e2e:one`); `npm test` cannot see any of it, because jsdom has no layout. The full
    `verify:full` chain stays the push hook's and CI's, never an implementer's.
 7. **Do not reason about what a browser does — run it.** `CROSS_BROWSER=1` adds Firefox and WebKit to
-   the geometry specs. Measured here rather than predicted: Firefox reports `clientWidth: 0` for an
-   inline `<label>` (CSSOM says an inline box has no client box) while Chromium reports a box, so a rule
-   about content overflow was asking a question one engine cannot answer.
+   the geometry specs (measured: `DECISIONS.md` § Cross-engine coverage).
 

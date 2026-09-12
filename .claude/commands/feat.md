@@ -7,15 +7,13 @@ actual gate, its actual reuse locations and its actual danger zones, so nothing 
 
 ## 0. Before reading anything: is this still needed, and where does it live?
 
-Two questions, both cheap, both measured on a sibling project as the largest recoverable waste in a
-lane's entry:
+Two questions, both cheap; both measured as the largest recoverable waste in a lane's entry
+(`AGENTS.md` § Entering this repo cheaply):
 
 1. **Is the work still needed?** `git log --oneline -15` and one grep for the thing the task names.
-   Two of five dispatched lanes there returned "already done" after ~430k tokens between them; both
-   were answerable in five minutes. Say what you checked.
+   Say what you checked.
 2. **Where does it live?** `.cursor/brain/READING_INDEX.md` maps the situation to the two or three
-   files that answer it. Open that before sweeping a directory — source exploration is ~93% of a
-   lane's entry, and the index exists to cut it.
+   files that answer it. Open that before sweeping a directory.
 
 ## 1. Discovery
 
@@ -40,10 +38,8 @@ If a blocking requirement is unclear, ask **one** question at a time and propose
 answer with it. Resolve from the codebase or the brain instead of asking whenever the answer is
 discoverable there.
 
-Wait for approval when the task touches a danger zone, an API payload shape, or **any of this repo's
-frozen security surface** — the CSP directives in `next.config.ts`, the nonce pipeline and branch order
-in `proxy.ts`, the rate-limit matcher, or COOP/CORP. Also stop before adding or removing a locale, or
-changing `routing.defaultLocale`. Trivial leaf edits proceed with a brief note.
+Wait for approval by risk (the risk list: `.cursor/rules/workflow.mdc` § Approval & Brain — it names this
+repo's frozen security surface and the locale set). Trivial leaf edits proceed with a brief note.
 
 Two Next-specific traps that are invisible until the build fails: every `app/[locale]/*` entry must call
 `requireLocale()` then `setRequestLocale(locale)` **before** any client descendant renders, and the
@@ -56,15 +52,16 @@ before §3; a plan is approved as a pull-request review, never as a chat reply.
 
 ## 3. Build
 
-- **Logic first, test-first**: for stores, hooks and `src/lib` modules, write the failing test, then the
+- **Logic first, test-first**: for stores, hooks and `shared/lib` modules, write the failing test, then the
   code. Say what the test asserted while it was red.
 - **UI**: implement, then cover it through `renderWithProviders` from `shared/lib/test-utils/`, which
   wraps `NextIntlClientProvider`.
-- Max two files per iteration without an intermediate check — the check is `npm run verify:iter`
+- Batch rule: `.cursor/rules/agent-pipeline.mdc` § Iteration; the check is `npm run verify:iter`
   (seconds), plus `npm run e2e:one -- e2e/<file>.spec.ts` when the surface has a spec (free port,
   traced). Need to LOOK at a built result: `npm run verify:measure` — legal at any time. The full
   chain is never run by hand (tier law: `AGENTS.md` Invariants #3).
-- Every `src` logic file needs a co-located `*.test.*` — the pre-commit hook refuses otherwise. Write
+- Every logic file under `app/`, `features/`, `shared/` or `i18n/` needs a co-located `*.test.*` — the
+  pre-commit hook refuses otherwise. Write
   the test because it is worth having, not to satisfy the hook.
 - Match the surrounding file exactly: 4-space indent, arrow functions, `FunctionComponent`, `@/`
   imports, named constants, design tokens, `t()` for every user-visible string, `logger` never
@@ -80,10 +77,9 @@ npm run verify:iter > /tmp/verify.log 2>&1; echo $?
 npm run e2e:one -- e2e/<touched>.spec.ts
 ```
 
-Exit code **without a pipe**. If the change touched routing, i18n, `proxy.ts` or `next.config.ts`,
-SAY SO in the report — the push gate (phase 1) and CI cover the build/e2e/smoke surface; flag it,
-do not run it. Then: revert your change mentally and ask which of your new tests would still pass.
-Any that would is worthless — fix it before reporting.
+Exit code **without a pipe**; the rest of the checklist: `.cursor/rules/agent-pipeline.mdc` § 4.1a. If
+the change touched routing, i18n, `proxy.ts` or `next.config.ts`, SAY SO in the report — the push gate
+(phase 1) and CI cover the build/e2e/smoke surface; flag it, do not run it.
 
 If the gate fails, fix the cause. Do not lower a severity, add an `eslint-disable`, move a threshold, or
 extend an ignore list to get green.
@@ -97,4 +93,4 @@ extend an ignore list to get green.
 - Anything you flagged instead of forcing.
 - `Confidence: HIGH | MEDIUM | LOW — reason`.
 
-Do not commit. Do not push.
+Hand over for review; the push runs the gate (`AGENTS.md` › Lanes).

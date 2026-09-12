@@ -117,7 +117,7 @@ npm start
 
 - **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
 - **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
-- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) runs lint → format → TypeScript → vitest → production build → Playwright e2e (`test:e2e:prod`, same as CI). Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
+- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) is the offline gate; its stage order is the `verify:enterprise:inner` script, listed once in `AGENTS.md` § Commands (exact) and not repeated here. Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
 - **Mutation testing**: **`npm run test:mutation`** (StrykerJS) measures test strength — whether the suite would catch a wrong implementation, not just execute the code. Runs as a weekly `mutation.yml` CI job with a measured floor (`thresholds.break` in `stryker.config.json`), deliberately outside `verify` because a full run costs minutes.
 
 ### Security (production)
@@ -227,13 +227,22 @@ npm run dev:webpack      # Use Webpack instead (for compatibility)
 # Build
 npm run build            # Production build (uses Webpack for custom optimizations)
 npm run build:analyze    # Build with bundle analyzer
-npm run build:webpack    # Explicitly use Webpack (same as build)
+npm run build:turbo      # Turbopack build (no custom webpack splits)
 
-# Quality
-npm run lint             # ESLint check
+# The moments (the law: AGENTS.md § Commands (exact) › The tier law)
+npm run verify:iter          # iteration tier: oxlint → tsc → vitest --changed; run per change
+npm run verify:measure       # MEASURE moment: build + look (-- e2e/<f>.spec.ts for one spec)
+npm run e2e:one -- <spec>    # one Playwright spec, FREE port, through the tracer
+npm run test:one -- <file>   # one unit test file, through the tracer
+npm run probe -- <route>     # LOOK: render, screenshot per width, print measured quantities
+npm run verify:push          # what pre-push runs, phase-aware
+npm run trace:report         # findings from .gate-trace.log: moments, budgets, worktrees
+
+# Drill-downs on a specific failure (none of these is a moment)
+npm run lint             # oxlint → ESLint
 npm run format           # Prettier formatting
 npm run format:check     # Prettier check
-npm test                 # Run tests
+npm test                 # Run tests (the gate uses test:coverage)
 npm run test:watch       # Watch mode
 npm run test:coverage    # Coverage report
 ```
@@ -515,7 +524,7 @@ weekly cron; `mutation.yml` is the weekly StrykerJS strength gate. What runs at 
 ### Pre-commit Hooks (Husky)
 
 - **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate, then repo-wide
-  `lint:oxlint` + `format:check` (the remedy on refusal: `npm run fix && git add -u`)
+  `lint:oxlint`, `format:check` and `typecheck` (the remedy on refusal: `npm run fix && git add -u`)
 - **commit-msg:** commitlint (`type(scope): subject`, max 96 chars)
 - **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined
   once in `AGENTS.md` § Commands (exact) › _The tier law_

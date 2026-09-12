@@ -44,18 +44,20 @@ Imports use the `@/*` path alias (repo root).
   the only definition (which script belongs to which moment, the push phases, what is forbidden by
   hand). Stage timings and what was deliberately not added: `.cursor/brain/VERIFICATION.md`. The
   full script list: `package.json`. Nothing about the gate is repeated in this file.
-- **`npm run verify:full`** — `verify:ci && smoke:dev`. The only local command that also predicts the `dev-smoke` job. Run it before a PR touching routing, i18n, `proxy.ts` or `next.config.ts`.
+- **`npm run verify:full`** — `verify:ci && smoke:dev`, the only chain that also predicts the `dev-smoke` job. Like every full chain it is never run by hand (the tier law); a change to routing, i18n, `proxy.ts` or `next.config.ts` is SAID in the hand-over, and CI's `dev-smoke` job covers it.
 - **`npm run fix`** — the one remedy: `oxlint --fix` → `eslint --fix` → `prettier --write`, repo-wide.
 - **`.env.local` is a bootstrap step, not optional**: `verify` builds, and the production build requires `NEXT_PUBLIC_APP_URL`. `cp .env.example .env.local` once. `scripts/check-build-env.mjs` runs before the build and reports the fix in one line instead of letting a Zod error surface from inside page-data collection; it reads `.env*` via `@next/env` so its view of the env matches the build's.
 - Playwright browsers install on demand via `scripts/ensure-playwright.mjs`, which reads the exact build paths out of `playwright install --dry-run`.
 
 ## CI
 
-Two jobs, in parallel.
+Three jobs, in parallel.
 
 **`validate`** — Node 24.x, `npm ci --ignore-scripts`, Next and Playwright caches, then a single **`npm run verify:ci`** step. One step on purpose: the script is the gate, and a check added to the workflow instead of the script is what made the local gate stop predicting CI.
 
 **`dev-smoke`** — `npm run smoke:dev` against a cold Turbopack dev server. It exists because `dev` runs Turbopack while `build` runs webpack with a custom `splitChunks` hook, so `validate` only ever exercises the webpack output. It is a separate job rather than a gate step because a cold Turbopack boot costs 10-30s per run.
+
+**`cross-browser`** — `CROSS_BROWSER=1`: the geometry specs on Firefox and WebKit (`test:e2e:prod` after a build, then `smoke:dev`), after `scripts/check-cross-browser-selection.mjs` has proved every engine collected tests. Why it is CI-only: `DECISIONS.md` § Cross-engine coverage.
 
 **`security.yml`** (separate workflow) — gitleaks over full history plus CodeQL `security-extended`, on push, PR and a weekly cron. CodeQL needs GitHub code scanning, which is free on public repos and paid on private ones; the workflow header spells out what a private fork must do. Exclusions live in `.github/codeql/codeql-config.yml` with their reason.
 

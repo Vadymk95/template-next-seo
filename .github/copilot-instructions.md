@@ -9,6 +9,8 @@ finding.
 - `npm run verify` is the bar and it is zero-warnings (`eslint --max-warnings 0`,
   `oxlint --deny-warnings`). A change that needs a rule downgraded, a severity lowered, a coverage
   threshold moved, or an `eslint-disable` to pass is a finding, not a fix.
+- The gate's moments, phases and what is never run by hand: `AGENTS.md` § Commands (exact) › _The tier
+  law_.
 - The frontend is not a security boundary. Anything `NEXT_PUBLIC_*` is inlined into the client bundle;
   a server-only value must not carry the prefix.
 - `proxy.ts` branch order is load-bearing: nothing before the rate limiter, next-intl stays the terminal
@@ -22,8 +24,8 @@ finding.
 ## Conventions the linter enforces — flag attempts to work around them
 
 - Named constants, never bare literals in logic (`@typescript-eslint/no-magic-numbers`). Location is
-  set by `.cursor/rules/constants.mdc`: co-locate for a single module, `src/store/<domain>/constants.ts`
-  for store scope, `src/router/routes.ts` for paths.
+  set by `.cursor/rules/constants.mdc`: inline for a single use, `shared/constants/` once a value has
+  two call sites or carries an external contract.
 - Design tokens, never raw hex, in `shared/ui/**` and `features/**`. Tokens live in `app/globals.css`
   under `@theme inline`.
 - One-way FSD imports: `shared` may not import `app`/`features`/`entities`; `entities` may not import

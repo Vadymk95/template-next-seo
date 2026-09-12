@@ -7,13 +7,7 @@ alwaysApply: true
 
 ### Technology Stack
 
-- **Next.js**: Next.js 16 with App Router
-- **React**: React 19 with automatic JSX runtime
-- **State Management**: Zustand for global client state; server state via Server Components / Route Handlers (TanStack Query is opt-in, not in the default `package.json`)
-- **TypeScript**: Strict mode with `@/*` path aliases
-- **Routing**: Next.js App Router (file-based)
-- **Styling**: Tailwind CSS v4 + shadcn-style UI primitives
-- **Testing**: Vitest + Testing Library
+See `AGENTS.md` § Stack; versions are `package.json`.
 
 ## Project Structure
 
