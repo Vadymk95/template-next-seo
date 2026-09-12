@@ -5,7 +5,7 @@
  * budgets and class; nothing here names a stage. That is what lets the discipline change by
  * editing the JSON alone.
  *
- * What this CAN see, proved by scripts/trace-report.test.ts against the three failures named in
+ * What this CAN see, proved by scripts/trace-report.test.mjs against the three failures named in
  * the founder's request:
  *   1. a stage forbidden at the moment it ran in (e.g. verify:enterprise run standalone, not
  *      nested inside a push) — flagged both as "forbidden" and, separately, as over budget.

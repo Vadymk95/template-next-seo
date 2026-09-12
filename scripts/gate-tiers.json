@@ -30,12 +30,14 @@
         "test": { "class": "code", "description": "vitest run" },
         "test:e2e": { "class": "code", "description": "playwright test (dev server locally)" },
         "build": { "class": "code", "description": "next build --webpack" },
-        "smoke:dev": { "class": "code", "description": "Turbopack dev smoke on its own port" }
+        "smoke:dev": { "class": "code", "description": "Turbopack dev smoke on its own port" },
+        "e2e:one": { "class": "code", "description": "one Playwright spec on a free port" },
+        "test:one": { "class": "code", "description": "one vitest file" }
     },
     "moments": {
         "iterate": {
             "description": "The desk. Run per change.",
-            "expected": ["verify:iter"],
+            "expected": ["verify:iter", "e2e:one", "test:one"],
             "forbidden": [
                 "verify",
                 "verify:enterprise",

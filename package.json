@@ -64,14 +64,14 @@
         "verify:ci:inner": "npm run audit:gate && npm run verify",
         "verify:push": "node scripts/gate-trace.mjs verify:push -- node scripts/verify-push.mjs",
         "verify:measure": "node scripts/gate-trace.mjs verify:measure -- node scripts/verify-measure.mjs",
-        "e2e:one": "node scripts/gate-trace.mjs test:e2e -- node scripts/run-on-free-port.mjs npx --no-install playwright test",
+        "e2e:one": "node scripts/gate-trace.mjs e2e:one -- node scripts/run-on-free-port.mjs npx --no-install playwright test",
         "verify:scaffold": "node scripts/check-hooks.mjs && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage",
         "verify:scaffold:push": "npm run audit:gate && npm run verify:scaffold",
         "smoke:dev": "NEXT_DIST_DIR=.next-dev playwright test --config playwright.dev.config.ts",
         "verify:full": "node scripts/gate-trace.mjs verify:full -- npm run verify:full:inner",
         "verify:full:inner": "npm run verify:ci && npm run smoke:dev",
         "probe": "node scripts/gate-trace.mjs verify:measure -- node scripts/probe.mjs",
-        "test:one": "node scripts/gate-trace.mjs test -- npx --no-install vitest run"
+        "test:one": "node scripts/gate-trace.mjs test:one -- npx --no-install vitest run"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.7.1",
