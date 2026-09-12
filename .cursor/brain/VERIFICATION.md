@@ -35,9 +35,15 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 | cross-browser geometry job | CI-only (`CROSS_BROWSER=1`) | unchanged by phases |
 | mutation score (weekly CI) | unchanged by phases | — |
 
-**`verify` is a strict superset of CI's offline checks**, so a green `verify` predicts a green
-`validate`. The rule that keeps it true: **a new check goes into the script, never only into the
-workflow file.**
+Measured here (`.gate-trace.log`, 2026-08-30 → 2026-09-11, 17 `verify:push` rows): a phase-0 push 9.9-12.7 s
+on seven runs, 20.7 and 33.7 s on two 2026-09-07 runs; the full chain (`GATE_PHASE=full`, or phase 1)
+23.4-30.2 s on 2026-08-30 and 37.7 s on 2026-09-06 — the `push` budget in `gate-tiers.json` is 45 s (the slowest observed full chain plus ~20%; the p90 of
+the 17 rows = 33.7 s, plus ~20 %, rounded to 5 s); `verify:iter` 1.8-2.4 s on a docs-only change, 28.5 s once
+on a mixed change that ran the full suite; `verify:measure` 12.0 s (18.7 s on a failing run); the mutation run
+2m28s (`mutation.yml`).
+
+The superset rule and the push/CI split: `AGENTS.md` § the tier law; why: `DECISIONS.md` § "[2026-07] The
+gate ladder".
 
 ## The tracer — how it works (the RULES it enforces are the tier law)
 
@@ -78,26 +84,9 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 ## Content variance
 
-Any component that renders authored copy must be proven against content it has not seen. The states live
-in `app/dev/ui/content-stress/stressMatrix.ts`: `minimal` / `typical` / `long` / `unbroken` for text and
-`none` / `one` / `many` for collections. `unbroken` is the one that finds a missing wrap guard — a long
-sentence wraps on its spaces and hides the defect.
-
-- **A chrome LABEL and PROSE are different content kinds.** The fixture keeps separate sources: `Button`
-  keeps `whitespace-nowrap` by contract, so feeding it a paragraph measures the wrong thing. Measured
-  here before the split: 568px of button content in a 292px column, which reads as a broken primitive
-  and is not one.
-- **The RANGE a guard covers is part of its specification.** Both geometry specs sweep
-  390 / 640 / 768 / 1024 / 1440. A guard proven at one width usually just moves the defect.
-- **A wrap class with no red-to-green proof gets deleted.** Decoration in a shared component is what the
-  next author copies.
-- **Do not reason about what a browser does — run it.** `CROSS_BROWSER=1` adds Firefox and WebKit.
-  Measured on the sibling template: Firefox reports `clientWidth: 0` for an inline `<label>` per CSSOM
-  while Chromium reports a box.
-
-**Known limitation, stated rather than hidden:** the geometry PREDICATES are shared
-(`e2e/support/geometry.ts`), but the in-page MEASUREMENT is a separate copy in each of the two specs.
-That is how the form-field handling once landed in one and not the other. Change both together.
+The rule: `AGENTS.md` § Architecture › Content variance. Why and what it found: `DECISIONS.md` § Content
+variance is measured in a browser. Which spec measures what, and where the shared predicates and the one
+in-page measurement live: `MAP.md` § Layout invariants and content variance.
 
 ---
 
