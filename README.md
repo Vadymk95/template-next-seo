@@ -613,3 +613,7 @@ npm run dev:clean     # clean + dev in one step
 ## 📄 License
 
 MIT
+
+## 🔒 Security
+
+Headers and the CSP live in code (`next.config.ts`, `shared/lib/cspHeader.ts`, `proxy.ts`); the rules for sessions, tokens and money and the pre-deployment checklist are in `SECURITY_REQUIREMENTS.md`.
