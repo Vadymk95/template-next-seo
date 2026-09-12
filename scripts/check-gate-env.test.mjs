@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { createServer } from 'node:net';
+import { connect, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
@@ -92,20 +92,34 @@ describe('gate preflight', () => {
             'node',
             [
                 '-e',
-                'require("net").createServer().listen(3181, () => {}); setInterval(() => {}, 1000)'
+                'require("net").createServer().on("error", () => process.exit(2)).listen(3181, () => {}); setInterval(() => {}, 1000)'
             ],
             { stdio: 'ignore' }
         );
-        await new Promise((resolvePromise) => {
+        /* Readiness is a CLIENT connect, never a bind: a probe that binds the port it waits for
+           races the holder for it, and a holder that loses that race exits on EADDRINUSE — the
+           probe then finds the port free forever and the case times out. */
+        await new Promise((resolvePromise, reject) => {
             const probe = () => {
-                const socket = createServer();
-                socket.once('error', () => {
+                if (holder.exitCode !== null) {
+                    reject(
+                        new Error(
+                            `holder exited with ${String(holder.exitCode)} before listening on 3181`
+                        )
+                    );
+                    return;
+                }
+                let connected = false;
+                const socket = connect(3181, () => {
+                    connected = true;
+                    socket.destroy();
                     resolvePromise(null);
                 });
-                socket.once('listening', () => {
-                    socket.close(() => setTimeout(probe, 50));
+                socket.on('error', () => {
+                    if (!connected) {
+                        setTimeout(probe, 50);
+                    }
                 });
-                socket.listen(3181);
             };
             probe();
         });
