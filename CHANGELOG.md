@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.1](https://github.com/Vadymk95/template-next-seo/compare/v1.1.0...v1.1.1) (2026-09-13)
+
+
+### Bug fixes
+
+* **docs:** restore two sections a careless span edit deleted from AGENTS.md ([#78](https://github.com/Vadymk95/template-next-seo/issues/78)) ([9f44ef2](https://github.com/Vadymk95/template-next-seo/commit/9f44ef2472ad9990aef8be456f1423817e4e8a55))
+* **gate:** give the push budget a recency window so it can recover ([ff32dc3](https://github.com/Vadymk95/template-next-seo/commit/ff32dc32736bb85dbea6f4d76f03b00dbb0c79b0))
+* **gate:** let release-please own the changelog format instead of the checker ([21691ba](https://github.com/Vadymk95/template-next-seo/commit/21691ba29a8cc9ecbe2efe7986de021eb6dc1578))
+* **gate:** make vitest and eslint blind to an agent worktree inside the repo ([5ed74f4](https://github.com/Vadymk95/template-next-seo/commit/5ed74f47c50affe06e29999ce493b0bf08f6f8b3))
+* **gate:** the push budget calibrates to the machine it runs on, not to mine ([#77](https://github.com/Vadymk95/template-next-seo/issues/77)) ([d1fc901](https://github.com/Vadymk95/template-next-seo/commit/d1fc901fdee3fd1c806ec6813c3a2a4fe1c476fa))
+
+
+### Documentation
+
+* **gate:** record why the push budget is not raised on today's window reading ([cfe602d](https://github.com/Vadymk95/template-next-seo/commit/cfe602d4c1098b1299f99e2cf75f54bc7d5971bf))
+
 ## [1.1.0](https://github.com/Vadymk95/template-next-seo/compare/v1.0.0...v1.1.0) (2026-09-13)
 
 
