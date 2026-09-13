@@ -7,7 +7,7 @@
 | `app/layout.tsx`                | Root layout: fonts, `<head>` preconnects, `WebVitalsReporter`, `Providers`, static `title.default` + `title.template` (cascades to descendants); no Header/Footer here |
 | `app/[locale]/layout.tsx`       | Locale segment: `generateStaticParams` from `routing.locales`, `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets locale-specific `description` / `openGraph` / `twitter` only (title inherits from root) |
 | `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` emits `alternates.languages` per routing locale |
-| `app/[locale]/HomePageClient.tsx` | Client island for the home page |
+| `app/[locale]/StartPage.tsx`    | The start page, a server component: what is inside, how work flows, the agent commands, where to read, first steps — the seed a fork replaces with its first real route |
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
 | `app/[locale]/not-found.tsx`    | Locale-scoped 404                                                  |
 | `app/[locale]/error.tsx`        | Locale error boundary                                              |

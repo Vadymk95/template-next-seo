@@ -12,7 +12,7 @@ test.describe('i18n SSR routing', () => {
         const html = page.locator('html');
         await expect(html).toHaveAttribute('lang', 'en');
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-            'Welcome to Next.js SEO Template'
+            'A Next.js foundation with the gate already wired'
         );
     });
 

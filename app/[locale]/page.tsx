@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { requireLocale } from '@/i18n/request-locale';
 import { routing } from '@/i18n/routing';
 
-import { HomePageClient } from './HomePageClient';
+import { StartPage } from './StartPage';
 
 // ISR: Revalidate every hour
 export const revalidate = 3600;
@@ -36,7 +36,7 @@ const HomePage = async ({ params }: HomePageProps): Promise<ReactElement> => {
     const { locale: rawLocale } = await params;
     const locale = requireLocale(rawLocale);
     setRequestLocale(locale);
-    return <HomePageClient />;
+    return <StartPage />;
 };
 
 export default HomePage;
