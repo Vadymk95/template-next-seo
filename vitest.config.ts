@@ -14,7 +14,19 @@ export default defineConfig({
         // `e2e/support/` are unit-tested here, which is why the two runners split on the
         // extension (`.spec.ts` = Playwright, `.test.ts` = Vitest) and both configs carry the
         // matching ignore. Excluding the whole directory silently dropped those tests.
-        exclude: ['**/node_modules/**', '**/e2e/**/*.spec.ts', '.next/**', '.next-dev/**'],
+        exclude: [
+            '**/node_modules/**',
+            '**/e2e/**/*.spec.ts',
+            '.next/**',
+            '.next-dev/**',
+            // The `include` below is a wildcard, so an agent worktree under the repository root -
+            // a full second checkout - is collected as if its tests were ours. Measured with a
+            // probe file on 2026-09-13: without this line vitest collected it. The sibling repo
+            // where this was found first ran 5615 tests instead of 1881 and went red on another
+            // checkout's emulator-less suite. Agent worktrees belong OUTSIDE the repository; this
+            // line is what makes the gate independent of anyone remembering it.
+            '**/.claude/worktrees/**'
+        ],
         setupFiles: ['./shared/lib/test-utils/setup.ts'],
         coverage: {
             provider: 'v8',
