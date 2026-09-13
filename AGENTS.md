@@ -88,7 +88,7 @@ npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.js
 npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
 npm run test:one -- <file>  # one unit test file, through the tracer (not around it)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
-npm run docs:check          # docs class: paths, scripts, sentinels, versions, command table, dead docs (pre-commit when docs are staged; weekly CI adds --weekly)
+npm run docs:check          # docs class: paths, scripts, sentinels, versions, command table, dead docs, test quarantines (pre-commit when docs are staged; weekly CI adds --weekly)
 npm run verify              # THE offline gate (alias of verify:enterprise) — the push/CI chain, not a desk tool
 npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → e2e
 npm run verify:ci           # verify + audit:gate — phase-1 pre-push and the CI validate job
