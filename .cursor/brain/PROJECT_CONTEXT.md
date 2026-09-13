@@ -59,6 +59,6 @@ Three jobs, in parallel.
 
 **`cross-browser`** — `CROSS_BROWSER=1`: the geometry specs on Firefox and WebKit (`test:e2e:prod` after a build, then `smoke:dev`), after `scripts/check-cross-browser-selection.mjs` has proved every engine collected tests. Why it is CI-only: `DECISIONS.md` § Cross-engine coverage.
 
-**`security.yml`** (separate workflow) — gitleaks over full history plus CodeQL `security-extended`, on push, PR and a weekly cron. CodeQL needs GitHub code scanning, which is free on public repos and paid on private ones; the workflow header spells out what a private fork must do. Exclusions live in `.github/codeql/codeql-config.yml` with their reason.
+**`security.yml`** (separate workflow) — gitleaks over full history plus CodeQL `security-extended`, on push, PR and a weekly cron. CodeQL needs GitHub code scanning, which is free on public repos and paid on private ones; the workflow header spells out what a private fork must do. There is no exclusion file: the one this repo used to carry was copied from a Vite sibling and named `public/mockServiceWorker.js`, `vite.config.ts` and `vite-plugins/`, none of which exist here. Add one only when an alert has a real reason to be ignored, and write that reason in it.
 
 Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, `min-release-age=3`.
