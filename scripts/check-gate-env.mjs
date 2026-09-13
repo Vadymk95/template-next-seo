@@ -14,7 +14,7 @@
  * `next build` does (@next/env). A second reader here would be a second opinion waiting to drift.
  */
 import { spawnSync } from 'node:child_process';
-import { createServer } from 'node:net';
+import { connect, createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,8 +49,40 @@ const listeningPids = (port) => {
         .filter((pid) => pid !== process.pid);
 };
 
-const portIsFree = async (port) =>
+const CONNECT_TIMEOUT_MS = 300;
+
+/** Something answers here: the port is taken for anyone who dials it by name. */
+const someoneAnswers = async (host, port) =>
     new Promise((resolve) => {
+        const socket = connect({ host, port });
+        const settle = (answered) => {
+            socket.destroy();
+            resolve(answered);
+        };
+        socket.setTimeout(CONNECT_TIMEOUT_MS, () => {
+            settle(false);
+        });
+        socket.once('connect', () => {
+            settle(true);
+        });
+        socket.once('error', () => {
+            settle(false);
+        });
+    });
+
+/*
+ * Both loopback families, then the bind. 127.0.0.1 alone misses a server bound on all interfaces;
+ * a bind alone misses one bound on `[::1]` only, which is what a dev server run by hand often is —
+ * and Playwright reaches ::1 first when it fetches `http://localhost:<port>`, so a bind-only probe
+ * passes the preflight and the suite refuses minutes later. Measured on a sibling repo 2026-09-13.
+ */
+const portIsFree = async (port) => {
+    for (const host of ['127.0.0.1', '::1']) {
+        if (await someoneAnswers(host, port)) {
+            return false;
+        }
+    }
+    return new Promise((resolve) => {
         const server = createServer();
         server.once('error', () => {
             resolve(false);
@@ -60,11 +92,9 @@ const portIsFree = async (port) =>
                 resolve(true);
             });
         });
-        // ALL interfaces, the way `next start` binds. Probing 127.0.0.1 alone reports the
-        // port free while a dev server is plainly holding it — a guard that cannot see the
-        // thing it guards.
         server.listen(port);
     });
+};
 
 const problems = [];
 
