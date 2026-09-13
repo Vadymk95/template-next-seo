@@ -39,6 +39,7 @@ describe('classifyToken', () => {
             value: 'verify:iter'
         });
         expect(classifyToken('verify:iter', ctx)).toEqual({ kind: 'script', value: 'verify:iter' });
+        expect(classifyToken('npm run perf:*', ctx)).toEqual({ kind: 'family', value: 'perf:' });
         expect(classifyToken('hover:text-primary', ctx).kind).toBe('other');
         expect(classifyToken('npm:rolldown-vite', ctx).kind).toBe('other');
     });
@@ -77,6 +78,7 @@ describe('checkPathsAndScripts', () => {
     it('flags a missing script and a missing anchored path, skips history files', () => {
         const docs = [
             ['README.md', 'run `npm run nope` then open `scripts/missing.mjs` or `PLAN.md`'],
+            ['AGENTS.md', '`npm run verify:*` is fine, `npm run gone:*` is not'],
             ['.cursor/brain/DECISIONS.md', 'old `scripts/gone.mjs`']
         ];
         const findings = checkPathsAndScripts({
@@ -85,9 +87,10 @@ describe('checkPathsAndScripts', () => {
             scripts: { 'verify:iter': 'x' },
             topDirs: new Set(['scripts'])
         });
-        expect(findings).toHaveLength(2);
+        expect(findings).toHaveLength(3);
         expect(findings[0]).toContain('npm run nope');
         expect(findings[1]).toContain('scripts/missing.mjs');
+        expect(findings[2]).toContain('npm run gone:*');
     });
 });
 
