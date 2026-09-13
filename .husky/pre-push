@@ -22,7 +22,7 @@ npm run verify:push || {
     echo "❌ verify:push failed. Fix before push."
     echo "   Lint or formatting: npm run fix && git add -u"
     echo "   Playwright browsers are installed by scripts/ensure-playwright.mjs"
-    echo "   Touched routing, i18n or next.config.ts? Also run: npm run verify:full"
-    echo "   Port 3000 busy? The gate kills its own stray servers; a foreign one: PORT=3100 PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run verify:ci"
+    echo "   Touched routing, i18n or next.config.ts? The content-stress fixture runs in CI (dev-smoke job); to look now: npm run smoke:dev"
+    echo "   Port 3000 busy? The gate clears its own stray; a foreign server means: move that lane."
     exit 1
 }
