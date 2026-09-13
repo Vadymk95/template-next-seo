@@ -68,6 +68,7 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 - **Docs only** — `npm run format:check`
 - **Docs, rules, commands, brain, tier data** (`*.md`, `*.mdc`, `scripts/gate-tiers.json`) — `npm run docs:check` (the pre-commit hook runs it when such files are staged; `--weekly` adds past revisit dates; it also refuses a focused test and an unconditional skip without `quarantine until YYYY-MM-DD` + reason)
+- **Proposing a new browser spec** — the suite is counted in invariants, not screens (`AGENTS.md` § the gate); `npm run docs:check` reports the suite against the ceiling in `scripts/gate-tiers.json` § suites
 - **TS/TSX / tests** — `npm run verify:iter`
 - **i18n copy only** (VALUE edits in `messages/<locale>/*.json`, no key changes) — `npm run format:check`.
   A key add/rename is a TS/TSX-class change: the typed messages make `verify:iter` catch it.
