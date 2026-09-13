@@ -152,7 +152,7 @@
                 "1": 48,
                 "full": 48
             },
-            "_budgetMeasured": "2026-09-13, p90 from .gate-trace.log: phase 0 18s ceiling, phase 1 48s ceiling, phase full 48s ceiling",
+            "_budgetMeasured": "18s, and DO NOT raise it on the red the window reports today. The reading is p90 19.5s over 9 runs, but the spread in the tracer is 8.9s to 37.7s and the most recent successful run is 13.6s - comfortably inside. The tail is machine load, not gate growth, and raising a budget to cover load is the one thing a budget exists to prevent. The window flushes those runs as newer ones accumulate; that is what it is for. Re-measure and move the number only when a QUIET run is itself above it.",
             "runsRegardlessOfDiff": true,
             "requiresMainCheckout": true,
             "budgetWindow": 20,
