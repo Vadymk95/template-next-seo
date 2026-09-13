@@ -622,6 +622,20 @@ npm run dev:clean     # clean + dev in one step
 
 MIT
 
+## What your fork does not inherit
+
+Files travel with a fork. Settings do not. Everything the gate needs is in the files — the husky hooks, the `verify` chain, the CI workflows, the agent docs — so a fork is fully working after `npm install && npm run prepare`. What it is NOT is protected, and nothing on screen says so.
+
+Not inherited, and each one is a switch in your own repository's settings:
+
+- **Rulesets and branch protection**, including the required `validate` check. Until you add one, your default branch accepts any push, and the pull-request discipline this repository documents is a habit rather than a rule.
+- **Actions permissions.** A fork starts with workflows disabled; GitHub asks you to enable them once, in the Actions tab. Until you do, the CI described here never runs, and a green screen means nobody looked.
+- **Secret scanning and push protection**, **CodeQL**, and **Dependabot alerts.** The Dependabot CONFIG file travels; the alerts it feeds are a setting.
+
+The order that costs least: enable Actions, open one pull request so the checks register their names, then add a ruleset on your default branch requiring the `validate` check. That last step is what turns the rest of this README from description into enforcement.
+
+One thing that is NOT a setting and is easy to miss: `.npmrc` disables lifecycle scripts on purpose, so `npm install` alone leaves you with no git hooks. `npm run prepare` once after cloning is what installs them.
+
 ## 🔒 Security
 
 Headers and the CSP live in code (`next.config.ts`, `shared/lib/cspHeader.ts`, `proxy.ts`); the rules for sessions, tokens and money and the pre-deployment checklist are in `SECURITY_REQUIREMENTS.md`.

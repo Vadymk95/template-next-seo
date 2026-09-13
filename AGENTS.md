@@ -360,9 +360,48 @@ Full list with risks + mitigations: @.cursor/brain/SKELETONS.md
 
 ## Machine-agnostic configs
 
-Committed configs must never contain absolute local paths. The VS Code i18next extension rewrites `i18next.i18nPaths` with absolute paths when it can't resolve the configured ones — keep them relative and existing.
+Committed configs must never contain absolute local paths. The VS Code i18next
+extension rewrites `i18next.i18nPaths` with absolute paths when it can't resolve
+the configured ones — keep them relative and existing (here: `messages,i18n`).
 
 **Nor a DURATION measured on one machine.** A committed number of seconds is the same mistake in a different costume: it describes the hardware that measured it, and a fork on slower hardware inherits a ceiling it may be unable to meet. Measured spread between this workstation and a two-core CI runner, same two suites: 5.6x and 10.5x. So the push budget in `scripts/gate-tiers.json` holds a RATIO and a sample size, never seconds; the gate calibrates its own baseline from its own first runs into the gitignored `.gate-budget.json`, ratchets it down when the gate gets faster, and reports drift. A clone starts with no baseline, no red reading, and no number belonging to someone else.
+
+## Entering this repo cheaply (read this before sweeping the source)
+
+Measured on a sibling project 2026-08-30: an agent's entry is ~93% READING SOURCE to find where
+things are and whether the task is still needed, and ~7% the documents that load automatically. So
+the levers are pointing and looking, in this order:
+
+1. **Open `.cursor/brain/READING_INDEX.md` first** — it maps a SITUATION ("about to change a shared
+   primitive") to the two or three files that answer it. It is a pointer file: it never restates a
+   rule, so it cannot go stale in the way a summary does.
+2. **Check the work is still needed** — `git log --oneline -15` plus one grep for the thing the task
+   names. Two of five lanes in that measurement returned "already done" after ~430k tokens; both
+   were five minutes of grep.
+3. **LOOK instead of inferring** — `npm run probe -- <route> [widths]` renders the route, saves a PNG
+   per width under `.probe/` and prints the quantities the layout guards measure. One measurement
+   replaces a round of reasoning about pixels; it is an instrument, never a gate.
+4. **Name the files when you dispatch work to another agent.** The largest observed difference
+   between a 33-tool-call lane and a 191-tool-call lane was how precisely the task pointed.
+
+**Where a rule must live** (which tool reads which file, and why a rule that must reach every tool
+belongs in this file): § Commands (exact) › _The tier law_ › Lanes › _Two tools, one file_. Verify
+what each tool loads before moving a rule between files.
+
+## Brain docs (entry points)
+
+- `.cursor/brain/READING_INDEX.md` — situation → the files that answer it. **Read on demand, NOT
+  `@`-imported on purpose:** a pointer file only earns its tokens when a task actually needs it, and
+  importing it would put the index inside the budget it exists to protect.
+- @.cursor/brain/PROJECT_CONTEXT.md — purpose, stack, layout, CI
+- @.cursor/brain/MAP.md — every route, file, and responsibility
+- @.cursor/brain/SKELETONS.md — danger zones
+- @.cursor/brain/DECISIONS.md — ADRs (why things are the way they are)
+- @.cursor/brain/DICTIONARY.md — project-specific vocabulary
+- @README.md — user-facing docs (setup, adding languages, restore playbook)
+
+Consult them before acting on an unfamiliar area; they are the authoritative
+"why" that git history doesn't capture.
 
 ## Out of scope (ask before touching)
 
@@ -378,6 +417,14 @@ Committed configs must never contain absolute local paths. The VS Code i18next e
 
 When unsure whether a change is in scope, state the intent and wait for
 confirmation. Saying "I don't know" is preferable to guessing.
+
+## Changes reach master through a pull request
+
+Branch, run the gate, push the branch, open a PR, merge when CI is green.
+
+In THIS repository that is not only a habit: `master` carries a ruleset requiring the `validate` check, and a direct push bypasses it, because the owner role always may. A rule bypassed on every change is worse than no rule — it reads as protection to the next person and to every agent, and protects nothing.
+
+**In YOUR fork the habit is all there is, until you set the rest up.** Rulesets, branch protection and required checks are repository SETTINGS, and settings do not travel with a fork — only files do. So a fork arrives with the whole gate and none of the enforcement: the hooks still run locally, CI still runs on pull requests, and nothing at all stops a push straight to your default branch. `README.md` § "What your fork does not inherit" lists what to switch on and in what order.
 
 ## Response discipline
 
