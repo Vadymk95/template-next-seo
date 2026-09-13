@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/Vadymk95/template-next-seo/compare/v1.1.1...v1.1.2) (2026-09-13)
+
+
+### Bug fixes
+
+* **ci:** a fork that renames its default branch no longer loses CI and protection ([#79](https://github.com/Vadymk95/template-next-seo/issues/79)) ([44517a1](https://github.com/Vadymk95/template-next-seo/commit/44517a1354fd7c90294803477492260026c9d0c2))
+
 ## [1.1.1](https://github.com/Vadymk95/template-next-seo/compare/v1.1.0...v1.1.1) (2026-09-13)
 
 
