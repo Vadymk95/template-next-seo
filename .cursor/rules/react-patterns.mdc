@@ -139,8 +139,8 @@ ComponentName/
 ## Pages (App Router)
 
 - **Pages are Server Components by default** in `app/` directory
-- **File-based routing** (document routes live under the locale segment): `app/[locale]/page.tsx` = `/en`, `app/[locale]/about/page.tsx` = `/en/about`
-- **Dynamic routes**: `app/[locale]/blog/[id]/page.tsx` = `/en/blog/:id`
+- **File-based routing** (document routes live under the locale segment): `app/[locale]/page.tsx` = `/en`, `app/[locale]/<route>/page.tsx` = `/en/<route>`
+- **Dynamic routes**: `app/[locale]/<segment>/[id]/page.tsx` = `/en/<segment>/:id`
 - **Layouts**: `app/layout.tsx` wraps all pages
 - **Route groups**: `app/(marketing)/about/page.tsx` for organization
 

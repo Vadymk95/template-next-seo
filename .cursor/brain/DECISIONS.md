@@ -48,7 +48,7 @@ taught everyone to ignore it. So vitest and `@vitest/coverage-v8` stay `^4.1.11`
 compatible fixes made for vitest 5 stay (they hold on 4.1 too: `vi.stubGlobal` in `scripts/probe.test.mjs`,
 the glob-form `coverage.exclude`, `import.meta.dirname`), `.github/dependabot.yml` ignores `vitest >=5`
 and `@vitest/coverage-v8 >=5` with this reason, and the hold is listed under "Version holds" in
-`AGENTS.md`. **Lift trigger**: a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
+`AGENTS.md`. **Lift trigger** (checked 2026-09-12: latest vitest-runner is 10.0.0 from 2026-08-14, hold stands; next check 2026-10-12): a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
 `npm install -D vitest@5 @vitest/coverage-v8@5` and the one-file probe above — take vitest 5 when it
 kills mutants again, in the same commit that drops the Dependabot ignore. Coverage under 4.1.11 with the
 glob excludes: 52 files / 350 tests, 92.91 / 74.21 / 91.34 / 92.96 against 85 / 70 / 75 / 85.
@@ -268,7 +268,7 @@ analysis of the plugin peers was correct and they never widened; what it missed 
 resolves the install conflict, and that the single runtime crash path is
 `settings.react.version: 'detect'`. Plan B was never needed. Kept for the reasoning.
 
-- **ESLint 9.x (HOLD)** — Snapshot 2026-05-22: ESLint 10.0.0 shipped 2026-02-09; latest 10.4.0 shipped 2026-05-15. ESLint 9.x EOL is 2026-08-06 (`maintenance` dist-tag `9.39.4`). `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. ESLint 10 removed `context.getFilename()` + `sourceCode.isSpaceBetweenTokens` + `sourceCode.getAllComments` + RuleTester `type` field — `eslint-plugin-react@7.x` calls these at runtime (crash, not warning). Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. PR #3979 (eslint-plugin-react ESLint 10) blocked transitively by `import-js/eslint-plugin-import#3230`; PR #1081 (eslint-plugin-jsx-a11y) awaiting `ljharb` review since Mar 2026. Re-evaluate monthly starting 2026-07-01 (1-month buffer pre-EOL) (2026-07 cycle missed - next check 2026-08-01). Plan B if upstream still blocked: switch to `@eslint-react/eslint-plugin@5.8.4+` (peer `eslint ^10.3.0`, requires Node ≥22, NOT drop-in — config rewrite ~3-5h) + `eslint-plugin-jsx-a11y-x@0.2.0+` (es-tooling org, drop-in).
+- **ESLint 9.x hold — closed 2026-09-12, ESLint 10 is installed** — Snapshot 2026-05-22: ESLint 10.0.0 shipped 2026-02-09; latest 10.4.0 shipped 2026-05-15. ESLint 9.x EOL is 2026-08-06 (`maintenance` dist-tag `9.39.4`). `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. ESLint 10 removed `context.getFilename()` + `sourceCode.isSpaceBetweenTokens` + `sourceCode.getAllComments` + RuleTester `type` field — `eslint-plugin-react@7.x` calls these at runtime (crash, not warning). Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. PR #3979 (eslint-plugin-react ESLint 10) blocked transitively by `import-js/eslint-plugin-import#3230`; PR #1081 (eslint-plugin-jsx-a11y) awaiting `ljharb` review since Mar 2026. The monthly review from 2026-07-01 no longer applies. Plan B if upstream still blocked: switch to `@eslint-react/eslint-plugin@5.8.4+` (peer `eslint ^10.3.0`, requires Node ≥22, NOT drop-in — config rewrite ~3-5h) + `eslint-plugin-jsx-a11y-x@0.2.0+` (es-tooling org, drop-in).
 - **TypeScript 6.0.x (ACTIVE — bumped 2026-05-09)** — `typescript-eslint@8.59.2` peer relaxed to `>=4.8.4 <6.1.0`, unblocking TS 6.0.x. Repo bumped from `~5.9.3` → `~6.0.3`. Keep within `~6.0.x` until `typescript-eslint` ships its next major widening the upper bound.
 - **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default). Latest 24.x patch is `24.12.4` (snapshot 2026-05-22). Dependabot config (`.github/dependabot.yml`) ignores @types/node ≥25.
 
@@ -408,7 +408,7 @@ inside `verify`; kept for the reasoning.**
 
 **Minority dissent (carrying forward)**: Pragma+Mini NO — speculative, no observed attribution-metric gap. Sec+Future+Ergo+Econ YES on triviality (5KB install, zero runtime cost, removes future "where does this come from" question). Tally crossed ≥4 YES threshold; minority concern documented here, not silenced.
 
-**Revisit trigger (60-day, 2026-07-23)**: if first consumer fork builds and never imports raw `web-vitals` directly within 60 days, revert this addition (Pragma+Mini were right; remove explicit dep).
+**Revisit trigger (60-day, 2026-07-23; checked 2026-09-12, no fork data yet, re-armed 2026-12-01)**: if first consumer fork builds and never imports raw `web-vitals` directly within 60 days, revert this addition (Pragma+Mini were right; remove explicit dep).
 
 ## [2026-05] REJECT list — explicit non-adoption (2026-05-23 /consilium)
 
@@ -417,12 +417,12 @@ inside `verify`; kept for the reasoning.**
 ### React Compiler enable in template-next-seo (VETOED)
 
 **Status**: skip. **Why**: /consilium 2026-05-23 Item 3 (`experimental.reactCompiler: true` in next.config.ts + `babel-plugin-react-compiler@1.0.0`) — 3 YES / 1 NO / 1 COND / 1 NO + **Adversarial killer Q VETO**: "Name one Compiler-enabled production app at >100K MAU where #35105 or #35644 reproducers have been ruled out as of 2026-05-23" — unanswerable. Open silent-bailout bugs: [facebook/react#35105](https://github.com/facebook/react/issues/35105) (filed 2025-11-11, `Status: Unconfirmed`, no assignees), [#35644](https://github.com/facebook/react/issues/35644) (filed 2026-01-27, same status). Independent verifier Nadia Makarevich ([developerway.com Dec 4, 2024](https://www.developerway.com/posts/how-react-compiler-performs-on-real-code)) N=1 mixed-positive — Compiler fixed only 1-2 of 8-10 noticeable re-renders.
-**Revisit (quarterly, 2026-08-23)**: if either bug closes AND ≥1 named >100K-MAU app publishes "ruled out" retro, re-evaluate. `eslint-plugin-react-hooks@7.1.1` already loaded via `eslint-config-next/core-web-vitals` — Compiler correctness rules already fire as lint-only signal.
+**Revisit (quarterly, 2026-08-23; checked 2026-09-12: react #35105 and #35644 both still open, hold stands, next 2026-12-01)**: if either bug closes AND ≥1 named >100K-MAU app publishes "ruled out" retro, re-evaluate. `eslint-plugin-react-hooks@7.1.1` already loaded via `eslint-config-next/core-web-vitals` — Compiler correctness rules already fire as lint-only signal.
 
 ### Lighthouse CI (LHCI) in template-next-seo (REJECTED on cost cascade)
 
 **Status**: skip. **Why**: /consilium 2026-05-23 Item 7 (`@lhci/cli` + `numberOfRuns: 3` + multi-URL + desktop+mobile + accessibility error≥0.95 + total-byte error≤200KB in `verify:enterprise`) — Econ math: 3 URLs × 3 runs × 2 form factors = 18 Lighthouse runs × ~30-60s = 9-18 min added per `verify:enterprise`. Compounds to 90-180h attention drain over 6mo (mirrors 2026-05-03 LLM-judge hook rejection on cost-cascade). Mini+Econ gang-of-two NO. Sibling `template-spa-pwa` ships LHCI; this template intentionally doesn't (different cost/benefit at SEO-focused Next 16 boundary).
-**Revisit (60-day, 2026-07-23)**: if `verify:enterprise` becomes the canonical pre-PR gate AND consumer forks observe perf regression that LHCI would have caught, re-evaluate scoped to single URL × 3 runs × desktop only.
+**Revisit (60-day, 2026-07-23; checked 2026-09-12, the push gate is `verify:push`, re-armed 2026-12-01)**: if `verify:enterprise` becomes the canonical pre-PR gate AND consumer forks observe perf regression that LHCI would have caught, re-evaluate scoped to single URL × 3 runs × desktop only.
 
 ### memlab / WDYR / `react-native-flipper` / `vite-plugin-bundlesize`
 
@@ -431,7 +431,7 @@ See sibling template `template-rn/.cursor/brain/DECISIONS.md` REJECT list sectio
 ### React Doctor `lint-staged --staged --fail-on warning` PR-gate (REJECTED)
 
 **Status**: skip. **Why**: /consilium 2026-05-23 Item 1 — 0 YES / 4 NO / 2 COND. Speculative infra (no dated bug Doctor would have caught), `lint-staged` scope mismatch (Doctor is project-level scan, not staged-file linter — Ergo "category error"), gang-of-two Pragma+Mini NO, Adversarial flagged [typicode/husky#1462](https://github.com/typicode/husky/issues/1462) Windows-path issues on cross-platform forks.
-**Revisit (60-day, 2026-07-23)**: if React Doctor 1.0 ships AND ≥1 dated bug observed in a fork that Doctor would have caught, re-evaluate scoped to `npm run doctor` ad-hoc + GitHub Action `millionco/react-doctor@<commit-sha>` (NOT `@main`) with `--offline` + PR comment only (NOT lint-staged blocking).
+**Revisit (60-day, 2026-07-23; checked 2026-09-12: react-doctor 0.9.14, no 1.0, re-armed 2026-12-01)**: if React Doctor 1.0 ships AND ≥1 dated bug observed in a fork that Doctor would have caught, re-evaluate scoped to `npm run doctor` ad-hoc + GitHub Action `millionco/react-doctor@<commit-sha>` (NOT `@main`) with `--offline` + PR comment only (NOT lint-staged blocking).
 
 ### Zstd compression (Brotli universal mandatory)
 

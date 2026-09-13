@@ -19,7 +19,7 @@ Two questions, both cheap; both measured as the largest recoverable waste in a l
 
 1. `.cursor/brain/SKELETONS.md` — does the task touch a danger zone? If yes, that section governs the
    task and you flag the risk before planning.
-2. `.cursor/brain/MAP.md` for wiring, `.cursor/brain/TEMPLATE_SEEDS.md` for what must not be deleted.
+2. `.cursor/brain/MAP.md` for wiring; the example modules (`app/[locale]/example-form/`, `app/api/example-form/`) are this template's seeds — keep them until the first real feature replaces them.
 3. The `.cursor/rules/*.mdc` whose `globs` match the files you will touch. Only those. State which you
    loaded.
 4. **Reuse check — a hard gate, not advice.** Before planning any new function, hook, component or

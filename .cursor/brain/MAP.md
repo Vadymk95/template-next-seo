@@ -32,9 +32,9 @@
 
 ## Shared
 
-- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "Boundary validation"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; `shared/lib/i18n/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
+- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "Boundary validation"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; the former i18n folder under `shared/lib/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
 - **`shared/ui/`**: Button, Input, layout chrome, ErrorBoundary, `WithSuspense`.
-- **`shared/constants/`**, **`shared/types/`**: cross-cutting definitions.
+- **`shared/constants/`**: cross-cutting definitions.
 
 ## Features / entities
 

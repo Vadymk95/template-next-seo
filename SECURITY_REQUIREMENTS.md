@@ -18,7 +18,7 @@ Change the header set only in those files; a header added anywhere else is a sec
 
 - **The session token lives in an `HttpOnly; Secure; SameSite=Lax` cookie set by the server.** The app never reads it and never stores it: no `localStorage`, no `sessionStorage`, no in-memory copy handed around. Identity comes from an endpoint (`GET /me`-shaped), never from parsing a cookie.
 - **Across apps the cookie is the contract, not a store.** When this app runs under a path of a larger product (one reverse proxy, `/app/*` per app), the cookie scope (`Domain`, `Path`) is all that is shared. No common Redux/Zustand store across apps; cross-app signals go through a versioned `CustomEvent` on `window`.
-- **Thin client, no client-side pricing.** The client never computes, corrects or submits a price, discount or total it derived itself; it sends an intent or an id and renders what the server returns. Money is validated on the server; the boundary adapter (`.cursor/rules/api.mdc`) parses the response once.
+- **Thin client, no client-side pricing.** The client never computes, corrects or submits a price, discount or total it derived itself; it sends an intent or an id and renders what the server returns. Money is validated on the server; the boundary adapter (`.cursor/rules/resilience.mdc` § 5) parses the response once.
 - **Third-party scripts** (payments, analytics) load only from origins listed in the CSP, never with `'unsafe-inline'`.
 
 ## ✅ Pre-deployment checklist

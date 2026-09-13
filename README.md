@@ -237,6 +237,7 @@ npm run test:one -- <file>   # one unit test file, through the tracer
 npm run probe -- <route>     # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push          # what pre-push runs, phase-aware
 npm run trace:report         # findings from .gate-trace.log: moments, budgets, worktrees
+npm run docs:check           # mechanical doc drift: paths, scripts, sentinels, versions, command table, dead docs
 
 # Drill-downs on a specific failure (none of these is a moment)
 npm run lint             # oxlint → ESLint
@@ -245,6 +246,9 @@ npm run format:check     # Prettier check
 npm test                 # Run tests (the gate uses test:coverage)
 npm run test:watch       # Watch mode
 npm run test:coverage    # Coverage report
+npm run test:e2e:ui      # Playwright UI mode
+npm run test:e2e:headed  # Playwright with a visible browser
+npm run start            # Serve the production build (after npm run build)
 ```
 
 ## 📚 Examples
@@ -576,7 +580,7 @@ npm start
 
 ## Removed dependencies (restore playbook)
 
-- **`shared/lib/web-vitals.ts` wrapper** — removed; the app reports via `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). The raw **`web-vitals`** package is pinned as an explicit dependency (`^5.2.0`) for fork-time access to attribution metrics not exposed by the wrapper (see `.cursor/brain/DECISIONS.md`, 2026-05 ADR). To restore the wrapper module, recreate it and re-export from `shared/lib/index.ts` — no install needed.
+- **Web-vitals wrapper** — removed (nothing under `shared/lib/` wraps it); the app reports via `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). The raw **`web-vitals`** package is pinned as an explicit dependency (`^5.2.0`) for fork-time access to attribution metrics not exposed by the wrapper (see `.cursor/brain/DECISIONS.md`, 2026-05 ADR). To restore the wrapper module, recreate it and re-export from `shared/lib/index.ts` — no install needed.
 
 ## Troubleshooting — stale content in dev
 

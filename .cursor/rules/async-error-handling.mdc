@@ -44,7 +44,7 @@ export default function Error({
 
 ### Global Error Boundary
 
-- **`app/[locale]/error.tsx`** is the app-wide error boundary here — document routes live under the `[locale]` segment, so an `app/error.tsx` at root would never catch them
+- **`app/[locale]/error.tsx`** is the app-wide error boundary here — document routes live under the `[locale]` segment, so an error boundary at the `app/` root would never catch them
 - **`app/global-error.tsx`** is the last-resort root boundary (catches errors in the root layout itself; must render its own `<html>`/`<body>`)
 
 ### ErrorBoundary for Client Components

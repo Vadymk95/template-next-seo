@@ -7,7 +7,7 @@ alwaysApply: false
 ## Code Formatting
 
 - **Use Prettier configuration** from the project (`trailingComma: 'none'`, `singleQuote: true`, `printWidth: 100`, `tabWidth: 4`)
-- **Follow ESLint + Oxlint** — `npm run lint` runs **oxlint** (`.oxlintrc.json`) then **eslint** (`eslint.config.js`): Next core-web-vitals + TypeScript, `eslint-plugin-oxlint`, `eslint-plugin-import-x`, `eslint-plugin-react`, type-aware strict rules, Prettier via `eslint-plugin-prettier/recommended`; `@/` imports, no `FC`, console only in `shared/lib/logger.ts` / tests / e2e (the removed `shared/lib/web-vitals.ts` wrapper is gone — Web Vitals go through `app/WebVitalsReporter.tsx`)
+- **Follow ESLint + Oxlint** — `npm run lint` runs **oxlint** (`.oxlintrc.json`) then **eslint** (`eslint.config.js`): Next core-web-vitals + TypeScript, `eslint-plugin-oxlint`, `eslint-plugin-import-x`, `eslint-plugin-react`, type-aware strict rules, Prettier via `eslint-plugin-prettier/recommended`; `@/` imports, no `FC`, console only in `shared/lib/logger.ts` / tests / e2e (there is no web-vitals wrapper under `shared/lib/` any more — Web Vitals go through `app/WebVitalsReporter.tsx`)
 - **Use 4 spaces** for indentation
 - **Always end files** with an empty line
 

@@ -74,7 +74,7 @@ export default BlogPost;
 ```
 
 - **Dynamic segments** work as usual, nested under the locale:
-  `app/[locale]/blog/[id]/page.tsx` → `/en/blog/:id`; catch-all `[...slug]`,
+  `app/[locale]/<segment>/[id]/page.tsx` → `/en/<segment>/:id`; catch-all `[...slug]`,
   optional catch-all `[[...slug]]`
 - **Params are async** in Next 16: `params: Promise<{ locale: string; ... }>` —
   always `await` them
