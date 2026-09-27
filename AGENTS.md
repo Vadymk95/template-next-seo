@@ -13,22 +13,14 @@ drifting away from them.
 
 SEO-first Next.js 16 App Router template with **next-intl SSR**, FSD layering,
 split static + nonce CSP, Upstash-ready rate limiting, and a forkable scaffolding
-pattern. This is a **template, not a shipped product** — several deps/files exist
-as load-bearing examples, not dead code (see Danger Zones).
+pattern. This is a **template, not a shipped product** — see Danger Zones.
 
 ## Stack (pinned)
 
-| Layer     | Choice                                                           |
-| --------- | ---------------------------------------------------------------- |
-| Runtime   | Node **≥ 24** (`engine-strict=true`)                             |
-| Framework | Next.js **16** App Router (`build --webpack`, not Turbo)         |
-| UI        | React **19**, Tailwind **v4**, shadcn-style `shared/ui/*`        |
-| Lang      | TypeScript **6.0** strict                                        |
-| State     | Zustand + `shared/lib/utils-store/createSelectors`               |
-| Forms     | react-hook-form + Zod                                            |
-| i18n      | **next-intl 4.13+** (SSR, `[locale]` segment, `messages/*.json`) |
-| Tests     | Vitest + Testing Library (`test/`), Playwright (`e2e/`)          |
-| Lint      | Oxlint → ESLint 10 (flat) → Prettier                             |
+Node **≥ 24** · Next.js **16** App Router (`build --webpack`, not Turbo) · React **19** ·
+Tailwind **v4** · TypeScript **6.0** strict · Zustand + `createSelectors` · react-hook-form + Zod ·
+**next-intl 4.13+** SSR (`[locale]`, `messages/*.json`) · Vitest + Testing Library + Playwright ·
+Oxlint → ESLint 10 (flat) → Prettier
 
 Detail: @.cursor/brain/PROJECT_CONTEXT.md
 
@@ -199,18 +191,15 @@ that lives only in a conversation is not a plan.
 
 <!-- shared-harness:end -->
 
-**Zero-warnings gate** — `eslint --max-warnings 0`, `oxlint --deny-warnings`: a warning is a failure,
-not a note.
+**Zero-warnings gate** — `eslint --max-warnings 0`, `oxlint --deny-warnings`: a warning is a
+failure, not a note. `verify:enterprise` is authoritative; if a rule is wrong for a real reason,
+raise it with the caller first — never downgrade, silence, or `eslint-disable` it.
 
 **Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
 scripts as a supply-chain guard, so husky hooks don't install themselves; the
 verify gate fails loudly if hooks are missing. Dependency cooldown is also on
 (`.npmrc` `min-release-age=3`, DAYS): a brand-new package or urgent patch needs
 `npm install <pkg> --min-release-age=0`.
-
-`verify:enterprise` is authoritative. If it fails, fix the cause — do **not**
-downgrade rules, silence warnings, or add `eslint-disable`. If a rule is wrong
-for a real reason, raise it with the caller first.
 
 **Complexity ratchet** — `complexity` 15 / `max-depth` 4 / `max-params` 6 /
 `max-lines-per-function` 130 / `max-lines` 200 over `app`/`features`/`shared`/`i18n`,
@@ -228,13 +217,9 @@ Re-measured 2026-09-06: 40.24 on Stryker 10 with vitest 4.1.11 — vitest is hel
 here because under 5.0.0 the Stryker runner ran zero tests per mutant (see Version holds).
 
 **The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
-step, `cp .env.example .env.local`, after cloning. `next dev` needs nothing (the
-schema defaults to localhost outside production), and CI injects
-`https://template-next-seo.invalid` at the workflow level.
-`scripts/check-build-env.mjs` runs before the build and says exactly that when the
-value is missing or points at localhost — which `shared/lib/env.ts` rejects on
-purpose. It loads `.env*` through `@next/env`, the same loader `next build` uses,
-so it cannot report "not set" for a value the build would have found.
+copy-the-example-env step after cloning — `scripts/check-build-env.mjs` names the fix if
+it's missing or points at localhost. Full rule and why: `README.md` § Environment
+Variables and @.cursor/brain/DECISIONS.md.
 
 ## Version holds (do not "fix" by bumping)
 
@@ -246,23 +231,19 @@ so it cannot report "not set" for a value the build would have found.
 - **TypeScript stays `~6.0.x`** — `typescript-eslint@8.65.0` peers
   `typescript >=4.8.4 <6.1.0`. Not a preference: a bump to 7.x makes **both**
   `npm install` and `npm ci` fail with ERESOLVE, so the tree stops resolving at
-  all. That bump was merged once and reached master; `dependabot.yml` now ignores
-  `typescript >=6.1` so it cannot happen again. Lift the hold only together with a
-  `typescript-eslint` major that widens the peer.
+  all (`dependabot.yml` ignores `typescript >=6.1` for this reason). Lift the hold
+  only together with a `typescript-eslint` major that widens the peer.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
-- **vitest and `@vitest/coverage-v8` stay `^4.1.x` in this repo** — under vitest 5.0.0
-  `@stryker-mutator/vitest-runner@10.0.0` ran zero tests per mutant here (2.94% score, every
-  mutant survived) while the same pair kills mutants in the sibling Vite templates; on 4.1.11 the
-  score is 40.24. `dependabot.yml` ignores `vitest >=5` for that reason. Lift only with a runner
-  release dated after 2026-09-03 AND the one-file probe in `DECISIONS.md` § "[2026-09]" killing
-  mutants again — same commit drops the ignore.
+- **vitest and `@vitest/coverage-v8` stay `^4.1.x` in this repo** — under vitest 5.0.0 the
+  Stryker vitest runner scores near-zero here (kills fine in the sibling Vite templates), so
+  `dependabot.yml` ignores `vitest >=5`. Lift trigger and the measured numbers: `DECISIONS.md`
+  § "[2026-09]".
 - **`@types/node` stays 24.x** — types match `engines.node >= 24`.
 - **`overrides` in `package.json` are security floors WITH major caps**
-  (`">=fixed <next-major"`). Two of our own uncapped floors (brace-expansion,
-  fast-uri) aged into their advisories' vulnerable ranges and turned the audit
-  gate red — an uncapped floor is a delayed regression. Do not remove a floor to
-  quiet npm, and never write one without a cap; details in `DECISIONS.md`.
+  (`">=fixed <next-major"`) — an uncapped one of our own already aged into its advisory's
+  vulnerable range once and reddened the audit gate. Do not remove a floor to quiet npm, and
+  never write one without a cap; details in `DECISIONS.md`.
 
 ## Architecture
 
