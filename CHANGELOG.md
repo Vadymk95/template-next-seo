@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.3](https://github.com/Vadymk95/template-next-seo/compare/v1.1.2...v1.1.3) (2026-09-27)
+
+
+### Maintenance
+
+* **deps:** bump the development-dependencies group with 6 updates ([#83](https://github.com/Vadymk95/template-next-seo/issues/83)) ([084b588](https://github.com/Vadymk95/template-next-seo/commit/084b588d1e0a57e850ed0ba60e74aee6176316da))
+* **deps:** bump the production-dependencies group with 5 updates ([#82](https://github.com/Vadymk95/template-next-seo/issues/82)) ([1379907](https://github.com/Vadymk95/template-next-seo/commit/1379907c3e6f8357a2ab3a9780f4f516014c84e0))
+
+
+### Documentation
+
+* **agents:** trim the stack table and the incident stories told twice ([#84](https://github.com/Vadymk95/template-next-seo/issues/84)) ([d6383eb](https://github.com/Vadymk95/template-next-seo/commit/d6383eb00c113a04427ca61c67dd6b6724dd1333))
+
+
+### CI
+
+* **deps:** bump googleapis/release-please-action in the actions group ([#81](https://github.com/Vadymk95/template-next-seo/issues/81)) ([ccadb9c](https://github.com/Vadymk95/template-next-seo/commit/ccadb9c302df101ff0c0f03f34a09fc0e769d574))
+
 ## [1.1.2](https://github.com/Vadymk95/template-next-seo/compare/v1.1.1...v1.1.2) (2026-09-13)
 
 
