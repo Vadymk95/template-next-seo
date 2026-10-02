@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.2.0](https://github.com/Vadymk95/template-next-seo/compare/v1.1.3...v1.2.0) (2026-10-02)
+
+
+### Features
+
+* **agents:** committed limits deny force pushes, skipped hooks and env reads in every mode ([c32df99](https://github.com/Vadymk95/template-next-seo/commit/c32df9941992a0440aca2adc89b6feac1c0ee184))
+
+
+### Bug fixes
+
+* **deps:** next 16.3.6+ for GHSA-vcvr-r3jv-pc5j and a raised brace-expansion floor ([9cf441c](https://github.com/Vadymk95/template-next-seo/commit/9cf441c2920fd5029a723ad605c4723afe1a37ec))
+
+
+### Maintenance
+
+* **deps:** bump the minor-and-patch group across 1 directory with 15 updates ([#91](https://github.com/Vadymk95/template-next-seo/issues/91)) ([98c5271](https://github.com/Vadymk95/template-next-seo/commit/98c527159c839e2acf9fe969c8b18455c0fffc0b))
+* **gate:** cap e2e failures on the gate run and keep one last-run record per suite ([3bdfc64](https://github.com/Vadymk95/template-next-seo/commit/3bdfc649a6a6164b6910415b66565913b04112bb))
+
+
+### Documentation
+
+* **brain:** the sibling templates' vitest 5 mutation runs were red, not killing mutants ([48f68a5](https://github.com/Vadymk95/template-next-seo/commit/48f68a58674974b2e738b10e7aac65144ccfc6fb))
+
+
+### CI
+
+* **deps:** one weekly Dependabot PR for minor and patch, so the lock file stops conflicting ([9d1aeef](https://github.com/Vadymk95/template-next-seo/commit/9d1aeefd7a26e6f4098fa442d36a0cc814b62617))
+* **release:** release-please prefers a RELEASE_PLEASE_TOKEN secret when one is set ([a05de4b](https://github.com/Vadymk95/template-next-seo/commit/a05de4ba0a6bdbb9b405d36befbef6e51a2a5cea))
+
 ## [1.1.3](https://github.com/Vadymk95/template-next-seo/compare/v1.1.2...v1.1.3) (2026-09-27)
 
 
