@@ -73,8 +73,10 @@ PAT in it, release PRs get CI like any other PR.
 
 **Decision**: take the three majors in one pass, one commit each, measured on the same tree — and
 then hold vitest back at `4.1.x` in THIS repo only, because the measurement below showed the mutation
-gate cannot run under vitest 5 here (the sibling templates took vitest 5 and their mutation runs still
-kill mutants). TypeScript stays `~6.0.x` because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
+gate cannot run under vitest 5 here (the sibling templates took vitest 5 too, and their weekly mutation
+runs went red from 2026-09-14; they returned to `4.1.x` on 2026-10-02 with this repo's numbers — see
+`template-1`'s `.cursor/brain/DECISIONS.md` § "[2026-10] vitest 5 hold"). TypeScript stays `~6.0.x`
+because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
 `~1.81.0` in lockstep with `eslint-plugin-oxlint` in the preceding compatible-updates commit, and
 `@next/env`'s exact pin was realigned to the `next` version `npm update` picked (16.3.4) — it has to
 match, because `scripts/check-build-env.mjs` reads `.env*` through it to mirror what `next build`
@@ -106,10 +108,11 @@ broken module fails as it should — the copy IS what runs). The debug log shows
 `vitest.config.ts` from the Stryker sandbox with cwd switched there, as designed. Same tree, vitest
 4.1.11 + coverage-v8 4.1.11, Stryker 10.0.0: the one-file probe kills 37 of 48 (79.17%, 1.75 tests per
 mutant) and the full run scores **40.24%** (1.65 tests per mutant) against the unchanged floor of 35.
-`@stryker-mutator/vitest-runner@10.0.0` (2026-08-14) predates `vitest@5.0.0` (2026-09-03); the two
-sibling Vite templates run the same pair and kill mutants, so the incompatibility is specific to this
-repo's shape (Next.js, `resolve.alias['@']` to the repo root, tests reaching modules through `@/`) and
-was not root-caused further here.
+`@stryker-mutator/vitest-runner@10.0.0` (2026-08-14) predates `vitest@5.0.0` (2026-09-03). The two
+sibling Vite templates looked as if they ran the same pair and killed mutants, but that reading came
+from a local run that reused Stryker's incremental report. Their cold weekly runs scored about 9.6 from
+2026-09-14, and both returned to vitest 4.1 on 2026-10-02. So the incompatibility is not specific to
+this repo's shape. It was not root-caused further here.
 
 **Why hold vitest rather than ship a red weekly job.** A strength gate that cannot fail is worse than
 a test runner one minor behind: the weekly `mutation.yml` job would have gone red on every run and
