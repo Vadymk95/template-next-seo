@@ -1,5 +1,28 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] `next` RCE (direct dep, raised within major) + `brace-expansion` floor raised (2026-10-02)
+
+**`next` raised from `^16.2.12` to `^16.3.6`.** `GHSA-vcvr-r3jv-pc5j` (critical — RCE in `next/og`
+`ImageResponse`) covers `>=16.2.0, <16.3.6`, fixed in 16.3.6. `next` is a direct dependency, so the fix
+is a version bump in `dependencies`, not an override. `npm install` resolved `16.3.7` — the newest
+release that also clears `.npmrc`'s `min-release-age=3` cooldown (16.3.7 published 2026-09-29, 16.3.8
+published 2026-09-30 and still inside the 3-day window at the time of this fix) — so no
+`--min-release-age=0` was needed. `eslint-config-next` (still `^16.2.12`) resolved to `16.3.5`
+independently; it is not part of this advisory and was left alone. `@next/env` was realigned to
+`16.3.7` in the same commit (exact pin, matching the practice recorded in "[2026-09] Test toolchain
+majors" below) — not strictly required by `docs:check`, which does not flag this gap, but left stale
+once and then corrected on review rather than carried forward; `npm ls next @next/env` shows `16.3.7`
+for both.
+
+**`brace-expansion` floor raised, same entry, same cap.** `"brace-expansion": ">=5.0.9 <6"` aged into
+three new high advisories published after it was written: `GHSA-q2hr-2g5m-vwhr` (quadratic-time
+`{a},b}` expansion, fixed 5.0.12), `GHSA-qhr7-859c-m2p7` (unbounded recursion on nested brace groups,
+fixed 5.0.11), `GHSA-6j4f-fj2g-mc7p` (unbounded recursion in `parseCommaParts`, fixed 5.0.10). Raised
+to `">=5.0.12 <6"`, which clears all three.
+
+`npm audit --audit-level=high` and `audit:gate` both report zero high/critical afterward (3 moderate
+remain, pre-existing `fast-uri`/`qs`, untouched).
+
 ## [2026-10] Playwright `maxFailures: 10` on the gate run and in CI
 
 **Decision**: `playwright.config.ts` caps `maxFailures` at 10 when `isCI || isProdServer` is true
