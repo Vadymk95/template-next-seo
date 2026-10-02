@@ -82,7 +82,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^1.47.0",
-        "next": "^16.2.12",
+        "next": "^16.3.6",
         "next-intl": "^4.14.5",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
@@ -98,7 +98,7 @@
         "@commitlint/config-conventional": "^21.2.0",
         "@eslint/js": "^10.0.1",
         "@next/bundle-analyzer": "^16.2.12",
-        "@next/env": "16.3.5",
+        "@next/env": "16.3.7",
         "@playwright/test": "^1.62.1",
         "@stryker-mutator/core": "^10.0.0",
         "@stryker-mutator/vitest-runner": "^10.0.0",
@@ -136,7 +136,7 @@
         "vitest": "^4.1.11"
     },
     "overrides": {
-        "brace-expansion": ">=5.0.9 <6",
+        "brace-expansion": ">=5.0.12 <6",
         "fast-uri": ">=4.1.2 <5",
         "next": {
             "postcss": ">=8.5.10 <9"
