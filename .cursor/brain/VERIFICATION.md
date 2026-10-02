@@ -20,6 +20,21 @@ one place, everything else points. This file holds the mechanics and the phase t
   `verify:ci` = + audit; `verify:full` = + Turbopack smoke) belong to the push hook and CI — they
   are not desk tools and are never run by hand.
 
+### After a red push: re-run only what failed
+
+Both Playwright configs cap failures (`maxFailures`) on the gate run and in CI, and each writes
+`.last-run.json` to its own `outputDir` — see `AGENTS.md` § the tier law and `DECISIONS.md`
+[2026-10]. The re-run after a fix, production-mode suite (`npm run build` first in both cases):
+
+- **The red stopped at the cap**: `PLAYWRIGHT_PROD_SERVER=1 npx playwright test <failed spec files from the red output>`
+- **The red finished under the cap**: `PLAYWRIGHT_PROD_SERVER=1 npx playwright test --last-failed`
+
+Name the files rather than reaching for `--last-failed` by default: after a capped stop,
+`.last-run.json` also lists every test the run never reached, so `--last-failed` re-runs most of
+the suite instead of only what failed.
+
+- **Dev smoke**: `npx playwright test --config playwright.dev.config.ts --last-failed`
+
 ## Phases — what a push proves, and the trigger that adds more
 
 `scripts/gate-tiers.json` `"phase"` decides; `scripts/verify-push.mjs` dispatches; the skip is

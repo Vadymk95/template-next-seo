@@ -17,6 +17,11 @@ const isProdServer = Boolean(process.env.PLAYWRIGHT_PROD_SERVER);
  */
 export default defineConfig({
     testDir: 'e2e',
+    // Own output folder: Playwright writes `.last-run.json` into `outputDir`, and this config and
+    // `playwright.dev.config.ts` both run inside the same push chain. A shared default folder lets
+    // the second suite overwrite the first's last-failed record, so `--last-failed` would then
+    // select the wrong tests, or none.
+    outputDir: 'test-results/e2e',
     // `e2e/dev/**` belongs to playwright.dev.config.ts: it needs a Turbopack dev
     // server, which this project does not start. Without this the specs are
     // collected here too and run against the production server — and they can
@@ -27,6 +32,13 @@ export default defineConfig({
     forbidOnly: isCI || isProdServer,
     retries: isCI ? 2 : 0,
     ...(isCI ? { workers: 1 } : {}),
+    // A red run must not cost a green run's wall clock: without a cap, every failure waits out its
+    // own timeout, and CI's retries pay for each failure three times over. 10 is the measured
+    // value — see DECISIONS.md [2026-10] for the numbers. The desk run against `next dev` (neither
+    // flag set) stays uncapped — it is not what a push or CI pays for. Spread, not
+    // `maxFailures: undefined`: `exactOptionalPropertyTypes` rejects an explicit `undefined` on an
+    // optional property.
+    ...(isCI || isProdServer ? { maxFailures: 10 } : {}),
     reporter: [['html', { open: 'never' }], ['list']],
     use: {
         baseURL,
