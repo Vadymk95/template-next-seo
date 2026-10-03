@@ -139,6 +139,11 @@ export default defineConfig([
             ],
             'no-console': 'error',
 
+            // ─── Empty catch ─────────────────────────────────────────────────
+            // A swallowed error ships silently. Every catch needs real handling or a
+            // comment stating why doing nothing is the deliberate disposition.
+            'no-empty': ['error', { allowEmptyCatch: false }],
+
             // ─── Magic numbers — extract to a named constant (exempt below) ───
             // Cheap models scatter literals; force named constants. Ignored:
             // trivial (-1,0,1,2), universal units (60 s/min, 1000 ms/s, 100 %),
