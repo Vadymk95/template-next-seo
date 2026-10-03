@@ -1,1 +1,8 @@
-[]
+[
+    {
+        "id": "GHSA-vfj7-8cjw-p6xm",
+        "expires": "2026-11-02",
+        "reason": "braces stack-exhaustion denial of service through deeply nested patterns; no fixed release exists as of 2026-10-03 - 3.0.3 is both the vulnerable ceiling and the newest version on npm. It reaches this tree only through dev tooling that expands the repo's own glob patterns (eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch), never attacker-supplied input in a shipped app.",
+        "upstream": "Re-check at expiry: npm view braces versions for a release past 3.0.3, or a micromatch release that drops it. If neither exists, re-date with a fresh reading."
+    }
+]
