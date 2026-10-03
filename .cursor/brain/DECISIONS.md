@@ -1,5 +1,41 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] guard audit fixes
+
+An audit sabotaged 73 guards in the sibling `template-1` and 53 caught the injected defect. F1 and
+F2 apply here too (F3–F7 are t1/spa-specific and out of scope for this repo).
+
+**F1 — `docs:check` flags a CI step that bypasses the gate.** New check derives every `run:` step
+in a PR-triggered workflow — a single line or every non-empty line inside a `run: |`/`run: >`
+block scalar, each reported at its OWN line — and compares it against `gate-tiers.json` §
+`ci.allowedRunSteps`; anything else names the file:line and asks for it to move into `verify` or
+be listed with a reason. Replays the 2026-07-28 "gate lied" class (`fb36cde` in `template-1`): an
+unlisted `npm run lint:extra` step, both on its own and inside a block scalar alongside an allowed
+line, turned `docs:check` red on exactly that line; the current workflow measures clean. (Review
+finding R1, 2026-10-03: the first cut skipped block scalars outright, the most common way to write
+a multi-line step. Fixed by reading the block's own lines instead of skipping them.)
+
+**F2 — `docs:check` flags a ruleset context no workflow produces.** New check derives each job's
+required-status-check name (its `name:` or id, plus matrix values from an inline `[a, b]` list or
+a block `- value` list, GitHub's own convention) from every workflow and compares it against
+`.github/ruleset.json`'s `required_status_checks`; a mismatch names the file:line and asks for the
+job to be renamed back or the context listed in `ci.rulesetContextAllowlist` with a reason. A job
+whose exact context GitHub renders only at runtime (a matrix `include:`/`exclude:` key, or a
+`name:` carrying a `${{ }}` expression) prints one loud, non-failing line instead, and only
+ruleset contexts starting with that job's static base name are exempted from the strict
+comparison — every other context still has to resolve exactly. Reproduces the class `6e47f3d`
+(#70) this repo already fixed once (the `dev-smoke` job here is named `Turbopack dev smoke`, and
+the ruleset context matches that explicit `name:`, not the job id — the check reads the right
+one): renaming the `cross-browser` job turned `docs:check` red; all five current contexts resolve
+to a real job and none is a block-list or `include`/`exclude` matrix or an expression name, so the
+exemption never fires on real data. (Review finding R2, 2026-10-03: the first cut read only an
+inline matrix and had no notion of either undecidable shape, so a fork using either got a false
+red no allowlist entry could fix.)
+
+`scripts/docs-check.mjs` stays byte-identical with `template-1`, `template-spa-pwa` and
+`template-rn` (shared-file rule); `scripts/gate-tiers.json` § `ci` carries this repo's own
+`allowedRunSteps` data instead.
+
 ## [2026-10] `next` RCE (direct dep, raised within major) + `brace-expansion` floor raised (2026-10-02)
 
 **`next` raised from `^16.2.12` to `^16.3.6`.** `GHSA-vcvr-r3jv-pc5j` (critical — RCE in `next/og`
