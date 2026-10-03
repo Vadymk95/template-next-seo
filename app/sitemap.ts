@@ -9,7 +9,7 @@ type SitemapRoute = {
     priority: number;
 };
 
-const ROUTES: SitemapRoute[] = [
+export const ROUTES: SitemapRoute[] = [
     { path: '', changeFrequency: 'weekly', priority: 1 },
     { path: '/example-form', changeFrequency: 'weekly', priority: 0.8 }
 ];

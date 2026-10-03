@@ -50,6 +50,16 @@ function emitModeWarningOnce(mode: TrustedProxyMode): void {
                 'or rely on automatic detection on Vercel (VERCEL=1). See .env.example.'
         );
     }
+    if (mode === 'first-hop' && process.env.NODE_ENV === 'production') {
+        // eslint-disable-next-line no-console -- intentional one-time prod warning to surface silent degradation
+        console.warn(
+            '[rate-limit] Running in `first-hop` trust mode: rate-limit identity trusts the ' +
+                'leftmost X-Forwarded-For entry as-is. A client can set that header to anything, so ' +
+                'this is only safe behind a proxy that OVERWRITES X-Forwarded-For before this app sees ' +
+                'it (nginx / Cloudflare / a docker reverse proxy configured to strip and re-set it) — ' +
+                'otherwise a spoofed header rotates the rate-limit bucket on every request. See .env.example.'
+        );
+    }
 }
 
 // Bounds the cardinality of the anonymous bucket: a spoofed, unbounded user-agent

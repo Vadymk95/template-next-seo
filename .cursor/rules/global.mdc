@@ -14,7 +14,7 @@ priority: 95
 
 ## 0.1 Conditional Rule Routing
 
-Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply: false` rules are not always injected for a task, and silently skipping them is a real failure mode. Before planning/editing in a task area, **explicitly read the matching conditional rules** below (the `alwaysApply: true` rules — `agent-pipeline`, `code-style`, `fsd-architecture`, `project-config`, `workflow`, `test-driven-development`, this file — are always loaded and are not listed here):
+Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply: false` rules are not always injected for a task, and silently skipping them is a real failure mode. Before planning/editing in a task area, **explicitly read the matching conditional rules** below (the `alwaysApply: true` rules — `agent-pipeline`, `project-config`, `workflow`, `test-driven-development`, this file — are always loaded and are not listed here; `code-style` and `fsd-architecture` are glob-scoped like the rest, see the bullets):
 
 - **React / UI / Server or Client Components / Metadata** → `react-patterns.mdc`, `performance.mdc`
 - **App Router routes / layouts / `sitemap` / `robots` / `generateMetadata`** → `routing.mdc`, `react-patterns.mdc`
@@ -27,6 +27,8 @@ Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply
 - **Constants / enums** → `constants.mdc`
 - **Types / interfaces / file-size discipline** → `typescript.mdc`, `engineering-standards.mdc`
 - **Commit flow** → `commit-command.mdc`
+- **Any `.ts`/`.tsx`/`.js`/`.jsx` edit (formatting, naming, file structure)** → `code-style.mdc`
+- **New module placement / cross-layer imports** → `fsd-architecture.mdc`
 
 `agent-pipeline.mdc` Step 1 enforces this: load the matching rules, then emit a **Rule Receipt** listing the ones actually loaded.
 

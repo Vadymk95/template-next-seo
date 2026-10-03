@@ -65,7 +65,7 @@ AI-generated UI has recognizable tells. For any UI work reject the generic defau
 - **Layout** — content-first and priority-driven (this is an SEO surface — the H1 and copy carry ranking weight), not a decorative hero followed by a uniform grid of identical cards.
 - **Copy** — realistic strings from `messages/<locale>.json` (next-intl), never lorem-ipsum; real length surfaces wrapping / overflow / truncation during dev.
 - **Padding & shadows** — no shadow tokens exist in `@theme`; lean on `shadow-*` sparingly (or `border-border` separation). Use the spacing scale, not blanket oversized padding.
-- **Dark mode** — every surface must read in both themes; verify against `.dark` tokens, don't tune light only.
+- **Dark mode only, in practice** — `app/layout.tsx` hardcodes `className="... dark"` on `<html>`, with no theme toggle anywhere in the repo, so `.dark` is always applied and the `:root` (light) tokens in `app/globals.css` never render. Verify new surfaces against the `.dark` values; don't tune against `:root` and assume it is reachable.
 - **Baseline APIs only** — stick to Baseline "Widely available" (`:has()`, container queries, `<dialog>`, `scroll-snap`, view-transitions); don't reach for "Newly available" (e.g. `scheduler.yield()`) without a fallback.
 
 ## Interaction & base-layer states (binding)

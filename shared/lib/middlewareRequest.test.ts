@@ -111,6 +111,35 @@ describe('getRateLimitKey', () => {
     });
 });
 
+describe('emitModeWarningOnce (first-hop)', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.restoreAllMocks();
+    });
+
+    it('warns once in production, naming the spoofing risk and the proxy requirement', async () => {
+        // `modeWarningEmitted` is module-level "once" state — a fresh module instance is the only
+        // way to observe the first call without leaking into every other test in this file.
+        vi.resetModules();
+        vi.stubEnv('RATE_LIMIT_TRUST_PROXY', 'first-hop');
+        vi.stubEnv('NODE_ENV', 'production');
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const fresh = await import('./middlewareRequest');
+        fresh.getRateLimitKey(req({ 'x-forwarded-for': '198.51.100.1' }));
+
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        const [message] = warnSpy.mock.calls[0] as [string];
+        expect(message).toMatch(/first-hop/);
+        expect(message).toMatch(/spoofed/i);
+        expect(message).toMatch(/overwrites? X-Forwarded-For/i);
+
+        // Second call in the same process must not warn again.
+        fresh.getRateLimitKey(req({ 'x-forwarded-for': '198.51.100.1' }));
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('isAssetPath', () => {
     it('treats Next asset prefixes and common static extensions as assets', () => {
         expect(isAssetPath('/_next/static/chunks/main.js')).toBe(true);

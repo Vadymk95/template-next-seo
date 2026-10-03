@@ -1,5 +1,67 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] delta audit fixes
+
+A second audit round reproduced three silent holes and closed each at the cheapest static or
+unit-test layer, plus three real doc ↔ code contradictions.
+
+**A new page under `app/[locale]/**` had no static check against `app/sitemap.ts`.** Exported
+`ROUTES` from `sitemap.ts` (no behaviour change) and added `app/sitemap.test.ts`: it walks
+`app/[locale]/**/page.tsx` (excluding `[dynamic]` segments, which a sitemap can't enumerate) and
+asserts every discovered route path appears in `ROUTES`. Proven: adding a throwaway
+`app/[locale]/probe-route/page.tsx` with no matching entry turns it red; removing the probe is
+green.
+
+**`RATE_LIMIT_TRUST_PROXY=first-hop` warned nowhere, unlike `none`.** `first-hop` trusts the
+leftmost `X-Forwarded-For` hop, which is trivially spoofable unless a proxy in front overwrites
+that header first. Added a second one-time production warning in
+`shared/lib/middlewareRequest.ts`'s `emitModeWarningOnce`, naming the spoofing risk and the
+proxy-overwrite requirement; the rate-limit algorithm itself is unchanged. Proven: a test that
+resets the module (`vi.resetModules()`, since the "once" flag is module-level state) and calls
+`getRateLimitKey` in a stubbed `NODE_ENV=production` asserts exactly one `console.warn` naming
+`first-hop`, "spoofed" and "overwrites X-Forwarded-For"; removing the new branch turns it red.
+
+**`scrollbar-gutter: stable` had no regression guard here**, unlike the sibling `template-1`
+(its "F4" fix). Ported the same one-line assertion into the existing per-width test in
+`e2e/layout-geometry.spec.ts` (not a new `test()`), guarded to run once per width on the first
+route. Proven: removing the CSS rule from `app/globals.css` turns all 5 width cases red
+(`auto` measured instead of `stable`); restoring it is green. Run via `verify:measure` rather
+than `e2e:one` against `next dev` — Turbopack refuses to resolve `next` through this worktree's
+symlinked `node_modules` ("points out of the filesystem root"), which does not reproduce against
+the webpack production build `verify:measure` uses.
+
+**`no-empty` was not enabled anywhere** — a `catch {}` passed every check silently. Added
+`'no-empty': ['error', { allowEmptyCatch: false }]` to `eslint.config.js`. Proven: a probe file
+with an empty `catch {}` turns `error` red; no existing code in this repo had one to fix.
+
+**The pre-commit `docs:check` trigger (`.husky/pre-commit`) missed the checker's own files** —
+same fix as the sibling templates: added `|^scripts/docs-check\.|^package\.json$` to the
+`grep -qE` regex. Proven: `scripts/docs-check.mjs` does not match the old pattern (exit 1) and
+matches the new one (exit 0); same for `package.json`.
+
+**Doc fixes, no behaviour change:**
+- `.cursor/rules/global.mdc:17` claimed `code-style` and `fsd-architecture` were part of the
+  `alwaysApply: true` set that is "always loaded." Both carry `alwaysApply: false` in their own
+  frontmatter (confirmed by `grep`) — this repo's own "[2026-09] Rules load" entry below records
+  deliberately moving them to glob-scoped loading, and the routing table was never updated to
+  match. Removed them from the "always loaded" list and added them as two conditional-routing
+  bullets instead.
+- `.cursor/rules/project-config.mdc:68` told agents to "verify against `.dark` tokens, don't tune
+  light only," presupposing a reachable light theme. `app/layout.tsx` hardcodes
+  `className="... dark"` on `<html>` with no theme toggle anywhere in the repo, so `.dark` is
+  always active and the `:root` (light) tokens in `app/globals.css` never render. Reworded to
+  state the dark-only reality.
+- This file's own "`outline-hidden`, never `outline-none`" entry (below) claimed the fix was
+  "pinned three ways," including `focus-indicator.test.tsx` / `SkipLink.test.tsx` and
+  `better-tailwindcss/no-deprecated-classes`. Neither test file exists in this repo (there is no
+  `SkipLink` component here either — the claim was carried over from the sibling
+  `template-spa-pwa`, which does have them), and the installed
+  `eslint-plugin-better-tailwindcss@4.7.0`'s `no-deprecated-classes` deprecation table (read from
+  its source) covers only Tailwind 4.0/4.1 renames and does not list `outline-none` /
+  `outline-hidden` at all — both remain valid, non-deprecated classes with different behaviour, so
+  the rule gives this regression no protection. Reworded to state the one real layer
+  (`e2e/forced-colors.spec.ts`) honestly.
+
 ## [2026-10] guard audit fixes
 
 An audit sabotaged 73 guards in the sibling `template-1` and 53 caught the injected defect. F1 and
@@ -601,12 +663,18 @@ outline-offset: 2px }`; `.outline-none` emits only the first. Every focusable co
 outline reset with a `ring-*`, which is a `box-shadow`, and `forced-colors` suppresses box-shadows. So
 with `outline-none` a Windows high-contrast user had NO focus indicator at all (WCAG 2.4.7).
 
-Swept in `button.tsx`, `input.tsx` and `SkipLink`. Pinned three ways, because no single one is enough:
-class-string assertions (`focus-indicator.test.tsx`, `SkipLink.test.tsx`), a committed browser test that
-emulates the mode (`e2e/forced-colors.spec.ts`), and `better-tailwindcss/no-deprecated-classes`. Mutation
-check: restoring `outline-none` makes the browser test report `outline=none shadow=none` and the unit test
-fail. **On every Tailwind minor bump, read the release notes for renamed utilities** — the build emits no
-warning and only the lint rule can catch a rename that is already known.
+Swept in `button.tsx` and `input.tsx` (this template has no `SkipLink` component). **Pinned one way,
+verified 2026-10**: a committed browser test that emulates the mode (`e2e/forced-colors.spec.ts`).
+`better-tailwindcss/no-deprecated-classes` is configured (see below) but gives this regression no
+protection — checked against the installed `eslint-plugin-better-tailwindcss@4.7.0` source, whose
+deprecation table covers only Tailwind 4.0/4.1 renames (shadow, blur, rounded, opacity utilities,
+`flex-shrink`/`-grow`, `bg-`/`object-` position) and does not list `outline-none` or `outline-hidden` —
+both remain valid, non-deprecated Tailwind classes with different behaviour, so the rule has nothing to
+flag. There is no class-string unit test here either (unlike the sibling `template-spa-pwa`, which has a
+real `SkipLink` plus a `focus-indicator.test.tsx`). Mutation check: restoring `outline-none` makes the
+browser test report `outline=none shadow=none`. **On every Tailwind minor bump, read the release notes
+for renamed utilities** — the build emits no warning, and today only this one browser test would catch a
+regression here.
 
 ## Tailwind class hygiene: two rules adopted on a pre-flight, one refused
 
