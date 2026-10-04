@@ -1,10 +1,11 @@
 // @vitest-environment node
 //
-// Guards two push-cost properties of the Playwright configs: a red run must stop after a capped
+// Guards three properties of the Playwright configs: a red run must stop after a capped
 // number of failures instead of running every remaining test into its timeouts (the gate run and
-// CI only — the desk run against `next dev` stays uncapped), and the gate config and the dev
+// CI only — the desk run against `next dev` stays uncapped), the gate config and the dev
 // config must write `.last-run.json` to two different folders, or the second suite in the push
-// chain overwrites the first's last-failed record and `--last-failed` selects the wrong tests.
+// chain overwrites the first's last-failed record and `--last-failed` selects the wrong tests,
+// and in CI a test that passes only on a retry fails the run instead of reporting green.
 //
 // Both configs read `process.env` at import time, so each case needs a fresh module instance:
 // `vi.resetModules()` plus a re-import, not a single cached import reused across cases with the
@@ -69,5 +70,22 @@ describe('playwright configs outputDir', () => {
         expect(gateConfig.outputDir).toBeTruthy();
         expect(devConfig.outputDir).toBeTruthy();
         expect(gateConfig.outputDir).not.toBe(devConfig.outputDir);
+    });
+});
+
+describe.each([
+    ['playwright.config.ts', importGateConfig],
+    ['playwright.dev.config.ts', importDevConfig]
+])('%s failOnFlakyTests', (_name, importConfig) => {
+    it('fails the run on a test that passed only on a retry when CI is set', async () => {
+        process.env.CI = 'true';
+        const config = await importConfig();
+        expect(config.retries).toBeGreaterThan(0);
+        expect(config.failOnFlakyTests).toBe(true);
+    });
+
+    it('does not fail on a flaky test off CI, where there are no retries', async () => {
+        const config = await importConfig();
+        expect(config.failOnFlakyTests).toBe(false);
     });
 });

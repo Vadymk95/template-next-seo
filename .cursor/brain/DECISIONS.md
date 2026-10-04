@@ -1,5 +1,110 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] Runtime axe scan inside the existing page specs
+
+**Decision**: `e2e/support/a11y.ts` exports `expectNoSevereA11yViolations(page)`, an `@axe-core/playwright`
+scan of the page as it is, failing on `serious` and `critical` violations with `target-size` (WCAG 2.2
+SC 2.5.8) switched on, because axe-core ships it disabled. It is called from the existing page-level specs
+that already load the public routes, after each spec's own readiness assertion: `e2e/smoke.spec.ts` (`/` ends
+on `/en`), `e2e/example-form.spec.ts` (`/en/example-form`) and, for the not-found route no other spec loads,
+`e2e/layout-geometry.spec.ts` (`/en/e2e-unknown-route-xyz`, once, at the first width). No `test()` block was
+added, so the suite count
+and the ceiling in `scripts/gate-tiers.json` do not move; the cost is one `analyze()` per page on a page the
+spec was loading anyway. The package is a devDependency at the range `template-spa-pwa` uses.
+
+**Why**: the static `jsx-a11y` rules read JSX and cannot see what the browser composes from it: contrast, a
+landmark rendered twice, a label a component swallows, a target under 24 px. Axe reads the rendered DOM, so it
+is the layer the static rules do not cover; the template had no check at that layer before.
+
+**Why these specs and not a new one**: `AGENTS.md` § What earns a browser test. A scan is not a new
+invariant of a new shell, it is a second measurement of pages already on screen. `e2e/layout-geometry.spec.ts`
+also visits the routes, but at five widths each, so a scan of home or the form there would repeat per width.
+The not-found route is the exception: only that spec loads it, so it is scanned there, once, at the first
+width (the markup does not change with the width, and the geometry spec measures the target sizes itself).
+
+**Why serious and critical only**: moderate and minor results are advice that needs a design position a
+template does not have; failing on them would redden the first fork over choices that are the fork's to make. A finding is fixed in
+the component. There is no allow-list in the helper: a rule that cannot hold for a template is a decision to
+record here, not a silent exclusion.
+
+**Scan after readiness**: axe scans the DOM that exists. A page caught before it rendered has almost nothing to
+violate, the same way a geometry measurement of an empty shell passes (SKELETONS § Layout measurements can pass
+by measuring nothing), so the call sits after the assertion that the page is up.
+
+## [2026-10] Playwright `failOnFlakyTests` in CI
+
+**Decision**: `playwright.config.ts` and `playwright.dev.config.ts` set `failOnFlakyTests: isCI`
+(`isCI = Boolean(process.env.CI)`, the same value as `!!process.env.CI`), next to the existing
+`retries: isCI ? 2 : 0`. The option is in the installed Playwright
+(`node_modules/playwright/types/test.d.ts`, `failOnFlakyTests?: boolean`, documented there as "Whether to
+exit with an error if any tests are marked as flaky. Useful on CI."). A test that fails and then passes on a
+retry is reported as flaky and now fails the run; before, it passed green with the failure visible only in
+the report.
+
+**Why**: a retry is there for an infrastructure blip. Without this flag it also turns a test that is wrong
+part of the time into a green run, and the first sign is the day the odds change. The cost is a red CI run
+the first time a real flake appears, which is the point: fix the cause or quarantine with a written reason.
+
+**Measured in this repo, 2026-10-04**: the CI logs of the last 12 successful and the 5 readable failed runs
+of the `CI` workflow contain no `flaky` and no `retry #` marker (`gh run view <id> --log`). The one other
+failed run's log is empty (expired). The flake that motivated the change was seen in `template-spa-pwa`
+only, so this is a preventive guard here, not a fix for an observed flake, and no test was quarantined.
+
+**Red to green**: `scripts/check-playwright-gate-config.test.mjs` asserts, for both configs, that
+`failOnFlakyTests` is `true` with `CI` set (with `retries` above zero) and `false` without it. Before the
+change the four new cases failed (`expected undefined to be true` and `to be false`); after it the file
+passes 8 of 8. `CI=1 npx playwright test --list` still loads the config (19 tests in 7 files).
+
+## [2026-10] zizmor audits the workflows in `security.yml`; the 2026-07-17 watch item fired
+
+**Decision**: a `zizmor` job (`Workflow audit (zizmor)`) in `security.yml` runs the official
+`zizmorcore/zizmor-action` (SHA-pinned, `# v0.6.4`) on push, PR and the weekly cron, over
+`.github/workflows` with the config in `.github/zizmor.yml`, and `min-severity: medium`, so any finding at
+medium or above fails the job. It is one pass with one config: the job and the local command
+`uvx zizmor@1.30.1 .github/workflows` read the same file, so a run on a laptop gives the verdict CI gives.
+zizmor is pinned by `version: 1.30.1` in the action (the action runs a digest-pinned container image of that
+release; to move it, change the number to a version listed in the action's `support/versions`, normally
+with the action bump Dependabot opens). `advanced-security: false` and `annotations: true`: findings show
+as annotations on the run, with no SARIF upload and no `security-events` permission, so the job works
+without GitHub code scanning, unlike CodeQL in the same file. The step is a `uses:`, so no `run:` entry was
+added to `scripts/gate-tiers.json` § `ci.allowedRunSteps`. The audit reads only this repository's workflow
+files; an online run also queries the GitHub API about the actions they reference, with the job's read-only
+token.
+
+**Closes the watch item** recorded 2026-07-17 ("zizmor: only if workflows grow beyond current ~2 files/repo,
+size-triggered"). This repo has five workflow files (`ci`, `docs`, `mutation`, `release`, `security`), so the
+trigger has fired.
+
+**Required check**: `Workflow audit (zizmor)` is in `.github/ruleset.json` `required_status_checks`, so a
+finding blocks the merge. `docs:check` `rulesetContexts` accepts the context because the job's `name:`
+produces it. The live ruleset is applied by hand from that file (`README.md` § "What your fork does not inherit"): add the context
+there after the job has reported once, because a required check that has never reported blocks every merge.
+
+**Measured, 2026-10-04, zizmor 1.30.1: online and offline grade differently.** Online (the action's default,
+with `github.token`) zizmor reads the pinned `actions/checkout` and grades a checkout without
+`persist-credentials: false` as Low for checkout v6 and newer; offline the same finding is Medium. On a
+copy outside the repo with that line removed from one checkout, `--min-severity medium` without the config
+exits 0 online and 13 offline, so the obvious gate (`min-severity: medium`) let the finding through in CI
+while a local offline run caught it. The repo baseline measured online was 10 findings, all Low: 7
+`artipacked` and 3 `adhoc-packages` (the `npm install -g npm@^11.14.0` steps in `ci.yml`); at
+`--min-severity medium` the same run reported nothing, so that gate would have been green over all 10.
+
+**Fixed at the source**: `persist-credentials: false` on every checkout that does not push (`ci.yml` x3,
+`docs.yml`, `mutation.yml`, `security.yml` x2 plus the new job's own).
+
+**Two entries in `.github/zizmor.yml`, each with its reason on the line above it**:
+
+- `artipacked` is remapped to medium (`rules.<id>.remap.severity`): the answer to the online grade above. With
+  the remap and the line removed from one checkout, `--min-severity medium` exits 13 online and 13 offline,
+  naming that checkout; the same copy with `--no-config` exits 0 online. The final tree exits 0 both ways.
+- `adhoc-packages` is ignored for `ci.yml` as a whole file, with no line numbers. The three
+  `npm install -g npm@^11.14.0` steps are deliberate (the step's own comment says why) and npm cannot be
+  pinned through `package.json`. The finding is Low, under the medium gate, so the entry only keeps a local
+  run without `--min-severity` quiet; a whole-file entry does not go stale when lines move.
+
+Findings of the `auditor` and `pedantic` personas (one `secrets-outside-env`, five `anonymous-definition`,
+two `undocumented-permissions`) are outside the default persona and were not addressed.
+
 ## [2026-10] First-load JS budget: `size:check`, right after `build`, full phase only
 
 **Decision**: `npm run size:check` (`scripts/check-bundle-budget.mjs`, zero dependencies) fails when the

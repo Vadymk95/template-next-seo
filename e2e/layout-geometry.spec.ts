@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { expectNoSevereA11yViolations } from '@/e2e/support/a11y';
 import { isAcceptedControlTarget } from '@/e2e/support/control-targets';
 import {
     CONTROL_SELECTOR,
@@ -59,6 +60,13 @@ for (const width of VIEWPORT_WIDTHS) {
              * guard against measuring an unrendered page is the non-empty measurement below.
              */
             await expect(page.locator('main, h1').first()).toBeVisible();
+
+            // The only spec that loads the not-found route, so it carries that route's axe scan. Once, at
+            // the first width: the markup is the same at every width and the geometry below measures the
+            // target sizes itself.
+            if (route.name === 'not-found' && width === VIEWPORT_WIDTHS[0]) {
+                await expectNoSevereA11yViolations(page);
+            }
 
             if (route.name === ROUTES_UNDER_TEST[0].name) {
                 // Guards against a layout shift between a scrolling route and a short one: without a

@@ -60,6 +60,7 @@
 | `e2e/support/measure.ts` | The in-page measurement, one definition shared by both geometry specs. Serialised into the page by Playwright, so it references nothing from module scope. |
 | `e2e/support/control-targets.ts` | The two kit sizes accepted below the 44px touch floor, each with a reason and an exit condition. A ratchet, not an amnesty. |
 | `e2e/support/cross-browser.ts` | Which specs run on every engine, and the `CROSS_BROWSER` switch. |
+| `e2e/support/a11y.ts` | `expectNoSevereA11yViolations(page)`: an axe-core scan of the page as it is, failing on serious or critical violations with `target-size` on. Called from `e2e/smoke.spec.ts` (`/en`), `e2e/example-form.spec.ts` (`/en/example-form`) and `e2e/layout-geometry.spec.ts` (the not-found route, once, at the first width) after their readiness assertion; adds no `test()`. |
 | `e2e/dev/content-stress.spec.ts` | Measures every primitive × content state × 5 widths against the invariants. Dev server only. |
 | `e2e/layout-geometry.spec.ts` | The same invariants over the real routes with real content — the assembled page, not the primitive. |
 | `e2e/forced-colors.spec.ts` | Proves a focus indicator survives `forced-colors: active`, where the ring is suppressed. |

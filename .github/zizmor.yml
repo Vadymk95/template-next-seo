@@ -1,0 +1,13 @@
+# zizmor configuration for `.github/workflows`. The `zizmor` job in security.yml and the local command
+# `uvx zizmor@1.30.1 .github/workflows` both read this file, so a run on a laptop gives the CI verdict.
+# Every entry carries its reason on the line above it.
+rules:
+    artipacked:
+        # Online, zizmor grades a checkout that keeps its credentials (no `persist-credentials: false`) of
+        # actions/checkout v6 or newer as low, under the job's medium gate; the remap keeps it at the gate.
+        remap:
+            severity: medium
+    adhoc-packages:
+        # Deliberate: npm cannot be pinned through package.json, and the step's own comment says why it is upgraded.
+        ignore:
+            - ci.yml

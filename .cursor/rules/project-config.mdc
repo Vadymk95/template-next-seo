@@ -86,6 +86,7 @@ AI-generated UI has recognizable tells. For any UI work reject the generic defau
 - **Ensure keyboard navigation**
 - **Use shadcn/ui components** which include accessibility features
 - **Don't overuse ARIA** - prefer semantic HTML first
+- **A public route is scanned at runtime** - the page-level spec that loads it calls `expectNoSevereA11yViolations(page)` from `@/e2e/support/a11y` after its readiness assertion (serious and critical fail, `target-size` on). Add that one call, never a new `test()`
 
 ## Internationalization (i18n) — next-intl SSR
 

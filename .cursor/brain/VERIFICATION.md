@@ -35,6 +35,13 @@ the suite instead of only what failed.
 
 - **Dev smoke**: `npx playwright test --config playwright.dev.config.ts --last-failed`
 
+**A flaky test is a red run in CI.** Both configs retry twice in CI only (`retries: isCI ? 2 : 0`) and set
+`failOnFlakyTests: isCI`, so a test that fails and then passes on a retry fails the job and is listed as
+`flaky` in the report, instead of passing green with a hidden failure. Off CI there are no retries and the
+flag is off. The remedy for a flaky test is to fix its cause or quarantine it with a written reason and an
+exit condition, never to drop the flag. Both configs are guarded by
+`scripts/check-playwright-gate-config.test.mjs`.
+
 ## Phases — what a push proves, and the trigger that adds more
 
 `scripts/gate-tiers.json` `"phase"` decides; `scripts/verify-push.mjs` dispatches; the skip is
@@ -106,6 +113,18 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 The rule: `AGENTS.md` § Architecture › Content variance. Why and what it found: `DECISIONS.md` § Content
 variance is measured in a browser. Which spec measures what, and where the shared predicates and the one
 in-page measurement live: `MAP.md` § Layout invariants and content variance.
+
+---
+
+## Accessibility at runtime
+
+`e2e/support/a11y.ts` runs axe-core on a page a spec has already loaded and fails on serious or critical
+violations, with `target-size` switched on (it is off by default in axe-core). It is called from
+`e2e/smoke.spec.ts` (`/en`), `e2e/example-form.spec.ts` (`/en/example-form`) and, for the not-found route,
+`e2e/layout-geometry.spec.ts` (once, at the first width), after each spec's own readiness assertion, so it runs wherever those specs run (the push gate and CI) and adds no `test()` of its own.
+To check one change: `npm run e2e:one -- e2e/smoke.spec.ts`. A new public route gets the same one-line call in
+the spec that loads it, never a new test; moderate and minor findings are not failures, and a finding is fixed in
+the component rather than allow-listed. Why this shape: `DECISIONS.md` § Runtime axe scan.
 
 ---
 

@@ -31,6 +31,10 @@ export default defineConfig({
     // A forgotten `.only` must fail the local gate too, not only CI.
     forbidOnly: isCI || isProdServer,
     retries: isCI ? 2 : 0,
+    // A retry exists to survive an infrastructure blip, not to hide a test that is wrong half the
+    // time: with this flag a test that passes only on a retry still fails the CI run, so the flake
+    // is fixed or quarantined with a reason instead of staying green. Off CI there are no retries.
+    failOnFlakyTests: isCI,
     ...(isCI ? { workers: 1 } : {}),
     // A red run must not cost a green run's wall clock: without a cap, every failure waits out its
     // own timeout, and CI's retries pay for each failure three times over. 10 is the measured

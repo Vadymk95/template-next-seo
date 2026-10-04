@@ -522,8 +522,11 @@ Key optimizations in `next.config.ts`:
 
 GitHub Actions (`.github/workflows/ci.yml`, Node 24.x, `npm ci --ignore-scripts`): `validate` is a
 single `npm run verify:ci` step (the audit gate plus the whole offline gate — one step on purpose, so the
-workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks and CodeQL on push, PR and a
-weekly cron; `mutation.yml` is the weekly StrykerJS strength gate. What runs at which moment locally:
+workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks, CodeQL and a zizmor audit of the workflows on push, PR and a
+weekly cron; the zizmor job (`Workflow audit (zizmor)`) is a required check in `.github/ruleset.json` and
+fails on findings of medium severity or above. Reproduce it locally with `uvx zizmor@1.30.1 .github/workflows`:
+it is pinned to the version CI runs and reads the same `.github/zizmor.yml`, so it gives the CI verdict
+online or offline. `mutation.yml` is the weekly StrykerJS strength gate. What runs at which moment locally:
 `AGENTS.md` § Commands (exact) › _The tier law_.
 
 ## 📝 Code Quality

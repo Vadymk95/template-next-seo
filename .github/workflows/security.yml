@@ -15,6 +15,10 @@ name: Security
 # A private fork therefore has to either enable Advanced Security for the repo, or
 # delete the `codeql` job below and keep `gitleaks`. Do not "fix" a red CodeQL job
 # by weakening the workflow — it is a plan boundary, not a configuration mistake.
+#
+# `zizmor` audits the workflow files themselves and works anywhere: it needs no code
+# scanning (findings print as annotations on the run, nothing is uploaded) and no
+# secret. It fails the job on a finding of medium severity or above.
 
 on:
     pull_request:
@@ -46,6 +50,7 @@ jobs:
               with:
                   # gitleaks needs commit history to scan past commits, not just HEAD.
                   fetch-depth: 0
+                  persist-credentials: false
 
             - name: Run gitleaks
               # Every action in every workflow is SHA-pinned since 2026-10-04 — tags are
@@ -72,6 +77,8 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
 
             - name: Initialize CodeQL
               uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
@@ -85,3 +92,30 @@ jobs:
               uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
               with:
                   category: '/language:${{ matrix.language }}'
+
+    zizmor:
+        name: Workflow audit (zizmor)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Run zizmor
+              # The action runs zizmor from a digest-pinned container image, so `version`
+              # is the whole pin; Dependabot's github-actions ecosystem moves the action,
+              # and a newer zizmor is a deliberate edit of `version`.
+              uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+              with:
+                  version: 1.30.1
+                  inputs: .github/workflows
+                  config: .github/zizmor.yml
+                  min-severity: medium
+                  # Annotations on the run instead of a SARIF upload: no `security-events`
+                  # permission, and nothing that needs code scanning on a private fork.
+                  advanced-security: false
+                  annotations: true
