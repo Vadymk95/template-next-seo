@@ -1,5 +1,18 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] Doc pointers are backticked paths, never `@` imports
+
+`AGENTS.md` pointed at the brain files and `README.md` with bare `@path` references. Claude Code expands an
+`@path` outside a code span as a memory import, recursively, and `CLAUDE.md` is `@AGENTS.md`, so every
+session loaded eight files before the first prompt: 162,102 bytes (158.3 KB, about 40k tokens at bytes / 4,
+a rough estimate), of which `DECISIONS.md` alone was 80 KB. Two subagents died of autocompact thrashing
+from that load. Every pointer is now a code span, so the closure is `CLAUDE.md` + `AGENTS.md`: two files,
+30,536 bytes (29.8 KB, about 7.6k tokens), the same shape the sibling templates have. The brain files are
+read on demand, which is what the shared harness block already promised ("nothing beyond `AGENTS.md` is
+`@`-imported"). Measured by walking from `CLAUDE.md`, stripping fenced blocks and inline code spans and
+following every `@<path>.md` recursively. Rule for new text: a pointer to a file is a code span; the one
+intended import is the `@AGENTS.md` line in `CLAUDE.md`.
+
 ## [2026-10] Runtime axe scan inside the existing page specs
 
 **Decision**: `e2e/support/a11y.ts` exports `expectNoSevereA11yViolations(page)`, an `@axe-core/playwright`

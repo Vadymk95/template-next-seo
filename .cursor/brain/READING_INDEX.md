@@ -50,7 +50,15 @@ Why it exists: `AGENTS.md` § Entering this repo cheaply.
   rules (a floor carries a major cap; an allowance is the last resort and needs an expiry).
 - `scripts/audit-allowlist.json` — the current allowances and their reasons.
 
-## 7. Wondering whether the work is still needed
+## 7. About to add what the baseline leaves out: a backend, auth, monitoring, analytics, a language, images, a deploy
+
+- `.cursor/brain/EXTENSIONS.md` — WINS: one recipe per integration, in the order a project meets them
+  (trigger, install, where it plugs in, the guard to add, what not to do).
+- `SECURITY_REQUIREMENTS.md` — the statements the recipe must not break, and the pre-deployment
+  checklist the deploy phase points at.
+- `AGENTS.md` § Out of scope — each of these needs the caller's confirmation before the first edit.
+
+## 8. Wondering whether the work is still needed
 
 Before reading anything else: `git log --oneline -15`, then grep for the thing the task names. On the
 sibling project two of five dispatched lanes returned "already done" after ~430k tokens between them,
