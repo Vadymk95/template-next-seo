@@ -14,7 +14,7 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | Styling       | Tailwind CSS **v4** (`app/globals.css`, PostCSS)                                                                              |
 | Components    | shadcn-style primitives under `shared/ui/`                                                                                    |
 | Global state  | Zustand + `shared/lib/utils-store/createSelectors` (no default entity store)                                                  |
-| Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed                                                      |
+| Server state  | Server Components / Route Handlers; add TanStack Query in-repo if needed (`.cursor/brain/EXTENSIONS.md` Phase 1d)             |
 | Forms         | react-hook-form + Zod                                                                                                         |
 | i18n          | next-intl (App Router SSR; `[locale]` segment; `messages/<locale>.json`)                                                      |
 | Tests         | Vitest + Testing Library; Playwright E2E (`e2e/`; local `test:e2e`, gate/CI `test:e2e:prod`)                                  |

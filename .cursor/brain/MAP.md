@@ -44,9 +44,10 @@
 ## Data flow (high level)
 
 1. **Server**: RSC pages fetch or render static content; Server Actions / Route Handlers under `app/api`, `app/actions`.
-2. **Client**: `'use client'` islands; add TanStack Query only if the app introduces it (not in default `package.json`).
+2. **Client**: `'use client'` islands; add TanStack Query only if the app introduces it (not in default `package.json`; the recipe is `.cursor/brain/EXTENSIONS.md` Phase 1d).
 3. **i18n**: next-intl SSR — `proxy.ts` composes next-intl middleware for document routes (locale redirect / rewrite), `[locale]` segment calls `setRequestLocale` + `getMessages`, server uses `getTranslations`, client islands use `useTranslations` inside `NextIntlClientProvider`. Single source: `messages/<locale>.json`.
 4. **Web Vitals**: Build-time attribution hints (`next.config` experimental) plus runtime `sendBeacon` ingestion at `/api/vitals` from the root reporter.
+5. **Beyond the baseline**: a real backend, auth, error monitoring, analytics, a second locale, remote images and the deploy are not wired here; `.cursor/brain/EXTENSIONS.md` holds one recipe per integration and says where each plugs into the files above.
 
 ## Bundling (webpack production)
 

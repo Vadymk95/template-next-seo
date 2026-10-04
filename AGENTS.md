@@ -22,7 +22,7 @@ Tailwind **v4** · TypeScript **6.0** strict · Zustand + `createSelectors` · r
 **next-intl 4.13+** SSR (`[locale]`, `messages/*.json`) · Vitest + Testing Library + Playwright ·
 Oxlint → ESLint 10 (flat) → Prettier
 
-Detail: @.cursor/brain/PROJECT_CONTEXT.md
+Detail: `.cursor/brain/PROJECT_CONTEXT.md`
 
 ## Invariants (do not violate)
 
@@ -243,7 +243,7 @@ here because under 5.0.0 the Stryker runner ran zero tests per mutant (see Versi
 **The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
 copy-the-example-env step after cloning — `scripts/check-build-env.mjs` names the fix if
 it's missing or points at localhost. Full rule and why: `README.md` § Environment
-Variables and @.cursor/brain/DECISIONS.md.
+Variables and `.cursor/brain/DECISIONS.md`.
 
 ## Version holds (do not "fix" by bumping)
 
@@ -251,7 +251,7 @@ Variables and @.cursor/brain/DECISIONS.md.
   life. Three plugins still cap their `eslint` peer below 10, so each has an
   `overrides` entry mapping that peer to `$eslint`; do not remove them and do not
   reach for `--legacy-peer-deps`. **`settings.react.version` must stay a literal,
-  never `'detect'`** — see @.cursor/brain/DECISIONS.md.
+  never `'detect'`** — see `.cursor/brain/DECISIONS.md`.
 - **TypeScript stays `~6.0.x`** — `typescript-eslint@8.65.0` peers
   `typescript >=4.8.4 <6.1.0`. Not a preference: a bump to 7.x makes **both**
   `npm install` and `npm ci` fail with ERESOLVE, so the tree stops resolving at
@@ -281,7 +281,7 @@ No circular barrels.
 - **`entities/`** — domain slices (empty in baseline; add when you have them).
 - **`shared/`** — UI kit (`ui/`), `lib/`, constants, types, utils.
 
-Full file map: @.cursor/brain/MAP.md
+Full file map: `.cursor/brain/MAP.md`
 
 **Reuse first** — before creating any function/util/component/constant, search for
 an existing equivalent and extend it. **Consistency beats preference** — match the
@@ -322,7 +322,7 @@ it.
   as `<xhtml:link>` entries.
 - **Server Actions** use `getTranslations({ locale })` for user-facing strings.
 
-Detail: @.cursor/brain/DECISIONS.md (ADR "i18n: next-intl SSR")
+Detail: `.cursor/brain/DECISIONS.md` (ADR "i18n: next-intl SSR")
 
 ## Security contract
 
@@ -339,7 +339,7 @@ Detail: @.cursor/brain/DECISIONS.md (ADR "i18n: next-intl SSR")
   guarantee — verify before assuming a route is throttled.
 - **COOP/CORP `same-origin`** may break OAuth popups; use same-tab redirects.
 
-Detail: @.cursor/brain/SKELETONS.md (sections "`proxy` composition", "strict CSP")
+Detail: `.cursor/brain/SKELETONS.md` (sections "`proxy` composition", "strict CSP")
 
 ## Danger zones
 
@@ -361,7 +361,7 @@ Read before editing these:
   examples; the inline `// Template scaffolding` comments mark each site. Do
   not strip as "unused" unless the caller confirms "this is now my MVP".
 
-Full list with risks + mitigations: @.cursor/brain/SKELETONS.md
+Full list with risks + mitigations: `.cursor/brain/SKELETONS.md`
 
 ## Machine-agnostic configs
 
@@ -398,12 +398,12 @@ what each tool loads before moving a rule between files.
 - `.cursor/brain/READING_INDEX.md` — situation → the files that answer it. **Read on demand, NOT
   `@`-imported on purpose:** a pointer file only earns its tokens when a task actually needs it, and
   importing it would put the index inside the budget it exists to protect.
-- @.cursor/brain/PROJECT_CONTEXT.md — purpose, stack, layout, CI
-- @.cursor/brain/MAP.md — every route, file, and responsibility
-- @.cursor/brain/SKELETONS.md — danger zones
-- @.cursor/brain/DECISIONS.md — ADRs (why things are the way they are)
-- @.cursor/brain/DICTIONARY.md — project-specific vocabulary
-- @README.md — user-facing docs (setup, adding languages, restore playbook)
+- `.cursor/brain/PROJECT_CONTEXT.md` — purpose, stack, layout, CI
+- `.cursor/brain/MAP.md` — every route, file, and responsibility
+- `.cursor/brain/SKELETONS.md` — danger zones
+- `.cursor/brain/DECISIONS.md` — ADRs (why things are the way they are)
+- `.cursor/brain/DICTIONARY.md` — project-specific vocabulary
+- `README.md` — user-facing docs (setup, adding languages, restore playbook)
 
 Consult them before acting on an unfamiliar area; they are the authoritative
 "why" that git history doesn't capture.
