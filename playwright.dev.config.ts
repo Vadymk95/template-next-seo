@@ -33,6 +33,10 @@ export default defineConfig({
     fullyParallel: false,
     forbidOnly: isCI,
     retries: isCI ? 2 : 0,
+    // A retry exists to survive an infrastructure blip, not to hide a test that is wrong half the
+    // time: with this flag a test that passes only on a retry still fails the CI run, so the flake
+    // is fixed or quarantined with a reason instead of staying green. Off CI there are no retries.
+    failOnFlakyTests: isCI,
     reporter: [['html', { open: 'never' }], ['list']],
     use: {
         baseURL,
