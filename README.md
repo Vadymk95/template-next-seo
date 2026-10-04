@@ -236,7 +236,7 @@ npm run test:one -- <file>   # one unit test file, through the tracer
 npm run probe -- <route>     # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push          # what pre-push runs, phase-aware
 npm run trace:report         # findings from .gate-trace.log: moments, budgets, worktrees
-npm run docs:check           # mechanical doc drift: paths, scripts, sentinels, versions, command table, dead docs
+npm run docs:check           # mechanical doc drift: paths, scripts, sentinels, versions, command table, dead docs, agent-memory imports
 
 # Drill-downs on a specific failure (none of these is a moment)
 npm run lint             # oxlint → ESLint
