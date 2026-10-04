@@ -33,6 +33,7 @@ describe('buildStaticContentSecurityPolicy', () => {
         expect(csp).toMatch(/script-src 'self'/);
         expect(csp).not.toContain('strict-dynamic');
         expect(csp).not.toContain('nonce-');
+        expect(csp).not.toContain("'unsafe-eval'");
         expect(csp).toContain('upgrade-insecure-requests');
     });
 });

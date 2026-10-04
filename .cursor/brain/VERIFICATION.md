@@ -16,7 +16,7 @@ one place, everything else points. This file holds the mechanics and the phase t
 - **Commit — the pre-commit hook**: staged autofix → TDD sibling gate → repo-wide
   oxlint/format/tsc. Nothing to run by hand.
 - **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below.
-- The full chains (`verify`/`verify:enterprise` = offline gate incl. build + prod e2e;
+- The full chains (`verify`/`verify:enterprise` = offline gate incl. build, the size budget and prod e2e;
   `verify:ci` = + audit; `verify:full` = + Turbopack smoke) belong to the push hook and CI — they
   are not desk tools and are never run by hand.
 
@@ -45,6 +45,7 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 | --- | --- | --- |
 | audit, hooks-check, format, tsc, lint, coverage | yes — every push, ~10s | day one |
 | production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
+| first-load JS budget (`size:check`, right after the build) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "[2026-10] First-load JS budget" |
 | prod-mode e2e | no | same flip — a prod boundary now exists |
 | Turbopack smoke (`smoke:dev`) | CI-only (`dev-smoke` job); never inside `verify:ci` | unchanged by phases |
 | coverage thresholds | already on (suite ships with real tests) | — |

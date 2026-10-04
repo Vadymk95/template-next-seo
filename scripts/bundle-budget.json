@@ -1,0 +1,8 @@
+{
+    "_description": "Data for scripts/check-bundle-budget.mjs (npm run size:check). limitsKb are brotli KB (1 KB = 1024 bytes) of first-load JS: sharedFirstLoad = build-manifest.json rootMainFiles JS; heaviestRouteFirstLoad = the largest public route (shared JS + that route's own client chunks). Each limit = the measurement + at most 10%, rounded up to a whole KB; the measurement, the build and the date are in .cursor/brain/DECISIONS.md. Raise a number on a new measurement and a DECISIONS.md line, never to make a red run green. excludeRoutes are routes (and everything under them) that are not public in production.",
+    "excludeRoutes": ["/_not-found", "/_global-error", "/dev"],
+    "limitsKb": {
+        "sharedFirstLoad": 134,
+        "heaviestRouteFirstLoad": 203
+    }
+}

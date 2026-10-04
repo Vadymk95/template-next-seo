@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
 
@@ -28,9 +29,9 @@ export const Header = (): ReactElement => {
                         Example Form
                     </SmartLink>
                     {process.env.NODE_ENV === 'development' && (
-                        <a href="/dev/ui" className={CHROME_NAV_LINK}>
+                        <Link href="/dev/ui" className={CHROME_NAV_LINK}>
                             Dev UI
-                        </a>
+                        </Link>
                     )}
                 </nav>
             </div>

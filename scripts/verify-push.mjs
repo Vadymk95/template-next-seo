@@ -2,12 +2,12 @@
 /**
  * Phase-aware push gate: what a push must prove depends on whether a prod boundary exists yet.
  *
- * Phase 0 (scaffold, pre-deploy): audit + hooks + format + types + lint + coverage. The build and
- * the prod e2e suite are SKIPPED (the dev smoke is never inside verify:ci — it is CI's dev-smoke job —
- * so no phase skips it) — before the first deploy there is no production boundary for them to
- * guard, and paying ~30s per push to check a boundary that does not exist
- * is how gates teach people to bypass them. The skip is printed LOUDLY on every push: a silent
- * skip looks exactly like coverage.
+ * Phase 0 (scaffold, pre-deploy): audit + hooks + format + types + lint + coverage. The build, the
+ * bundle size budget (it reads the build) and the prod e2e suite are SKIPPED (the dev smoke is
+ * never inside verify:ci — it is CI's dev-smoke job — so no phase skips it) — before the first
+ * deploy there is no production boundary for them to guard, and paying ~30s per push to check a
+ * boundary that does not exist is how gates teach people to bypass them. The skip is printed
+ * LOUDLY on every push: a silent skip looks exactly like coverage.
  *
  * Phase 1 (deployed): the full verify:ci chain, unchanged. Flip `phase` in
  * scripts/gate-tiers.json to 1 in its own commit at the FIRST DEPLOY — that commit is the
@@ -22,7 +22,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const SKIPPED_AT_SCAFFOLD = ['build', 'test:e2e:prod'];
+const SKIPPED_AT_SCAFFOLD = ['build', 'size:check', 'test:e2e:prod'];
 
 export const resolvePushPlan = ({ phase, override }) => {
     let effective;
