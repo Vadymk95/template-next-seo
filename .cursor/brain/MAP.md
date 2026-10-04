@@ -68,3 +68,4 @@
 | `shared/ui/common/chromeLink.ts` | Class contracts for chrome links — the touch height and the display mode that makes it apply. |
 | `scripts/check-coverage.mjs` | Runs the coverage suite and refuses a report that silently dropped files. |
 | `scripts/check-cross-browser-selection.mjs` | Refuses a cross-browser run where an engine collected no tests. |
+| `scripts/check-bundle-budget.mjs` | `size:check`: brotli first-load JS of the build (shared + heaviest public route) against `scripts/bundle-budget.json`. Reads `.next` manifests; full phase only, after `build`. |

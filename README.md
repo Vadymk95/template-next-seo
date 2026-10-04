@@ -73,8 +73,7 @@ Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 
 - ✅ **Error boundaries** (`app/[locale]/error.tsx` + root `app/global-error.tsx`)
 - ✅ **404 page** (`app/[locale]/not-found.tsx`)
-- ✅ **Component error boundary** (`shared/ui/common/ErrorBoundary`)
-- ✅ **Reusable loading primitive** (`shared/ui/common/Loading`)
+- **Available in `shared/ui`, not wired into any route by default:** `ErrorBoundary` (`shared/ui/common/ErrorBoundary`), `Loading` (`shared/ui/common/Loading`) and `WithSuspense` (`shared/ui/hocs/WithSuspense`). Import them where a client subtree needs a fallback.
 - ✅ **Error logging** - structured error tracking
 
 ### Forms & Validation
@@ -424,7 +423,7 @@ Next.js does **not** apply `title.template` to the segment that defines it — o
 
 ### Bundle Sizes
 
-- **First Load JS:** ~154 kB (gzipped rootMainFiles + polyfills; run `npm run build:analyze` for a breakdown)
+- **First Load JS (brotli):** shared by every route 121.18 kB; `/[locale]` 147.79 kB; `/[locale]/example-form` 184.43 kB (measured 2026-10-04 on a webpack build, 1 kB = 1024 bytes). The full-phase gate runs `npm run size:check` against the limits in `scripts/bundle-budget.json` (134 kB shared, 203 kB heaviest public route); how they were set and how to move them: `.cursor/brain/DECISIONS.md` § "First-load JS budget". `npm run build:analyze` gives a breakdown.
 - **Vendor chunks:** `optimizePackageImports` + webpack cache groups (React, Next, Zustand, i18n, forms, UI)
 
 ### Optimizations
@@ -555,7 +554,7 @@ Components are in `shared/ui/`:
 
 - `Button` - Multiple variants and sizes
 - `Input` - Form input with validation
-- `ErrorBoundary` - Error handling component
+- `ErrorBoundary` - Error handling component for client subtrees (available, not used by any route by default)
 - `Header` - Site header with navigation
 - `Footer` - Site footer
 
@@ -576,7 +575,7 @@ npm start
 
 ### Performance Checklist
 
-- ✅ Bundle size under 200 kB First Load JS (see Performance Metrics)
+- ✅ First Load JS held by a budget in the gate (`npm run size:check`, see Performance Metrics)
 - ✅ ISR for `/` and `/example-form`
 - ✅ Cache-Control headers for API routes
 - ✅ Security headers (`next.config.ts` + `proxy.ts`)
@@ -646,3 +645,5 @@ Two things that are NOT settings and are easy to miss. `.npmrc` disables lifecyc
 ## 🔒 Security
 
 Headers and the CSP live in code (`next.config.ts`, `shared/lib/cspHeader.ts`, `proxy.ts`); the rules for sessions, tokens and money and the pre-deployment checklist are in `SECURITY_REQUIREMENTS.md`.
+
+To report a vulnerability, follow `SECURITY.md`.

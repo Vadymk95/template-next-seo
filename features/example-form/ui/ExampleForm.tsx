@@ -59,9 +59,9 @@ export const ExampleForm: FunctionComponent = () => {
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {submitSuccess && (
-                <p className="text-sm text-muted-foreground" role="status">
+                <output className="block text-sm text-muted-foreground">
                     {tCommon('form.submittedSuccessfully')}
-                </p>
+                </output>
             )}
             {errors.root?.serverError && (
                 <p className="text-sm text-destructive" role="alert">

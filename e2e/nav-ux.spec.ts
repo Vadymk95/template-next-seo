@@ -65,7 +65,7 @@ test.describe('Navigation UX regressions', () => {
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 30_000 });
         await page.waitForLoadState('networkidle');
 
-        const spinner = page.locator('[role="status"]');
+        const spinner = page.getByRole('status');
         await page
             .getByRole('banner')
             .getByRole('navigation')

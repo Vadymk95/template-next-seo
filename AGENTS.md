@@ -74,6 +74,7 @@ npm run dev                 # Turbopack dev (fast)
 npm run dev:webpack         # webpack parity dev (debug splitChunks)
 npm run build               # next build --webpack (production)
 npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
+npm run size:check          # first-load JS budget over an existing build (scripts/bundle-budget.json); full phase only, after build
 npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; run per change)
 npm run verify:measure      # MEASURE moment: build + look; add `-- e2e/<f>.spec.ts` for one prod-mode spec
 npm run e2e:one -- <spec>   # one Playwright spec, FREE port, through the tracer
@@ -83,7 +84,7 @@ npm run test:one -- <file>  # one unit test file, through the tracer (not around
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
 npm run docs:check          # docs class: paths, scripts, sentinels, versions, command table, dead docs, test quarantines (pre-commit when docs are staged; weekly CI adds --weekly)
 npm run verify              # THE offline gate (alias of verify:enterprise) — the push/CI chain, not a desk tool
-npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → e2e
+npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → size → e2e
 npm run verify:ci           # verify + audit:gate — phase-1 pre-push and the CI validate job
 npm run verify:full         # verify:ci + smoke:dev — predicts the whole CI pipeline
 npm run smoke:dev           # Turbopack dev smoke on its own (e2e/dev/, port 3003)

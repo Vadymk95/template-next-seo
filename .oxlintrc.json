@@ -1,6 +1,6 @@
 {
     "$schema": "./node_modules/oxlint/configuration_schema.json",
-    "plugins": ["react", "typescript"],
+    "plugins": ["react", "typescript", "jsx-a11y", "nextjs"],
     "env": {
         "browser": true,
         "es2022": true

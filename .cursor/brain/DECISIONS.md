@@ -1,5 +1,80 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] First-load JS budget: `size:check`, right after `build`, full phase only
+
+**Decision**: `npm run size:check` (`scripts/check-bundle-budget.mjs`, zero dependencies) fails when the
+brotli size of the shared first-load JS, or of the heaviest PUBLIC route's first-load JS, passes a limit in
+`scripts/bundle-budget.json`. It sits right after `build` in `verify:enterprise:inner`, so it runs in the
+full phase (phase 1, CI, `GATE_PHASE=full`) and is SKIPPED, printed, at phase 0 with the build it reads.
+Nothing was added to phase 0 and the push gate got no new stage at scaffold.
+
+**What is measured**, from the manifests the build leaves behind (Next 16 prints no "First Load JS" table):
+
+- shared first-load JS = the JS files in `.next/build-manifest.json` `rootMainFiles` (webpack runtime,
+  `next-vendor-*`, `main-app`; the css is not JS). `polyfillFiles` are nomodule-only and excluded.
+- a route's first-load JS = the shared JS plus that route's own client chunks, each file counted once.
+- size = `zlib.brotliCompressSync` at its default quality, in KB of 1024 bytes.
+- public routes are discovered from `.next/app-path-routes-manifest.json`, minus `excludeRoutes` in the
+  budget file (`/_not-found`, `/_global-error`, `/dev` and everything under it), so a route a fork adds is
+  inside the budget until someone excludes it on purpose. Today that is `/[locale]` and
+  `/[locale]/example-form`.
+- fail closed: a missing manifest, a chunk that is not on disk, no public route, an empty shared set or a
+  malformed budget file is a red run, never a pass over fewer files.
+
+**Premise corrected**: the first design read a route's chunks from `entryJSFiles` in
+`server/app/<route>/page_client-reference-manifest.js`. In a `next build --webpack` that field is not
+filled (this build: absent); Next's own route bundle stats code, which reads it, runs for Turbopack builds.
+The chunks are in `clientModules[*].chunks` of the same manifest (paths URL-encoded, `?dpl=` suffixed when a
+deployment id is set). Checked against the prerendered HTML: the decoded JS in `clientModules`, plus
+`rootMainFiles`, plus the one polyfill file, is exactly the `<script src>` set of
+`.next/server/app/en.html` (23 scripts = 22 + polyfill) and `en/example-form.html` (29 = 28 + polyfill). The script reads both fields, so a build that fills `entryJSFiles` is
+counted the same way.
+
+**Measured** 2026-10-04 on the build of master `ab50035` (`next build --webpack` with
+`NEXT_PUBLIC_APP_URL=https://template-next-seo.invalid`), brotli, 1 KB = 1024 bytes:
+
+| Quantity | Files | Bytes | KB | Limit (KB) | Headroom |
+| --- | --- | --- | --- | --- | --- |
+| shared first-load JS | 14 | 124,086 | 121.18 | 134 | +10.58% |
+| `/[locale]` first-load JS | 22 | 151,340 | 147.79 | (not the heaviest) | - |
+| `/[locale]/example-form` first-load JS (heaviest) | 28 | 188,852 | 184.43 | 203 | +10.07% |
+
+Each limit is the measurement + 10%, rounded up to a whole KB: 121.18 x 1.10 = 133.30 -> 134, and
+184.43 x 1.10 = 202.87 -> 203. The whole-KB rounding is what lifts the shared headroom above 10%; no limit
+carries more slack than that rounding. The CLI takes 0.85 s on this build.
+
+**Red-to-green**: a fixture one byte over either limit fails and one exactly on it passes; a route whose
+chunks are listed twice (and a chunk shared with `rootMainFiles`) is counted once. Mutation proofs: dropping
+either de-duplication fails 2 tests each; tightening the heaviest-route `>` to `>=` fails 3, loosening the
+shared check by one byte fails 2. Against the real build, a budget file lowered to 121 KB (shared) or 184 KB
+(heaviest route) exits 1 with the measurement and the limit named; the shipped file exits 0.
+
+**How to move a limit**: re-measure on a build (`npm run build`, then `npm run size:check`), put the new
+number and its build and date in this entry, and set the limit to the measurement + at most 10%, rounded up.
+A number raised to turn a red run green, with no new measurement here, is the failure this gate exists to
+catch. Dropping a limit after a real reduction is encouraged the same way.
+
+**Not covered**: `/dev/*`, `_not-found` and `_global-error` (not public in production), CSS, images and
+fonts, and lazily loaded chunks a route fetches after interaction (they are not first-load by definition).
+
+## [2026-10] Every GitHub Action is SHA-pinned; workflow tokens default to read-only
+
+**Every `uses:` in `.github/workflows/*.yml` is pinned to a full 40-hex commit SHA since 2026-10-04**,
+with the version it resolves to as a trailing comment (`actions/checkout@<sha> # v7.0.1`). The versions
+are the ones the workflows already used; nothing was upgraded. The reason is that GitHub's immutable
+releases lock only a release's own tag, and only when the publisher opts in, so a floating `@vN` tag
+stays movable: the publisher (or whoever takes over the account) can retarget it, and the next run of
+our workflow executes the new code with our token. Only a commit SHA cannot be moved. gitleaks was
+already pinned this way; the official `actions/*`, `github/codeql-action` and `googleapis/release-please-action`
+steps now match it. `.github/dependabot.yml` keeps the `github-actions` ecosystem, which updates both
+the SHA and its version comment, so the pins do not go stale.
+
+**Token permissions.** `release.yml` declares `permissions: contents: read` at the workflow level and
+gives the single job that writes (`release-please`) `contents`, `issues` and `pull-requests` write;
+`security.yml` declares `permissions: contents: read` at the top, with each job keeping its own scopes.
+No job's effective permissions changed; the point is that a job added later starts from read-only instead
+of inheriting write.
+
 ## [2026-10] delta audit fixes
 
 A second audit round reproduced three silent holes and closed each at the cheapest static or
@@ -421,7 +496,8 @@ rule exists for.
 
 ## ESLint + Oxlint (strict, template-1 parity)
 
-- **Oxlint:** CLI `oxlint` + `.oxlintrc.json` — fast first pass (react + typescript plugins, core JS rules). `npm run lint` runs **`lint:oxlint` then `eslint`**. Overrides for tests, e2e, scripts, logger/web-vitals (no-console off where intentional).
+- **Oxlint:** CLI `oxlint` + `.oxlintrc.json` — fast first pass (react, typescript, jsx-a11y and nextjs plugins, core JS rules). The last two are enabled on purpose: `eslint-plugin-oxlint` `flat/all` switches off ESLint's own `jsx-a11y/*` (36) and `@next/next/*` (21) rules as "covered by oxlint", so while `.oxlintrc.json` did not load those plugins no linter checked them at all. `npm run lint` runs **`lint:oxlint` then `eslint`**. Overrides for tests, e2e, scripts, logger/web-vitals (no-console off where intentional).
+- **Oxlint a11y blind spot:** `jsx-a11y/control-has-associated-label` does not see inside components, so an icon-only button whose only child is a lucide icon component is NOT caught; give such buttons an `aria-label` by convention.
 - **ESLint base:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`, then **`eslint-plugin-oxlint` `flat/all`** (disables ESLint rules already covered by oxlint so custom severities win).
 - **Imports:** **`eslint-plugin-import-x`** + `eslint-import-resolver-typescript` via `import-x/resolver-next` — `import-x/order`, `import-x/no-cycle`, recommended import-x rules.
 - **React:** **`eslint-plugin-react`** — flat recommended + `jsx-runtime`, plus `react/no-array-index-key`, `no-unstable-nested-components`, `jsx-no-useless-fragment`, `self-closing-comp`; `react/prop-types` off (TypeScript).
@@ -465,6 +541,7 @@ resolves the install conflict, and that the single runtime crash path is
 - **`next.config.ts` `headers()`:** applies static CSP (document-safe **`script-src 'self'`** in production via **`buildStaticContentSecurityPolicy`**), HSTS (prod), frame options, COOP/CORP, Reporting-Endpoints, Permissions-Policy, etc., on **`/:path*`**.
 - **`proxy.ts`:** for **`config.matcher`** paths only, sets per-request **nonce** CSP (**`strict-dynamic`** in production) on the outgoing response and forwards **`x-nonce`** on the request for handlers that need it.
 - **CSP violation reporting:** policy includes `report-to csp-endpoint`; **`Reporting-Endpoints`** points at **`/api/csp-report`**; POST handler logs payloads. **`X-XSS-Protection`** omitted (deprecated).
+- **Coverage side effect of the headers test:** `next.config.test.ts` imports `next.config.ts`, so that file now counts toward the vitest coverage totals (it is not in `coverage.exclude`). The thresholds still pass. Measured 2026-10-04 on the full coverage run (42 test files, 387 tests): lines 92.53, statements 92.64, functions 90.56, branches 83.5 percent against thresholds 85 / 85 / 75 / 70; `next.config.ts` alone is 76.47 lines, 50 functions, 57.14 branches, and the same run without it gives 93.63 / 93.73 / 92.16 / 85.56.
 
 ## Public app URL (SEO)
 
