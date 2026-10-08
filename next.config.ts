@@ -29,6 +29,9 @@ const distDir = process.env.NEXT_DIST_DIR ?? '.next';
 
 const nextConfig: NextConfig = {
     distDir,
+    // `next dev` otherwise writes its own managed block into AGENTS.md when it detects a coding agent.
+    // AGENTS.md is this repo's own law; the one pointer worth keeping from that block is written there by hand.
+    agentRules: false,
     headers: async () => {
         const isDev = process.env.NODE_ENV !== 'production';
         const staticCsp = buildStaticContentSecurityPolicy(isDev);

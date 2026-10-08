@@ -1,5 +1,72 @@
 # DECISIONS — template-next-seo
 
+## [2026-10] Dependency refresh (2026-10-07); `agentRules: false`; footer year out of render
+
+**Rule applied:** every package goes to its newest compatible, stable release; a version is held only for a
+measured incompatibility, with the reason in `AGENTS.md` § "Version holds" and, where Dependabot would bump
+it, an `ignore` entry. Every minor and patch moved (`next`, `@next/env`, `@next/bundle-analyzer` and
+`eslint-config-next` 16.4.0, `eslint` 10.12, `oxlint` and `eslint-plugin-oxlint` 1.87 in lockstep,
+`typescript-eslint` 8.71.1, `eslint-plugin-better-tailwindcss` 4.9.0, `@radix-ui/react-slot` 1.4.0,
+`next-intl` 4.14.9, `@types/node` 24.19.1 and the rest). No major was taken: the only majors on offer were
+the three holds below.
+
+**Cooldown bypass (operator call, 2026-10-07: skip the cooldown now, install everything current).** One-off.
+`.npmrc` keeps `min-release-age=3` for every future resolution. Each version below was less than three days
+old and was installed with `--min-release-age=0`; the transitives came from `npm update --min-release-age=0`.
+Publish dates are UTC (`npm view <pkg> time`); provenance is `npm view <pkg>@<version> dist.attestations`.
+
+- `next`, `@next/env`, `@next/bundle-analyzer`, `eslint-config-next` 16.4.0 (2026-10-06, 18:22 to 18:35),
+  with `@next/eslint-plugin-next` and the `@next/swc-*` binaries at 16.4.0: provenance yes.
+- `oxlint` 1.87.0 (2026-10-05 11:05) with its `@oxlint/binding-*` platform packages 1.87.0 (2026-10-05, 10:55 to
+  11:01), and `eslint-plugin-oxlint` 1.87.0 (2026-10-05 17:14): provenance yes.
+- `typescript-eslint` 8.71.1 and its `@typescript-eslint/*` packages (2026-10-05, 17:08 to 17:10): provenance yes.
+- `@radix-ui/react-slot` 1.4.0 (2026-10-05 23:09), `@vitejs/plugin-react` 6.1.2 (2026-10-05 10:08),
+  `postcss` 8.5.29 (2026-10-05 09:28): provenance yes.
+- `web-vitals` 6.2.3 (2026-10-05 10:03): provenance **no**.
+- `eslint-plugin-better-tailwindcss` 4.9.0 (2026-10-05 21:13): provenance **no**.
+- Transitives, provenance yes: `vite` 8.3.3 (2026-10-06), `rolldown` 1.2.13 and its bindings (2026-10-07,
+  14:10 to 14:20), `@babel/*` 8.0.7 and 7.29.10 (2026-10-07), `caniuse-lite` 1.0.30001815 (2026-10-07),
+  `electron-to-chromium` 1.5.450 (2026-10-07), and, all on 2026-10-05, `nanoid` 3.3.20, `@oxc-project/types`
+  0.153.0, `@napi-rs/wasm-runtime` 1.2.5, `@formatjs/icu-messageformat-parser` 3.5.21,
+  `conventional-commits-parser` 7.1.3, `conventional-changelog-conventionalcommits` 10.4.1 and
+  `@conventional-changelog/git-client` 3.2.0.
+- Transitives, provenance **no**: `acorn` 8.19.0 (2026-10-05 12:51), `@bramus/specificity` 2.4.3
+  (2026-10-05 19:38).
+
+After the bypass `npm outdated` lists only the recorded holds. A plain `npm ci` with the repo's `.npmrc`
+installs the resulting lockfile, because the lockfile pins the exact versions and `min-release-age` only
+affects resolution.
+
+**Holds re-read today, all still true:** TypeScript 7 (typescript-eslint 8.71.1 still peers `<6.1.0`),
+vitest 5 (probed twice on 2026-10-07, by the implementer and by an independent verifier: 5.0.3 with the
+still-newest Stryker runner 10.0.0, published 2026-08-14, killed 0 of 48 mutants and ran 0.00 tests per
+mutant; the shipping pair, vitest 4.1.11, on the refreshed tree: the same probe kills 37 of 48 plus 1 timeout, 79.17, 1.75 tests per mutant), `@types/node` 26 (`engines.node >=24`; 24.19.1 is the newest 24.x). The `eslint` peer caps
+behind the `overrides` entries also stand: the newest `eslint-plugin-react`, `-jsx-a11y` and `-import` still
+peer `eslint` at `^9`. The `braces` audit allowance stands too: 3.0.3 (2024) is still the newest release and
+the newest `micromatch` (4.0.8) still depends on it.
+
+**`agentRules: false` in `next.config.ts`.** In the installed Next (16.4.0) `next dev` writes a managed
+`BEGIN:nextjs-agent-rules` block into `AGENTS.md` whenever it detects a coding agent and the block is
+missing. The gate is `syncAgentRulesForDev(dir, initResult.agentRules !== false)` in
+`node_modules/next/dist/server/lib/start-server.js`; the option and its `@default true` are in
+`node_modules/next/dist/server/config-shared.d.ts` (`agentRules?: boolean`) and documented in
+`node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/agentRules.md`.
+`node_modules/next/dist/server/lib/generate-agent-files.js` is only the file that writes (or, with the
+option off, strips) the block; the dev log prints the option name. `AGENTS.md` is this repo's own law, so the
+file must not drift under a dev server. Measured in the worktree: on 16.3.8 with `agentRules: true`,
+`next dev` added 10 lines to `AGENTS.md`, and with `false` the file stayed byte-identical; re-run on 16.4.0
+with `false` (a coding agent detected, `GET /en` 200): `AGENTS.md` and `CLAUDE.md` byte-identical, no
+`Generated` line. The one useful line in that block, where the version-matched Next docs live, is now
+written by hand under § Stack in `AGENTS.md`. `next.config.test.ts` pins the option.
+
+**Oxlint 1.86 and later, `react/purity`.** The 1.86 bump made `oxlint --deny-warnings` red: the footer called
+`new Date().getFullYear()` during render. The year is now read once at module load (`CURRENT_YEAR` in
+`shared/ui/common/Footer/index.tsx`) rather than silencing the rule, because weakening a lint severity to get
+green is out of scope here. Consequence: on a long-lived server the year changes at the next restart or
+build, not at midnight on 1 January; prerendered pages carry the build-time year in their HTML already.
+
+---
+
 ## [2026-10] Doc pointers are backticked paths, never `@` imports
 
 `AGENTS.md` pointed at the brain files and `README.md` with bare `@path` references. Claude Code expands an
@@ -411,7 +478,7 @@ taught everyone to ignore it. So vitest and `@vitest/coverage-v8` stay `^4.1.11`
 compatible fixes made for vitest 5 stay (they hold on 4.1 too: `vi.stubGlobal` in `scripts/probe.test.mjs`,
 the glob-form `coverage.exclude`, `import.meta.dirname`), `.github/dependabot.yml` ignores `vitest >=5`
 and `@vitest/coverage-v8 >=5` with this reason, and the hold is listed under "Version holds" in
-`AGENTS.md`. **Lift trigger** (checked 2026-09-12: latest vitest-runner is 10.0.0 from 2026-08-14, hold stands; next check 2026-10-12): a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
+`AGENTS.md`. **Lift trigger** (checked 2026-10-07: latest vitest-runner is still 10.0.0 from 2026-08-14 and the one-file probe under vitest 5.0.3 killed 0 of 48, hold stands; next check 2026-11-07): a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
 `npm install -D vitest@5 @vitest/coverage-v8@5` and the one-file probe above — take vitest 5 when it
 kills mutants again, in the same commit that drops the Dependabot ignore. Coverage under 4.1.11 with the
 glob excludes: 52 files / 350 tests, 92.91 / 74.21 / 91.34 / 92.96 against 85 / 70 / 75 / 85.

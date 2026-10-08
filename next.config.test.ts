@@ -28,6 +28,12 @@ const EXPECTED_HEADERS: [string, string][] = [
     ['Cross-Origin-Resource-Policy', 'same-origin']
 ];
 
+describe('next.config agentRules', () => {
+    it('keeps `next dev` from writing its managed block into AGENTS.md', () => {
+        expect(nextConfig.agentRules).toBe(false);
+    });
+});
+
 describe('next.config headers()', () => {
     afterEach(() => {
         vi.unstubAllEnvs();
