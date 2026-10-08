@@ -24,6 +24,10 @@ Oxlint → ESLint 10 (flat) → Prettier
 
 Detail: `.cursor/brain/PROJECT_CONTEXT.md`
 
+Next.js ships docs for the installed version in `node_modules/next/dist/docs/`: read the relevant guide
+there before writing Next-specific code, and heed its deprecation notices. `agentRules: false` in
+`next.config.ts` stops `next dev` from writing its own copy of this pointer into this file.
+
 ## Invariants (do not violate)
 
 1. **Scope lock.** Change only what the task requires. No "while I'm here" edits,
@@ -251,19 +255,22 @@ Variables and `.cursor/brain/DECISIONS.md`.
   life. Three plugins still cap their `eslint` peer below 10, so each has an
   `overrides` entry mapping that peer to `$eslint`; do not remove them and do not
   reach for `--legacy-peer-deps`. **`settings.react.version` must stay a literal,
-  never `'detect'`** — see `.cursor/brain/DECISIONS.md`.
-- **TypeScript stays `~6.0.x`** — `typescript-eslint@8.65.0` peers
-  `typescript >=4.8.4 <6.1.0`. Not a preference: a bump to 7.x makes **both**
+  never `'detect'`** — see `.cursor/brain/DECISIONS.md`. Re-read 2026-10-07: the newest
+  `eslint-plugin-react` (7.37.5), `eslint-plugin-jsx-a11y` (6.10.2) and `eslint-plugin-import`
+  (2.32.0) still peer `eslint` at `^9`, and no major above the installed one is published (the `latest` tag is 10.12.0).
+- **TypeScript stays `~6.0.x`** — `typescript-eslint@8.71` peers
+  `typescript >=4.8.4 <6.1.0` (re-read 2026-10-07; the `typescript` `latest` tag is 7.0.2). Not a preference: a bump to 7.x makes **both**
   `npm install` and `npm ci` fail with ERESOLVE, so the tree stops resolving at
   all (`dependabot.yml` ignores `typescript >=6.1` for this reason). Lift the hold
   only together with a `typescript-eslint` major that widens the peer.
 - **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
   plugin pins `~<its version>`.
 - **vitest and `@vitest/coverage-v8` stay `^4.1.x` in this repo** — under vitest 5.0.0 the
-  Stryker vitest runner scores near-zero here (kills fine in the sibling Vite templates), so
+  Stryker vitest runner scores near-zero here (the sibling Vite templates hit the same and returned to 4.1 on 2026-10-02), so
   `dependabot.yml` ignores `vitest >=5`. Lift trigger and the measured numbers: `DECISIONS.md`
-  § "[2026-09]".
-- **`@types/node` stays 24.x** — types match `engines.node >= 24`.
+  § "[2026-09]". Re-probed 2026-10-07 with vitest 5.0.3 and the still-newest runner 10.0.0
+  (2026-08-14): 0 of 48 mutants killed, `Ran 0.00 tests per mutant`.
+- **`@types/node` stays 24.x** — types match `engines.node >= 24` (24.19.1 is the newest 24.x on 2026-10-07; 26.x is `latest`).
 - **`overrides` in `package.json` are security floors WITH major caps**
   (`">=fixed <next-major"`) — an uncapped one of our own already aged into its advisory's
   vulnerable range once and reddened the audit gate. Do not remove a floor to quiet npm, and

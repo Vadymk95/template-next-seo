@@ -22,21 +22,23 @@ updates:
       # ignore that outlives its reason is worse than none: it silently withholds
       # security patches. Check the reason before adding or keeping one.
       #
-      # typescript: `typescript-eslint@8` peers `>=4.8.4 <6.1.0`. A bump to 7.x
+      # typescript: `typescript-eslint@8` (8.71 on 2026-10-07) peers `>=4.8.4 <6.1.0`. A bump to 7.x
       # makes BOTH `npm install` and `npm ci` fail with ERESOLVE — the whole tree
       # stops resolving, not just linting. This guard exists because that bump was
       # merged once and reached master.
       #
       # eslint: the repo IS on 10.x. The floor is `>=11` so patches and minors
       # inside 10 still arrive; a major would again outrun the plugin peers that
-      # `overrides` currently map to `$eslint`.
+      # `overrides` currently map to `$eslint` (react, jsx-a11y and import still cap
+      # `eslint` at ^9 on 2026-10-07; no ESLint 11 is published yet).
       #
       # @types/node: aligned with `engines.node >=24` (Node 24 LTS), not the newest
-      # type defs. Re-evaluate when `engines.node` bumps.
+      # type defs (24.19.1 is the newest 24.x on 2026-10-07). Re-evaluate when `engines.node` bumps.
       #
       # vitest / @vitest/coverage-v8: under vitest 5.0.0 the Stryker vitest runner
       # (10.0.0, 2026-08-14) ran ZERO tests per mutant in this repo, so the weekly
-      # mutation gate could not fail; on 4.1.11 it scores 40.24. Lift together with a
+      # mutation gate could not fail; on 4.1.11 it scores 40.24. Re-probed 2026-10-07 with
+      # vitest 5.0.3 and the runner still at 10.0.0: 0 of 48 mutants killed. Lift together with a
       # runner release dated after 2026-09-03 that passes the one-file probe in
       # .cursor/brain/DECISIONS.md § "[2026-09] Test toolchain majors".
       ignore:

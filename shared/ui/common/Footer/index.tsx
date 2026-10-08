@@ -6,6 +6,9 @@ import type { ReactElement } from 'react';
 import { CHROME_MUTED_LINK } from '@/shared/ui/common/chromeLink';
 import { SmartLink } from '@/shared/ui/common/SmartLink';
 
+// Read once at module load: a Date call inside render is flagged as impure (oxlint react/purity).
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const Footer = (): ReactElement => {
     const t = useTranslations('common');
 
@@ -15,8 +18,7 @@ export const Footer = (): ReactElement => {
                 <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
                     <div className="flex flex-col items-center gap-2 md:items-start">
                         <p className="text-sm text-muted-foreground">
-                            © {new Date().getFullYear()} React Enterprise Foundation. All rights
-                            reserved.
+                            © {CURRENT_YEAR} React Enterprise Foundation. All rights reserved.
                         </p>
                     </div>
                     <nav className="flex min-w-0 flex-wrap items-center gap-x-6">
