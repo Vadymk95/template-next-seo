@@ -3,10 +3,10 @@
  * For middleware and tests. Server routes should prefer `@/shared/lib/rateLimit` for the server-only boundary.
  */
 
-export type RateLimitRecord = {
+export interface RateLimitRecord {
     count: number;
     resetTime: number;
-};
+}
 
 const DEFAULT_MAX_KEYS = 5_000;
 

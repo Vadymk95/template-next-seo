@@ -26,7 +26,7 @@ export const ErrorFallback = ({ error, onReset, onReload }: ErrorFallbackProps):
                 <h1 className="text-2xl font-bold">{tErrors('page.errorTitle')}</h1>
                 <p className="text-muted-foreground">{tErrors('page.errorDescription')}</p>
 
-                {isDev && error && (
+                {isDev && (
                     <details className="mt-4 text-left">
                         <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
                             {tErrors('page.errorDetails')}

@@ -587,9 +587,9 @@ trailing config object with no `files` key repeats the pin and wins for every li
 exit code: 1236 rules declared, 57 active, 9 plugins loaded on a real source file.
 
 **Note on strictness relative to the sibling templates.** 57 active rules here versus 237 in the Vite
-templates, because this repo builds on `eslint-config-next` rather than `typescript-eslint`
-`strictTypeChecked`. That is this template's existing design, not a regression — but it is why a rule
-present in a sibling is not necessarily present here.
+templates, because this repo then built on `eslint-config-next` rather than `typescript-eslint`
+`strictTypeChecked`. Since 2026-10 the TypeScript block extends `strictTypeChecked` +
+`stylisticTypeChecked` (see "ESLint + Oxlint" below), so those counts are the pre-change baseline.
 
 ## [2026-07] `no-magic-numbers`, with HTTP status codes ignored
 
@@ -686,7 +686,8 @@ rule exists for.
 - **ESLint base:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`, then **`eslint-plugin-oxlint` `flat/all`** (disables ESLint rules already covered by oxlint so custom severities win).
 - **Imports:** **`eslint-plugin-import-x`** + `eslint-import-resolver-typescript` via `import-x/resolver-next` — `import-x/order`, `import-x/no-cycle`, recommended import-x rules.
 - **React:** **`eslint-plugin-react`** — flat recommended + `jsx-runtime`, plus `react/no-array-index-key`, `no-unstable-nested-components`, `jsx-no-useless-fragment`, `self-closing-comp`; `react/prop-types` off (TypeScript).
-- **Type-aware strictness:** `parserOptions.projectService` + `@typescript-eslint/no-floating-promises`, `no-misused-promises` with **`checksVoidReturn.attributes: false`** (React event/async handlers), `no-import-type-side-effects`, `switch-exhaustiveness-check`.
+- **Type-aware strictness:** `parserOptions.projectService` + the `typescript-eslint` `strictTypeChecked` and `stylisticTypeChecked` presets, extended inside the TypeScript block so they sit AFTER the oxlint block (`flat/all` switches off every rule oxlint implements, including ones `.oxlintrc.json` never enables, `ban-ts-comment` among them). On top: `no-floating-promises`, `no-misused-promises` with **`checksVoidReturn.attributes: false`** (React event/async handlers), `no-import-type-side-effects`, `switch-exhaustiveness-check`, `ban-ts-comment` (`@ts-ignore` banned, `@ts-expect-error` only with a description). Carve-outs, each in `eslint.config.js` with its reason: `next.config.ts` (webpack `config` is `any` in Next's own type; `headers()` must be async), `proxy.ts` (frozen nonce pipeline, two rules), `app/**/route.ts` (`require-await`), and test files (`unbound-method`, `require-await`).
+- **Suppressions carry their reason:** `@eslint-community/eslint-plugin-eslint-comments` with `require-description` and `no-unlimited-disable` as errors, so a bare or blanket `eslint-disable` fails the gate. `no-unused-disable` is not enabled: ESLint's own unused-directive report is a warning and `--max-warnings 0` fails on it.
 - **Imports / style:** `no-restricted-imports` — no `FC`; parent-relative `../` banned in favor of `@/`.
 - **Prettier in ESLint:** **`eslint-plugin-prettier/recommended`** (last config block) so `prettier/prettier` runs as an ESLint rule.
 - **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.

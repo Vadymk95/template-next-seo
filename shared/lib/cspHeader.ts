@@ -6,7 +6,7 @@
 // This file is part of the next.config.ts import graph — Next transpiles that
 // graph standalone, before any bundler `@/` alias resolution exists, so every
 // import reachable from next.config.ts must stay relative.
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- next.config.ts loads this file before the `@/` alias exists
 import { CSP_REPORTING_ENDPOINT_NAME } from '../constants';
 
 export const CSP_NONCE_HEADER = 'x-nonce';

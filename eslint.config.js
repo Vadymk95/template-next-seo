@@ -1,3 +1,4 @@
+import eslintComments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import nextTypescript from 'eslint-config-next/typescript';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
@@ -63,8 +64,28 @@ export default defineConfig([
     ...nextCoreWebVitals,
     ...nextTypescript,
     oxlintPlugin.configs['flat/all'],
+    // ─── Suppressions must carry their reason ────────────────────────────
+    // A bare `// eslint-disable-next-line <rule>` passed the whole gate: nothing
+    // asked why. Every directive now needs a `-- reason`, and a blanket
+    // `eslint-disable` (no rule named) is refused. Unused directives are already
+    // reported by ESLint itself (`linterOptions.reportUnusedDisableDirectives`
+    // defaults to "warn", which `--max-warnings 0` turns into a failure), which is
+    // why the plugin's deprecated `no-unused-disable` rule is not enabled.
+    {
+        plugins: eslintComments.recommended.plugins,
+        rules: {
+            '@eslint-community/eslint-comments/require-description': 'error',
+            '@eslint-community/eslint-comments/no-unlimited-disable': 'error'
+        }
+    },
     {
         files: ['**/*.{ts,tsx}'],
+        // The type-checked presets bring the type-aware rules (await-thenable,
+        // no-unnecessary-type-assertion, no-unsafe-*, prefer-nullish-coalescing, ...).
+        // They sit AFTER the oxlint block on purpose: `flat/all` switches off every rule
+        // oxlint implements, including ones the oxlint run never enables
+        // (`ban-ts-comment` among them), so the presets must win back.
+        extends: [tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked],
         plugins: {
             'import-x': pluginImport,
             react: pluginReact
@@ -219,6 +240,17 @@ export default defineConfig([
                         attributes: false
                     }
                 }
+            ],
+            // `@ts-ignore` hides every error on the next line, including ones introduced later.
+            // `@ts-expect-error` fails when the error disappears, so it is allowed with a reason.
+            '@typescript-eslint/ban-ts-comment': [
+                'error',
+                {
+                    'ts-ignore': true,
+                    'ts-expect-error': 'allow-with-description',
+                    'ts-nocheck': true,
+                    'ts-check': false
+                }
             ]
         }
     },
@@ -276,7 +308,11 @@ export default defineConfig([
             'no-console': 'off',
             'no-restricted-syntax': 'off',
             // Fixture values are the point of a test; naming them adds indirection.
-            '@typescript-eslint/no-magic-numbers': 'off'
+            '@typescript-eslint/no-magic-numbers': 'off',
+            // `expect(logger.info).toHaveBeenCalled()` reads a method off its object by design,
+            // and a mock of an async API keeps the async signature with a synchronous body.
+            '@typescript-eslint/unbound-method': 'off',
+            '@typescript-eslint/require-await': 'off'
         }
     },
     // ─── Framework config files ──────────────────────────────────────────────
@@ -287,6 +323,41 @@ export default defineConfig([
         files: ['*.config.{ts,js,mjs}'],
         rules: {
             '@typescript-eslint/no-magic-numbers': 'off'
+        }
+    },
+    // ─── Type-aware carve-outs, each tied to a fixed contract ───────────────
+    // Next types the `webpack(config)` callback's `config` as `any`
+    // (`NextJsWebpackConfig` in next/dist/server/config-shared.d.ts), so every
+    // read of it is "unsafe"; `headers()` must return a Promise per `NextConfig`.
+    // `next.config.ts` is also the frozen CSP surface (AGENTS.md invariant 7, edits
+    // are ask-gated), which is why the rules are relaxed here instead of the file edited.
+    {
+        files: ['next.config.ts'],
+        rules: {
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
+            '@typescript-eslint/require-await': 'off'
+        }
+    },
+    // `proxy.ts` is the frozen nonce pipeline (AGENTS.md invariant 7, edits are
+    // ask-gated). `generateNonce` indexes a fixed-length `Uint8Array` it just
+    // allocated, so `bytes[i]!` cannot be undefined. Drop this entry when the file
+    // is next opened for a gated change and the loop becomes `for...of`.
+    {
+        files: ['proxy.ts'],
+        rules: {
+            '@typescript-eslint/no-non-null-assertion': 'off',
+            '@typescript-eslint/prefer-for-of': 'off'
+        }
+    },
+    // Route handlers are `async` by the Next contract (`Response | Promise<Response>`);
+    // the sample GET handlers hold no I/O yet, and a fork that adds some should not have
+    // to change the exported signature.
+    {
+        files: ['app/**/route.ts'],
+        rules: {
+            '@typescript-eslint/require-await': 'off'
         }
     },
     {

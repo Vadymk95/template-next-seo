@@ -1,10 +1,10 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-type SerializedError = {
+interface SerializedError {
     name: string;
     message: string;
     stack?: string;
-};
+}
 
 interface LogEntry {
     level: LogLevel;
@@ -22,13 +22,10 @@ const report = {
         _message: string,
         _data?: Record<string, unknown>
     ): void => {
-        void _level;
-        void _message;
-        void _data;
+        // Intentionally empty until a vendor SDK is wired (see the TODO above).
     },
     capture: (_error: Error, _context?: Record<string, unknown>): void => {
-        void _error;
-        void _context;
+        // Intentionally empty until a vendor SDK is wired (see the TODO above).
     }
 };
 
@@ -71,7 +68,7 @@ class Logger {
             if (error) {
                 console.error(prefix, message, context, error);
             } else {
-                console.log(prefix, message, context || '');
+                console.log(prefix, message, context ?? '');
             }
         }
     }

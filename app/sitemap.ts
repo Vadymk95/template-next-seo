@@ -3,11 +3,11 @@ import type { MetadataRoute } from 'next';
 import { routing } from '@/i18n/routing';
 import { getAppBaseUrl } from '@/shared/lib/env';
 
-type SitemapRoute = {
+interface SitemapRoute {
     path: string;
     changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'];
     priority: number;
-};
+}
 
 export const ROUTES: SitemapRoute[] = [
     { path: '', changeFrequency: 'weekly', priority: 1 },

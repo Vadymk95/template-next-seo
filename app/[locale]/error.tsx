@@ -33,7 +33,7 @@ const Error = ({
                 <h1 className="text-2xl font-bold">{tErrors('page.errorTitle')}</h1>
                 <p className="text-muted-foreground">{tErrors('page.errorDescription')}</p>
 
-                {process.env.NODE_ENV === 'development' && error && (
+                {process.env.NODE_ENV === 'development' && (
                     <details className="mt-4 text-left">
                         <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
                             {tErrors('page.errorDetails')}
@@ -50,7 +50,12 @@ const Error = ({
                     <Button onClick={reset} variant="default">
                         {tCommon('button.tryAgain')}
                     </Button>
-                    <Button onClick={() => window.location.reload()} variant="outline">
+                    <Button
+                        onClick={() => {
+                            window.location.reload();
+                        }}
+                        variant="outline"
+                    >
                         {tCommon('button.reloadPage')}
                     </Button>
                 </div>

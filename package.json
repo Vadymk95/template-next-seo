@@ -98,6 +98,7 @@
         "@axe-core/playwright": "^4.12.1",
         "@commitlint/cli": "^21.2.3",
         "@commitlint/config-conventional": "^21.2.0",
+        "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
         "@eslint/js": "^10.0.1",
         "@next/bundle-analyzer": "^16.4.0",
         "@next/env": "16.4.0",

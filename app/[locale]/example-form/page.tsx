@@ -10,9 +10,9 @@ import { ExampleFormPageClient } from './ExampleFormPageClient';
 // ISR: Revalidate every 30 minutes
 export const revalidate = 1800;
 
-type ExampleFormPageProps = {
+interface ExampleFormPageProps {
     params: Promise<{ locale: string }>;
-};
+}
 
 export const generateMetadata = async ({ params }: ExampleFormPageProps): Promise<Metadata> => {
     const { locale: rawLocale } = await params;
@@ -35,6 +35,7 @@ export const generateMetadata = async ({ params }: ExampleFormPageProps): Promis
 const ExampleFormPage = async ({ params }: ExampleFormPageProps): Promise<ReactElement> => {
     const { locale: rawLocale } = await params;
     const locale = requireLocale(rawLocale);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
     setRequestLocale(locale);
     return <ExampleFormPageClient />;
 };

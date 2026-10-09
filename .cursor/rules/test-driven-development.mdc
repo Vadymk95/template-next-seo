@@ -172,7 +172,9 @@ describe('userStore', () => {
 // Step 3: Implement (in userStore.ts)
 const useUserStoreBase = create<UserStoreState>((set) => ({
     // ... other state
-    reset: () => set({ isSubmitting: false, error: null })
+    reset: () => {
+        set({ isSubmitting: false, error: null });
+    }
 }));
 ```
 

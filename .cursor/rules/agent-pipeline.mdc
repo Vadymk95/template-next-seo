@@ -141,7 +141,7 @@ End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 
 - Skipping Step 1
 - Batches > 2 files without verification
-- Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause)
+- Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause; the only exceptions are the reasoned disables the template already carries for documented invariants, e.g. `setRequestLocale` in the `routing.mdc` recipe)
 - Finishing without Brain sync declaration
 - `next build` / webpack behavior changes without updating **DECISIONS** / **SKELETONS**
 - **Touching the frozen security surface** — CSP directives in `next.config.ts`, the nonce pipeline / middleware order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers — **unless the task is explicitly security work** with prior approval. Never add a branch *before* the rate limiter in `proxy.ts`; never let static (`next.config.ts`) and nonce (`proxy.ts`) CSP drift. Such edits are a **security review**, not a routine change (`AGENTS.md` invariant 7 + SKELETONS "`proxy` composition").

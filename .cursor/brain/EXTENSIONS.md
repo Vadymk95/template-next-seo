@@ -218,7 +218,7 @@ export const createSession = async (userId: string) => {
     const token = await new SignJWT({ userId })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime(`${SESSION_DAYS}d`)
+        .setExpirationTime(`${String(SESSION_DAYS)}d`)
         .sign(key());
 
     (await cookies()).set(SESSION_COOKIE, token, {
@@ -514,6 +514,7 @@ Also extend `app/sitemap.test.ts` so that, with two locales, every entry's `alte
 // app/[locale]/layout.tsx becomes the root layout: it renders html and body
 const LocaleLayout = async ({ children, params }: LocaleLayoutProps): Promise<ReactElement> => {
     const locale = requireLocale((await params).locale);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
     setRequestLocale(locale);
     return (
         <html lang={locale} /* dir={...} for right-to-left locales */ className={...}>

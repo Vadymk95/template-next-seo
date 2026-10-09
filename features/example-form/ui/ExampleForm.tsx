@@ -114,7 +114,13 @@ export const ExampleForm: FunctionComponent = () => {
                     )}
                     {isSubmitting ? tCommon('form.submitting') : tCommon('button.submit')}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => reset()}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                        reset();
+                    }}
+                >
                     {tCommon('button.reset')}
                 </Button>
             </div>

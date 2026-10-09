@@ -16,10 +16,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         body = { parseError: true };
     }
     logger.info('[vitals]', {
-        metric:
-            typeof body === 'object' && body !== null
-                ? (body as Record<string, unknown>)
-                : { value: body }
+        metric: typeof body === 'object' && body !== null ? body : { value: body }
     });
     return new NextResponse(null, { status: 204 });
 }

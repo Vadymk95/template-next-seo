@@ -7,9 +7,9 @@ alwaysApply: false
 ## TypeScript Typing
 
 - **Always type everything** - variables, functions, props, hooks
-- **NEVER use `any` in new / touched code** — `@typescript-eslint/no-explicit-any` is an ESLint **error** outside tests (`eslint.config.js`), so `any` fails the lint gate. Do not reach for `as any` / `// eslint-disable` to get past it; fix the type.
+- **NEVER use `any` in new / touched code** — `@typescript-eslint/no-explicit-any` is an ESLint **error** outside tests (`eslint.config.js`), so `any` fails the lint gate. Do not reach for `as any` / `// eslint-disable` to get past it; fix the type. The only `eslint-disable` lines are the reasoned ones the template already carries for documented invariants (each needs a `-- reason`, `eslint-comments/require-description`), such as `setRequestLocale` in the `routing.mdc` recipe.
 - **Use `unknown`** if type is truly unknown, then narrow via type guards
-- **Use `type`** for type aliases, `interface` for extensible structures
+- **Use `interface`** for object shapes (`type X = { ... }` fails `@typescript-eslint/consistent-type-definitions`, an ESLint **error**), `type` for unions, intersections and aliases of other types
 - **Callbacks in interfaces/types use property style** — `onSelect: (id: string) => void`, never method style `onSelect(id: string): void` (`@typescript-eslint/method-signature-style: property` is an ESLint **error**, `eslint.config.js`); property style gets strict contravariant parameter checks
 
 ## Type Organization

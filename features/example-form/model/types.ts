@@ -9,10 +9,10 @@ import type { exampleFormSchema } from './schema';
 
 export type ExampleFormData = z.infer<typeof exampleFormSchema>;
 
-export type ExampleFormResult = {
+export interface ExampleFormResult {
     success: boolean;
     message?: string;
     error?: string;
     data?: ExampleFormData;
-    errors?: Array<{ path: string[]; message: string }>;
-};
+    errors?: { path: string[]; message: string }[];
+}

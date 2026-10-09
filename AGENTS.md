@@ -222,6 +222,10 @@ that lives only in a conversation is not a plan.
 **Zero-warnings gate** — `eslint --max-warnings 0`, `oxlint --deny-warnings`: a warning is a
 failure, not a note. `verify:enterprise` is authoritative; if a rule is wrong for a real reason,
 raise it with the caller first — never downgrade, silence, or `eslint-disable` it.
+Suppressions are guarded too: `@eslint-community/eslint-comments` (`require-description`,
+`no-unlimited-disable`) refuses a bare or blanket `eslint-disable`, `@typescript-eslint/ban-ts-comment`
+refuses `@ts-ignore` and an undescribed `@ts-expect-error`, and the TypeScript block extends
+`strictTypeChecked` + `stylisticTypeChecked` so the type-aware rules are on.
 
 **Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
 scripts as a supply-chain guard, so husky hooks don't install themselves; the
