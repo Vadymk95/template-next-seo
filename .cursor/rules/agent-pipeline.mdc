@@ -5,81 +5,42 @@ alwaysApply: true
 priority: 100
 ---
 
-# Agent Pipeline — Principal Autonomy Engine
+# Agent Pipeline
 
-> Defines the **process**. Quality standards live in domain rules (`workflow.mdc`, `fsd-architecture.mdc`, etc.). Pipeline enforces them — never bypass it.
+> Defines the **process**. Quality standards live in `AGENTS.md` and the domain rules; the pipeline enforces them, never bypass it.
 
 ---
 
 ## Step 1: Deep Discovery (mandatory)
 
-### Step 1 Fast-Track
+**Fast-track:** a task that touches only `*.css`, `*.test.ts(x)`, `*.spec.ts`, `messages/*.json` or `*.md` skips the Brain reads. State `"Step 1 skipped — styling/i18n/test/docs task."` and still emit the Rule Receipt (item 4). When in doubt, run the full Step 1.
 
-If the task targets **only** files matching `*.styled.ts`, `*.styled.tsx`, `*.scss`, `*.css`, `*.i18n.*`, `*.spec.ts`, `*.test.ts`, or `*.md` — skip Brain reads and proceed directly to Step 3. State: `"Step 1 skipped — styling/i18n/test/docs task."` Still emit the **Rule Receipt** (step 7) for the conditional rules the task area maps to. When in doubt → run full Step 1.
+1. **Brain scan:** `.cursor/brain/MAP.md` (routes, wiring), then `.cursor/brain/SKELETONS.md` (custom webpack, RSC boundary, i18n, SEO, the frozen security surface, protected template scaffolding).
+2. **Context:** find existing patterns in `app/`, `features/`, `entities/`, `shared/`.
+3. **Scope declaration:** in-scope / out-of-scope, and the SKELETONS zones touched (or "none"). Do not code before this.
+4. **Rule routing and receipt:** load the matching conditional rules per `global.mdc` § Conditional rule routing, then list the ones actually loaded (`Rules loaded: react-patterns, performance, routing`), or state `"Rule Receipt: none — always-on rules only."`
 
----
-
-Before any reasoning about implementation:
-
-1. **Brain Scan**: Read `.cursor/brain/MAP.md` (routes, data flows, wiring).
-2. **Risk Detection**: Read `.cursor/brain/SKELETONS.md` — custom webpack, RSC boundary, i18n, SEO, **the frozen security surface** (`proxy.ts` middleware composition + nonce CSP, `next.config.ts` CSP / COOP / CORP / rate-limit matcher) and **protected Template scaffolding** (`// Template scaffolding`-marked files/deps). The last two are **do-not-touch by default** (see Anti-patterns + `global.mdc`).
-3. **Context Gathering**: Find existing patterns in `app/`, `features/`, `entities/`, `shared/`.
-4. **Scope Declaration**: Clear **In-scope / Out-of-scope** list.
-5. **Explicit declaration**: State scope + SKELETONS zones touched (or "none"). Do not code before this.
-6. **Rule Routing**: Load the matching conditional rules using **`global.mdc` §0.1** before planning edits.
-7. **Rule Receipt**: Produce a list of the conditional rules actually loaded (e.g. `Rules loaded: react-patterns, performance, routing`). If none apply, state `"Rule Receipt: none — always-on rules only."`
-
-> **Gate**: If task touches a SKELETONS zone — flag risk and propose mitigation before Step 2.
+> **Gate**: a task that touches a SKELETONS zone flags the risk and proposes mitigation before Step 2.
 
 ---
 
 ## Step 2: Architectural Simulation
 
-### Inference-Time Scaling
+- Think adversarially: what breaks SEO, caching or RSC boundaries? Trace each non-trivial function once on the happy path and once on an edge case; a trace that fails revises the plan before coding.
+- Direction `app` → `features` → `entities` → `shared`, `@/*` imports only. Server Components by default, `'use client'` only where hooks or browser APIs need it, no client stores in RSC files. Zustand for client-global state, TanStack Query for server data, no duplicated sources of truth. No magic strings, no implicit API shapes, no drive-by refactors.
 
-- Use `sequential-thinking` (if available in your environment) with `totalThoughts >= 3` for tasks > 3 steps.
-- Include **adversarial analysis**: what breaks SEO, caching, or RSC boundaries?
-
-### Architectural Critique
-
-1. **FSD / imports**: Respect `app` → `features` → `entities` → `shared` direction; use `@/*` only.
-2. **Next.js boundary**: Server Components by default; add `'use client'` only where hooks or browser APIs are required. No client stores in RSC files.
-3. **State**: Zustand for client-global UI/domain; TanStack Query for server/async data; do not duplicate sources of truth.
-4. **Tech debt**: Avoid magic strings and implicit API shapes.
-5. **Ghost Principle**: Every change must be necessary; no drive-by refactors.
-
-### Solver-Verifier (mental test cases)
-
-- 1–2 traces per non-trivial function: happy path + edge case.
-- If a trace fails — revise the plan before coding.
-
-> **Gate (by risk, not LOC)**: wait for approval when the change is on the risk list — `workflow.mdc` § Approval & Brain (danger zones, the frozen security surface, contract changes, anything hard to reverse). **Trivial leaf edits** (self-contained, no danger-zone / contract surface) — proceed with a brief notice.
+> **Gate (by risk, not LOC)**: wait for approval when the change is on the risk list — `workflow.mdc` § Approval & Brain. **Trivial leaf edits** (self-contained, no danger-zone / contract surface) proceed with a brief notice.
 
 ---
 
 ## Step 3: TDD-First Execution
 
-### Business logic (`entities`, `shared/lib`, hooks)
-
-1. State requirements → **Red** (failing test) → **Green** → **Refactor**.
-
-### UI
-
-- Implement with existing patterns → verify with Testing Library where valuable.
+- **Business logic** (`entities`, `shared/lib`, hooks): Red (failing test) → Green → Refactor, per `test-driven-development.mdc`. **UI:** existing patterns, verified with Testing Library where valuable.
 
 ### Iteration
 
-- **1–2 files** per batch (a batch is what sits between two `verify:iter` runs, INSIDE one PLAN slice — the slice is the 2-7 × <400-line unit of `AGENTS.md` › Before code); verify between batches.
-- Surgical edits; match local style (4 spaces in this repo).
-
-### Per-file checklist
-
-- [ ] `@/*` imports, no stray `../../` (exception: files reachable from `next.config.ts` must stay RELATIVE — see `fsd-architecture.mdc` carve-out)
-- [ ] No hardcoded user strings — i18n
-- [ ] `logger.error` with context per `resilience.mdc` — not bare `console.error(e)`
-- [ ] No stray `console.log`
-- [ ] Hook vs utility split is explicit: runtime orchestration in hooks, pure computation in utilities.
-- [ ] If a hook contains pure computation, extract the pure part to a utility before finalizing.
+- **1–2 files** per batch (a batch is what sits between two `verify:iter` runs, INSIDE one PLAN slice — the slice is the 2-7 × <400-line unit of `AGENTS.md` › Before code); verify between batches. Surgical edits; match local style (4 spaces in this repo).
+- Per file: `@/*` imports (files reachable from `next.config.ts` stay RELATIVE, see the `fsd-architecture.mdc` carve-out); no hardcoded user strings (i18n); `logger.error` with context per `resilience.mdc`, never bare `console.error(e)`; no stray `console.log`; the hook / utility split of `workflow.mdc`.
 
 ---
 
@@ -97,35 +58,26 @@ npm run e2e:one -- e2e/<file>.spec.ts    # only the spec the change affects — 
 npm run verify:measure                   # need to LOOK at a built result? legal at any time
 ```
 
-Everything else about the gate — the push and its phases, CI, what is forbidden by hand, the
-superset rule, which scripts are drill-downs rather than moments — is `AGENTS.md` § Commands (exact)
-› _The tier law_, and is not repeated here.
+Everything else about the gate (the push and its phases, CI, what is forbidden by hand, which
+scripts are drill-downs rather than moments) is `AGENTS.md` § Commands (exact) › _The tier law_.
 
 ### 4.2 On failure
 
 Root-cause first; then fix; re-run the full loop.
 
-### 4.3 Manual pass
+### 4.3 Manual pass and self-review
 
-- RSC vs client boundaries for touched files
-- SEO routes (`sitemap`, `robots`, metadata) if URLs or env changed
-- Logging/resilience: see **`resilience.mdc`** (`logger`, no silent `catch`)
-- Verify no pure business computation remains inside hooks when it is extractable to utility functions.
-
-### 4.4 Diff self-review
-
-Plan alignment, ghost principle, regression on callers.
+RSC vs client boundaries for touched files; SEO routes (`sitemap`, `robots`, metadata) if URLs or env changed; logging per `resilience.mdc`. Then the diff: plan alignment, ghost principle, regression on callers.
 
 ---
 
 ## Step 5: Brain Auto-Sync
 
-| File            | When to update                       |
-| --------------- | ------------------------------------ |
-| `MAP.md`        | Routes, actions, stores, major flows |
-| `DECISIONS.md`  | New pattern or intentional trade-off |
-| `SKELETONS.md`  | New risk or mitigated zone           |
-| `DICTIONARY.md` | New domain term / acronym            |
+| File           | When to update                       |
+| -------------- | ------------------------------------ |
+| `MAP.md`       | Routes, actions, stores, major flows |
+| `DECISIONS.md` | New pattern or intentional trade-off |
+| `SKELETONS.md` | New risk or mitigated zone           |
 
 If nothing applies: **"Brain sync: none needed."**
 
@@ -139,13 +91,11 @@ End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 
 ## Anti-patterns (FORBIDDEN)
 
-- Skipping Step 1
+- Skipping Step 1, or finishing without the Brain sync declaration
 - Batches > 2 files without verification
 - Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause; the only exceptions are the reasoned disables the template already carries for documented invariants, e.g. `setRequestLocale` in the `routing.mdc` recipe)
-- Finishing without Brain sync declaration
 - `next build` / webpack behavior changes without updating **DECISIONS** / **SKELETONS**
-- **Touching the frozen security surface** — CSP directives in `next.config.ts`, the nonce pipeline / middleware order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers — **unless the task is explicitly security work** with prior approval. Never add a branch *before* the rate limiter in `proxy.ts`; never let static (`next.config.ts`) and nonce (`proxy.ts`) CSP drift. Such edits are a **security review**, not a routine change (`AGENTS.md` invariant 7 + SKELETONS "`proxy` composition").
-- **Stripping protected Template scaffolding** as "unused" — `lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, or anything marked `// Template scaffolding`. These are load-bearing examples; remove them ONLY after the caller explicitly confirms "this is now my MVP, not the template" (`AGENTS.md` invariant 8 + SKELETONS "Template scaffolding").
+- **Touching the frozen security surface or stripping protected Template scaffolding** without the caller's explicit approval: `AGENTS.md` invariants 7 and 8 and § Danger zones are the rule, SKELETONS "`proxy` composition" and "Template scaffolding" the detail. A security edit is a **security review**, not a routine change.
 
 ### 4.1a Verification Integrity
 

@@ -24,7 +24,7 @@ one place, everything else points. This file holds the mechanics and the phase t
 
 Both Playwright configs cap failures (`maxFailures`) on the gate run and in CI, and each writes
 `.last-run.json` to its own `outputDir` — see `AGENTS.md` § the tier law and `DECISIONS.md`
-[2026-10]. The re-run after a fix, production-mode suite (`npm run build` first in both cases):
+§ "Playwright `maxFailures: 10`". The re-run after a fix, production-mode suite (`npm run build` first in both cases):
 
 - **The red stopped at the cap**: `PLAYWRIGHT_PROD_SERVER=1 npx playwright test <failed spec files from the red output>`
 - **The red finished under the cap**: `PLAYWRIGHT_PROD_SERVER=1 npx playwright test --last-failed`
@@ -52,7 +52,7 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 | --- | --- | --- |
 | audit, hooks-check, format, tsc, lint, coverage | yes — every push, ~10s | day one |
 | production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
-| first-load JS budget (`size:check`, right after the build) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "[2026-10] First-load JS budget" |
+| first-load JS budget (`size:check`, right after the build) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "First-load JS budget" |
 | prod-mode e2e | no | same flip — a prod boundary now exists |
 | Turbopack smoke (`smoke:dev`) | CI-only (`dev-smoke` job); never inside `verify:ci` | unchanged by phases |
 | coverage thresholds | already on (suite ships with real tests) | — |
@@ -66,7 +66,7 @@ the 17 rows = 33.7 s, plus ~20 %, rounded to 5 s); `verify:iter` 1.8-2.4 s on a 
 on a mixed change that ran the full suite; `verify:measure` 12.0 s (18.7 s on a failing run); the mutation run
 2m28s (`mutation.yml`).
 
-The superset rule and the push/CI split: `AGENTS.md` § the tier law; why: `DECISIONS.md` § "[2026-07] The
+The superset rule and the push/CI split: `AGENTS.md` § the tier law; why: `DECISIONS.md` § "The
 gate ladder".
 
 ## The tracer — how it works (the RULES it enforces are the tier law)
@@ -90,8 +90,8 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 ## Minimal check by task type
 
 - **Docs only** — `npm run format:check`
-- **Docs, rules, commands, brain, tier data** (`*.md`, `*.mdc`, `scripts/gate-tiers.json`) — `npm run docs:check` (the pre-commit hook runs it when such files are staged; `--weekly` adds past revisit dates; it also refuses a focused test, an unconditional skip without `quarantine until YYYY-MM-DD` + reason, and an agent-memory import: an `@` pointer in `CLAUDE.md` or `AGENTS.md` that names a file, which Claude Code would load into every session; write it as a backticked path instead)
-- **Proposing a new browser spec** — the suite is counted in invariants, not screens (`AGENTS.md` § the gate); `npm run docs:check` reports the suite against the ceiling in `scripts/gate-tiers.json` § suites
+- **Docs, rules, commands, brain, tier data** (`*.md`, `*.mdc`, `scripts/gate-tiers.json`) — `npm run docs:check` (the pre-commit hook runs it when such files are staged; `--weekly`, the scheduled Docs workflow's flag, runs the same checks so a quarantine that expires while nobody pushes still turns it red; it also refuses a focused test, an unconditional skip without `quarantine until YYYY-MM-DD` + reason, and an agent-memory import: an `@` pointer in `CLAUDE.md` or `AGENTS.md` that names a file, which Claude Code would load into every session; write it as a backticked path instead)
+- **Proposing a new browser spec** — the suite is counted in invariants, not screens (`AGENTS.md` § The tier law); `npm run docs:check` reports the suite against the ceiling in `scripts/gate-tiers.json` § suites
 - **TS/TSX / tests** — `npm run verify:iter`
 - **i18n copy only** (VALUE edits in `messages/<locale>/*.json`, no key changes) — `npm run format:check`.
   A key add/rename is a TS/TSX-class change: the typed messages make `verify:iter` catch it.
@@ -110,8 +110,8 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 ## Content variance
 
-The rule: `AGENTS.md` § Architecture › Content variance. Why and what it found: `DECISIONS.md` § Content
-variance is measured in a browser. Which spec measures what, and where the shared predicates and the one
+The rule: `AGENTS.md` § Architecture and contracts › Content and rendering. Why and what it found: `DECISIONS.md` § "Content
+variance is measured in a browser". Which spec measures what, and where the shared predicates and the one
 in-page measurement live: `MAP.md` § Layout invariants and content variance.
 
 ---
@@ -124,7 +124,7 @@ violations, with `target-size` switched on (it is off by default in axe-core). I
 `e2e/layout-geometry.spec.ts` (once, at the first width), after each spec's own readiness assertion, so it runs wherever those specs run (the push gate and CI) and adds no `test()` of its own.
 To check one change: `npm run e2e:one -- e2e/smoke.spec.ts`. A new public route gets the same one-line call in
 the spec that loads it, never a new test; moderate and minor findings are not failures, and a finding is fixed in
-the component rather than allow-listed. Why this shape: `DECISIONS.md` § Runtime axe scan.
+the component rather than allow-listed. Why this shape: `DECISIONS.md` § "Runtime axe scan inside the existing page specs".
 
 ---
 

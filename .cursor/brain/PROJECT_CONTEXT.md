@@ -30,35 +30,11 @@ Next.js App Router template focused on **SEO** (sitemap, robots, `hreflang`), **
 | `entities/` | Optional domain slices (directory is created on first domain extraction) |
 | `shared/`   | UI kit, `lib/`, constants, types                                         |
 
-Imports use the `@/*` path alias (repo root).
+Imports use the `@/*` path alias (repo root). The file-by-file map is `MAP.md`.
 
-## Build & dev
+## Build, gate and CI
 
-- **Production build**: `npm run build` → `next build --webpack` (custom `webpack` splits require webpack; see `DECISIONS.md`).
-- **Optional**: `npm run build:turbo` for Turbopack-only experiments (no custom webpack chunks).
-- **Dev**: `npm run dev` (Turbopack); `npm run dev:webpack` if webpack parity is needed.
-
-## Local gate
-
-- **The gate, its moments and its scripts** — `AGENTS.md` § Commands (exact) › _The tier law_ is
-  the only definition (which script belongs to which moment, the push phases, what is forbidden by
-  hand). Stage timings and what was deliberately not added: `.cursor/brain/VERIFICATION.md`. The
-  full script list: `package.json`. Nothing about the gate is repeated in this file.
-- **`npm run verify:full`** — `verify:ci && smoke:dev`, the only chain that also predicts the `dev-smoke` job. Like every full chain it is never run by hand (the tier law); a change to routing, i18n, `proxy.ts` or `next.config.ts` is SAID in the hand-over, and CI's `dev-smoke` job covers it.
-- **`npm run fix`** — the one remedy: `oxlint --fix` → `eslint --fix` → `prettier --write`, repo-wide.
-- **`.env.local` is a bootstrap step, not optional**: `verify` builds, and the production build requires `NEXT_PUBLIC_APP_URL`. `cp .env.example .env.local` once. `scripts/check-build-env.mjs` runs before the build and reports the fix in one line instead of letting a Zod error surface from inside page-data collection; it reads `.env*` via `@next/env` so its view of the env matches the build's.
-- Playwright browsers install on demand via `scripts/ensure-playwright.mjs`, which reads the exact build paths out of `playwright install --dry-run`.
-
-## CI
-
-Three jobs, in parallel.
-
-**`validate`** — Node 24.x, `npm ci --ignore-scripts`, Next and Playwright caches, then a single **`npm run verify:ci`** step. One step on purpose: the script is the gate, and a check added to the workflow instead of the script is what made the local gate stop predicting CI.
-
-**`dev-smoke`** — `npm run smoke:dev` against a cold Turbopack dev server. It exists because `dev` runs Turbopack while `build` runs webpack with a custom `splitChunks` hook, so `validate` only ever exercises the webpack output. It is a separate job rather than a gate step because a cold Turbopack boot costs 10-30s per run.
-
-**`cross-browser`** — `CROSS_BROWSER=1`: the geometry specs on Firefox and WebKit (`test:e2e:prod` after a build, then `smoke:dev`), after `scripts/check-cross-browser-selection.mjs` has proved every engine collected tests. Why it is CI-only: `DECISIONS.md` § Cross-engine coverage.
-
-**`security.yml`** (separate workflow) — gitleaks over full history, CodeQL `security-extended` and a zizmor audit of `.github/workflows` (a required check; fails at medium severity or above; `.github/zizmor.yml` holds the `artipacked` severity remap and the one deliberate ignore, and `uvx zizmor@1.30.1 .github/workflows` reproduces the verdict locally), on push, PR and a weekly cron. CodeQL needs GitHub code scanning, which is free on public repos and paid on private ones; the workflow header spells out what a private fork must do. There is no exclusion file: the one this repo used to carry was copied from a Vite sibling and named `public/mockServiceWorker.js`, `vite.config.ts` and `vite-plugins/`, none of which exist here. Add one only when an alert has a real reason to be ignored, and write that reason in it.
-
-Root **`.npmrc`** sets `ignore-scripts=true`, `engine-strict=true`, `min-release-age=3`.
+- **Build:** `npm run build` is `next build --webpack` (the custom `splitChunks` need webpack); `dev` runs Turbopack, `dev:webpack` is the parity run. Why: `DECISIONS.md` § "Build and styling basics".
+- **Gate:** defined once, in `AGENTS.md` § Commands (exact) › _The tier law_; stage timings and what was deliberately not added are in `VERIFICATION.md`. `.env.local` is a bootstrap step (`cp .env.example .env.local`), see `README.md` § Environment Variables.
+- **CI (`ci.yml`)** runs in parallel: `validate` (one `npm run verify:ci` step: the script is the gate, so a check added to the workflow instead of the script is what stops the local gate predicting CI), `dev-smoke` (`npm run smoke:dev` against a cold Turbopack server, because `build` is webpack and `validate` never exercises Turbopack output) and `cross-browser` (`CROSS_BROWSER=1`, Firefox and WebKit geometry specs; `DECISIONS.md` § "Cross-engine coverage").
+- **`security.yml`** (separate workflow): gitleaks, CodeQL `security-extended` and a zizmor audit of the workflows, on push, PR and a weekly cron. CodeQL needs GitHub code scanning (free on public repos, paid on private); the workflow header says what a private fork must do. There is no CodeQL exclusion file; add one only when an alert has a real reason to be ignored, and write that reason in it.

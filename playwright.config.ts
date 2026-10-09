@@ -38,7 +38,7 @@ export default defineConfig({
     ...(isCI ? { workers: 1 } : {}),
     // A red run must not cost a green run's wall clock: without a cap, every failure waits out its
     // own timeout, and CI's retries pay for each failure three times over. 10 is the measured
-    // value — see DECISIONS.md [2026-10] for the numbers. The desk run against `next dev` (neither
+    // value — see DECISIONS.md "Playwright `maxFailures: 10`" for the numbers. The desk run against `next dev` (neither
     // flag set) stays uncapped — it is not what a push or CI pays for. Spread, not
     // `maxFailures: undefined`: `exactOptionalPropertyTypes` rejects an explicit `undefined` on an
     // optional property.

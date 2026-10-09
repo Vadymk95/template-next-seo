@@ -32,7 +32,7 @@
 
 ## Shared
 
-- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "Boundary validation"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; the former i18n folder under `shared/lib/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
+- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "External data is parsed at the boundary with Zod"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; the former i18n folder under `shared/lib/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
 - **`shared/ui/`**: Button, Input, layout chrome, ErrorBoundary, `WithSuspense`.
 - **`shared/constants/`**: cross-cutting definitions.
 
@@ -40,6 +40,7 @@
 
 - **`features/example-form/`**: UI + model (Zod schema, types); consumed by `app/[locale]/example-form`.
 - **`entities/`**: FSD slot for domain slices; directory is intentionally absent in baseline and is created when first real domain entity appears.
+- **Absent in the baseline on purpose:** `hooks/` (keep slice-local hooks under `features/*` / `entities/*`, or create it with the first shared hook) and any `loading.tsx` (add one per segment when a route gains slow data fetching).
 
 ## Data flow (high level)
 

@@ -5,88 +5,32 @@ alwaysApply: true
 
 ## Workflow & Planning
 
-- **Always plan before implementing**: Before writing code, create a plan of changes
-- **Confirm plan when the repo gate requires it**: Present the plan and wait for user confirmation before proceeding when the task crosses the repo's approval threshold
-- **The plan's shape**: `.cursor/<feature-slug>/PLAN.md`, copied from `.cursor/templates/PLAN.md` (law: `AGENTS.md` › Before code)
-- **Only after required confirmation**: Proceed with implementation once the required repo approval has been given
-- **Exception**: For trivial leaf edits (self-contained, no danger-zone / contract surface), planning can be skipped, but still inform user about the change
+- **Plan before implementing**: write the plan of changes first. The plan's shape is `.cursor/<feature-slug>/PLAN.md`, copied from `.cursor/templates/PLAN.md` (law: `AGENTS.md` › Before code).
+- **Confirm the plan when the repo gate requires it** (the threshold below), and implement only after that approval.
+- **Exception**: trivial leaf edits (self-contained, no danger-zone / contract surface) skip planning, but tell the user about the change.
 
 ## Approval & Brain
 
-- **Threshold (by risk, not LOC)**: Changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits** — brief notification is enough (Step 2 gate).
-- **Above the chat gate**: for a task bigger than a one-sentence diff the approval is the non-author PR review of `SPEC.md`/`PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate for tasks below that size.
-- **Brain**: After meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Step 5).
+- **Threshold (by risk, not LOC)**: changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` `setRequestLocale`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits**: a brief notification is enough (Step 2 gate).
+- **Above the chat gate**: for a task bigger than a one-sentence diff the approval is the non-author PR review of `SPEC.md` / `PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate for tasks below that size.
+- **Brain**: after meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Step 5).
 
 ## Implementation Workflow
 
-The steps: `agent-pipeline.mdc` (Discover → Simulate → Execute → Verify → Brain Sync → Confidence); the
-Approve step sits between Simulate and Execute and is § Approval & Brain above. Test-first inside Execute:
-`test-driven-development.mdc` (strict TDD for logic, hybrid for UI).
+The steps are `agent-pipeline.mdc` (Discover → Simulate → Execute → Verify → Brain Sync → Confidence); the Approve step sits between Simulate and Execute and is § Approval & Brain above. Test-first inside Execute: `test-driven-development.mdc` (strict TDD for logic, hybrid for UI).
 
 ## Code Quality Checks (MANDATORY)
 
-After every change: `agent-pipeline.mdc` § 4.1 (the iteration tier); fix what it finds before the next
-batch.
-
-**Rules:**
-
-- ❌ **DO NOT commit** code with linter or formatting errors
-- ❌ **DO NOT commit** code that violates FSD architecture
-- ✅ **ALWAYS** check code before committing
-- ✅ **ALWAYS** fix found issues
-
-**For UI components**: the hybrid approach in `test-driven-development.mdc` § Hybrid Approach for UI Components.
+After every change run `agent-pipeline.mdc` § 4.1 (the iteration tier) and fix what it finds before the next batch. Never commit code with linter or formatting errors, or code that violates FSD architecture.
 
 ## Hook vs Utility Extraction Policy (MANDATORY)
 
-- **Extract to hook** when logic requires React runtime: `useEffect` orchestration, subscriptions, timers, browser/DOM APIs, store mutations/selectors, router navigation, async UI state handling in event handlers.
-- **Extract to utility** when logic is pure and deterministic: mapping, filtering, sorting, formatting, parsing, validation, data transformation.
-- **Mandatory split rule**: if a hook contains pure computation, extract that computation to a utility first. The hook must stay a thin orchestration layer.
-- **Never keep pure business computation in hooks** when it can be unit-tested as a utility.
-
-## Project Context
-
-- **Use @ mentions**: When working with multiple files, use `@File`, `@Folder`, or `@Codebase` to provide context
-- **`.cursorignore` file**: Automatically excludes files from Cursor's indexing
-    - Files and directories listed in `.cursorignore` are not included in AI context to save tokens and improve performance
-    - Follows `.gitignore` syntax patterns
-    - Cursor automatically reads `.cursorignore` from the project root - no additional configuration needed
+- **Hook** when logic needs the React runtime: `useEffect` orchestration, subscriptions, timers, browser/DOM APIs, store mutations/selectors, router navigation, async UI state in event handlers.
+- **Utility** when logic is pure and deterministic: mapping, filtering, sorting, formatting, parsing, validation, transformation.
+- **Split rule**: a hook that contains pure computation extracts it to a utility first and stays a thin orchestration layer. Pure business computation never stays in a hook when it can be unit-tested as a utility.
 
 ## Git Commits and Pushes
 
-### Before Committing
-
-- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment
-  (staged autofix → TDD sibling gate → repo-wide oxlint/format/tsc); the pre-push hook owns the
-  push moment, phase-aware. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is
-  `AGENTS.md` § Commands (exact) › _The tier law_, and it is not restated here
-- Individual commands (`npm run lint`, `npm run format:check`, `npm test`) are drill-downs on a specific failure — none replace the tiers
-- Fix any errors or warnings before committing
-
-### Commit Message Format
-
-- **MUST follow commitlint rules** from `commitlint.config.mjs`
-- Use conventional commit format: `type(scope): subject`
-- Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`, `build`, `ci`
-- Header maximum length: 96 characters
-- Format: `type(scope): subject` (scope is optional)
-
-### Commit Message Examples
-
-```
-feat(page): add new feature page
-fix(ui): handle form validation errors
-chore(deps): update dependencies
-docs(readme): update installation instructions
-style(button): fix spacing in component
-refactor(store): extract state management logic
-perf(query): optimize data fetching
-test(component): add tests for component functionality
-```
-
-### Before Pushing
-
-- Ensure all checks pass (lint, format, tests)
-- Review changed files with `git status` and `git diff`
-- Verify commit message follows commitlint rules
-- Only push if everything is correct
+- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment (staged autofix → TDD sibling gate → repo-wide oxlint/format/tsc); the pre-push hook owns the push moment, phase-aware. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is `AGENTS.md` § Commands (exact) › _The tier law_, and it is not restated here. `npm run lint`, `npm run format:check` and `npm test` are drill-downs on a specific failure, none replace the tiers.
+- **Message**: conventional `type(scope): subject` (scope optional), header ≤ 96 characters, rules in `commitlint.config.mjs`. Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`, `build`, `ci`.
+- **Before pushing**: all checks pass, `git status` and `git diff` reviewed, and the message follows commitlint.

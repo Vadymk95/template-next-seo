@@ -7,19 +7,15 @@ priority: 95
 
 # Global Standards — template-next-seo
 
-## Pipeline Initialization (CRITICAL)
-
-- **Any task MUST begin** with the protocol in **`agent-pipeline.mdc`** (Priority 100).
-- Steps: Discovery → Simulation → TDD Execution → Verification → Brain Sync → Confidence.
+**Any task MUST begin** with the protocol in **`agent-pipeline.mdc`** (Priority 100): Discovery → Simulation → TDD Execution → Verification → Brain Sync → Confidence. `AGENTS.md` is the canonical guide and the code is ground truth; `.cursor/brain/` is the depth layer. Sync drift in the same session.
 
 ## 0.1 Conditional Rule Routing
 
-Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply: false` rules are not always injected for a task, and silently skipping them is a real failure mode. Before planning/editing in a task area, **explicitly read the matching conditional rules** below (the `alwaysApply: true` rules — `agent-pipeline`, `project-config`, `workflow`, `test-driven-development`, this file — are always loaded and are not listed here; `code-style` and `fsd-architecture` are glob-scoped like the rest, see the bullets):
+Do **NOT** rely on Cursor to auto-attach every glob-scoped rule: `alwaysApply: false` rules are not always injected for a task, and silently skipping them is a real failure mode. Before planning or editing in a task area, **explicitly read the matching rules** below. The always-on core is `agent-pipeline`, `workflow` and this file; everything else is conditional.
 
-- **React / UI / Server or Client Components / Metadata** → `react-patterns.mdc`, `performance.mdc`
-- **App Router routes / layouts / `sitemap` / `robots` / `generateMetadata`** → `routing.mdc`, `react-patterns.mdc`
-- **New behavioral component or changed behavior** → also `testing.mdc` **before** implementation
-- **Tests / fixtures / mocks** → `testing.mdc` (+ `shared/lib/test-utils`)
+- **React / UI / Server or Client Components / Metadata** → `react-patterns.mdc`, `performance.mdc`, `project-config.mdc` (design tokens, states, a11y, i18n usage)
+- **App Router routes / layouts / `sitemap` / `robots` / `generateMetadata`** → `routing.mdc`, `react-patterns.mdc`, `project-config.mdc`
+- **New behavioral component, changed behavior, tests, fixtures, mocks** → `testing.mdc` **before** implementation, `test-driven-development.mdc` (+ `shared/lib/test-utils`)
 - **API route handlers / Server Actions / payload contracts** → `routing.mdc`, `resilience.mdc`, `async-error-handling.mdc`, `typescript.mdc`
 - **Zustand stores / `createSelectors` / client-global state** → `state-management.mdc`, `typescript.mdc`
 - **Async / error handling / debugging** → `async-error-handling.mdc`, `resilience.mdc`
@@ -27,26 +23,22 @@ Do **NOT** rely on Cursor to auto-attach every glob-scoped rule — `alwaysApply
 - **Constants / enums** → `constants.mdc`
 - **Types / interfaces / file-size discipline** → `typescript.mdc`, `engineering-standards.mdc`
 - **Commit flow** → `commit-command.mdc`
-- **Any `.ts`/`.tsx`/`.js`/`.jsx` edit (formatting, naming, file structure)** → `code-style.mdc`
+- **Any `.ts` / `.tsx` / `.js` / `.jsx` edit (formatting, naming, file structure)** → `code-style.mdc`
 - **New module placement / cross-layer imports** → `fsd-architecture.mdc`
 
 `agent-pipeline.mdc` Step 1 enforces this: load the matching rules, then emit a **Rule Receipt** listing the ones actually loaded.
 
-## Danger zones — FROZEN / PROTECTED (read SKELETONS before touching)
+## Danger zones: FROZEN / PROTECTED
 
-These are not "prefer not to" — they are **do-not-touch by default**. Read `.cursor/brain/SKELETONS.md` before any edit here, and get explicit approval first (see `agent-pipeline.mdc` Anti-patterns + Step 2 gate).
+Do-not-touch by default, with explicit approval first (`agent-pipeline.mdc` Anti-patterns + Step 2 gate). The rule is `AGENTS.md` invariants 7 and 8 and § Danger zones; read `.cursor/brain/SKELETONS.md` before any edit here.
 
-- **Security surface is FROZEN** unless the task is *explicitly* security work: do not touch CSP directives in `next.config.ts`, the nonce pipeline / middleware composition order in `proxy.ts`, the rate-limit matcher, or COOP/CORP headers. `proxy.ts` composes rate-limit → nonce CSP → next-intl in a specific order — **never add a branch before the rate limiter**, and keep static (`next.config.ts`) and nonce (`proxy.ts`) CSP in sync. Treat any such edit as a **security review** (`AGENTS.md` invariant 7; SKELETONS "`proxy` composition", "COOP / CORP / strict CSP").
-- **Template scaffolding is PROTECTED** — `lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, and every site marked `// Template scaffolding` are load-bearing examples, not dead code. **Never** strip them in an "unused code" pass; remove ONLY after the caller confirms "this is now my MVP, not the template" (`AGENTS.md` invariant 8; SKELETONS "Template scaffolding").
-- **`app/[locale]/*`**: every page/layout entry MUST call `setRequestLocale(locale)` before any client descendant — a missing call swallows errors as `Error(void 0)` in prerender (SKELETONS "i18n"). **Locale set stays `['en']`** until the caller asks to expand it.
-- **Production build is `npm run build` (`next build --webpack`)** — custom `splitChunks` are ignored under Turbopack; do not switch the default build tool (SKELETONS "Custom `webpack()`").
+- **Security surface** (CSP in `next.config.ts`, the nonce pipeline and middleware order in `proxy.ts`, the rate-limit matcher, COOP/CORP): never add a branch before the rate limiter, and keep the static and nonce CSP in sync. Any edit is a **security review**.
+- **Template scaffolding** (`lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, every `// Template scaffolding` site): never stripped in an "unused code" pass, only after the caller confirms "this is now my MVP".
+- **`app/[locale]/*`**: every page/layout entry calls `setRequestLocale(locale)` before any client descendant. **Locale set stays `['en']`** until the caller asks.
+- **Production build is `npm run build` (`next build --webpack`)**: custom `splitChunks` are ignored under Turbopack, so the default build tool does not change.
 
 ## Intelligence & Context
 
-- **Reasoning**: Use `sequential-thinking` (if available in your environment) for multi-step work; `context7` for library docs.
-- **Authority**: `AGENTS.md` § Source of truth — code is ground truth, `AGENTS.md` the canonical guide, `.cursor/brain/` the depth layer; sync drift in the same session.
-- **Standards**: `engineering-standards.mdc`, `resilience.mdc`, `commit-command.mdc` — enterprise-quality bar on top of FSD rules.
-- **Stack**: TypeScript strict, **Next.js 16 App Router**, React 19, Tailwind v4.
-- **Quality**: Minimal diff; no magic strings — constants or i18n. Prefer `@/*` imports over `../../` (exception: files reachable from `next.config.ts` must stay RELATIVE — see `fsd-architecture.mdc` carve-out).
-- **Hygiene**: AI metadata and specs live under **`.cursor/`**, not project root.
-- **Git**: Conventional commits; subject line ≤ 96 characters; English, imperative mood.
+- **Reasoning**: `sequential-thinking` (if available) for multi-step work; `context7` for library docs.
+- **Quality**: minimal diff; no magic strings (constants or i18n); `@/*` imports over `../../` (files reachable from `next.config.ts` stay RELATIVE, see the `fsd-architecture.mdc` carve-out). AI metadata and specs live under **`.cursor/`**, not the project root.
+- **Git**: Conventional Commits, subject ≤ 96 characters, English, imperative mood (`workflow.mdc` § Git Commits and Pushes).

@@ -1,1048 +1,615 @@
 # DECISIONS — template-next-seo
 
-## [2026-10] Dependency refresh (2026-10-07); `agentRules: false`; footer year out of render
-
-**Rule applied:** every package goes to its newest compatible, stable release; a version is held only for a
-measured incompatibility, with the reason in `AGENTS.md` § "Version holds" and, where Dependabot would bump
-it, an `ignore` entry. Every minor and patch moved (`next`, `@next/env`, `@next/bundle-analyzer` and
-`eslint-config-next` 16.4.0, `eslint` 10.12, `oxlint` and `eslint-plugin-oxlint` 1.87 in lockstep,
-`typescript-eslint` 8.71.1, `eslint-plugin-better-tailwindcss` 4.9.0, `@radix-ui/react-slot` 1.4.0,
-`next-intl` 4.14.9, `@types/node` 24.19.1 and the rest). No major was taken: the only majors on offer were
-the three holds below.
-
-**Cooldown bypass (operator call, 2026-10-07: skip the cooldown now, install everything current).** One-off.
-`.npmrc` keeps `min-release-age=3` for every future resolution. Each version below was less than three days
-old and was installed with `--min-release-age=0`; the transitives came from `npm update --min-release-age=0`.
-Publish dates are UTC (`npm view <pkg> time`); provenance is `npm view <pkg>@<version> dist.attestations`.
-
-- `next`, `@next/env`, `@next/bundle-analyzer`, `eslint-config-next` 16.4.0 (2026-10-06, 18:22 to 18:35),
-  with `@next/eslint-plugin-next` and the `@next/swc-*` binaries at 16.4.0: provenance yes.
-- `oxlint` 1.87.0 (2026-10-05 11:05) with its `@oxlint/binding-*` platform packages 1.87.0 (2026-10-05, 10:55 to
-  11:01), and `eslint-plugin-oxlint` 1.87.0 (2026-10-05 17:14): provenance yes.
-- `typescript-eslint` 8.71.1 and its `@typescript-eslint/*` packages (2026-10-05, 17:08 to 17:10): provenance yes.
-- `@radix-ui/react-slot` 1.4.0 (2026-10-05 23:09), `@vitejs/plugin-react` 6.1.2 (2026-10-05 10:08),
-  `postcss` 8.5.29 (2026-10-05 09:28): provenance yes.
-- `web-vitals` 6.2.3 (2026-10-05 10:03): provenance **no**.
-- `eslint-plugin-better-tailwindcss` 4.9.0 (2026-10-05 21:13): provenance **no**.
-- Transitives, provenance yes: `vite` 8.3.3 (2026-10-06), `rolldown` 1.2.13 and its bindings (2026-10-07,
-  14:10 to 14:20), `@babel/*` 8.0.7 and 7.29.10 (2026-10-07), `caniuse-lite` 1.0.30001815 (2026-10-07),
-  `electron-to-chromium` 1.5.450 (2026-10-07), and, all on 2026-10-05, `nanoid` 3.3.20, `@oxc-project/types`
-  0.153.0, `@napi-rs/wasm-runtime` 1.2.5, `@formatjs/icu-messageformat-parser` 3.5.21,
-  `conventional-commits-parser` 7.1.3, `conventional-changelog-conventionalcommits` 10.4.1 and
-  `@conventional-changelog/git-client` 3.2.0.
-- Transitives, provenance **no**: `acorn` 8.19.0 (2026-10-05 12:51), `@bramus/specificity` 2.4.3
-  (2026-10-05 19:38).
-
-After the bypass `npm outdated` lists only the recorded holds. A plain `npm ci` with the repo's `.npmrc`
-installs the resulting lockfile, because the lockfile pins the exact versions and `min-release-age` only
-affects resolution.
-
-**Holds re-read today, all still true:** TypeScript 7 (typescript-eslint 8.71.1 still peers `<6.1.0`),
-vitest 5 (probed twice on 2026-10-07, by the implementer and by an independent verifier: 5.0.3 with the
-still-newest Stryker runner 10.0.0, published 2026-08-14, killed 0 of 48 mutants and ran 0.00 tests per
-mutant; the shipping pair, vitest 4.1.11, on the refreshed tree: the same probe kills 37 of 48 plus 1 timeout, 79.17, 1.75 tests per mutant), `@types/node` 26 (`engines.node >=24`; 24.19.1 is the newest 24.x). The `eslint` peer caps
-behind the `overrides` entries also stand: the newest `eslint-plugin-react`, `-jsx-a11y` and `-import` still
-peer `eslint` at `^9`. The `braces` audit allowance stands too: 3.0.3 (2024) is still the newest release and
-the newest `micromatch` (4.0.8) still depends on it.
-
-**`agentRules: false` in `next.config.ts`.** In the installed Next (16.4.0) `next dev` writes a managed
-`BEGIN:nextjs-agent-rules` block into `AGENTS.md` whenever it detects a coding agent and the block is
-missing. The gate is `syncAgentRulesForDev(dir, initResult.agentRules !== false)` in
-`node_modules/next/dist/server/lib/start-server.js`; the option and its `@default true` are in
-`node_modules/next/dist/server/config-shared.d.ts` (`agentRules?: boolean`) and documented in
-`node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/agentRules.md`.
-`node_modules/next/dist/server/lib/generate-agent-files.js` is only the file that writes (or, with the
-option off, strips) the block; the dev log prints the option name. `AGENTS.md` is this repo's own law, so the
-file must not drift under a dev server. Measured in the worktree: on 16.3.8 with `agentRules: true`,
-`next dev` added 10 lines to `AGENTS.md`, and with `false` the file stayed byte-identical; re-run on 16.4.0
-with `false` (a coding agent detected, `GET /en` 200): `AGENTS.md` and `CLAUDE.md` byte-identical, no
-`Generated` line. The one useful line in that block, where the version-matched Next docs live, is now
-written by hand under § Stack in `AGENTS.md`. `next.config.test.ts` pins the option.
-
-**Oxlint 1.86 and later, `react/purity`.** The 1.86 bump made `oxlint --deny-warnings` red: the footer called
-`new Date().getFullYear()` during render. The year is now read once at module load (`CURRENT_YEAR` in
-`shared/ui/common/Footer/index.tsx`) rather than silencing the rule, because weakening a lint severity to get
-green is out of scope here. Consequence: on a long-lived server the year changes at the next restart or
-build, not at midnight on 1 January; prerendered pages carry the build-time year in their HTML already.
-
----
-
-## [2026-10] Doc pointers are backticked paths, never `@` imports
-
-`AGENTS.md` pointed at the brain files and `README.md` with bare `@path` references. Claude Code expands an
-`@path` outside a code span as a memory import, recursively, and `CLAUDE.md` is `@AGENTS.md`, so every
-session loaded eight files before the first prompt: 162,102 bytes (158.3 KB, about 40k tokens at bytes / 4,
-a rough estimate), of which `DECISIONS.md` alone was 80 KB. Two subagents died of autocompact thrashing
-from that load. Every pointer is now a code span, so the closure is `CLAUDE.md` + `AGENTS.md`: two files,
-30,536 bytes (29.8 KB, about 7.6k tokens), the same shape the sibling templates have. The brain files are
-read on demand, which is what the shared harness block already promised ("nothing beyond `AGENTS.md` is
-`@`-imported"). Measured by walking from `CLAUDE.md`, stripping fenced blocks and inline code spans and
-following every `@<path>.md` recursively. Rule for new text: a pointer to a file is a code span; the one
-intended import is the `@AGENTS.md` line in `CLAUDE.md`.
-
-## [2026-10] Runtime axe scan inside the existing page specs
-
-**Decision**: `e2e/support/a11y.ts` exports `expectNoSevereA11yViolations(page)`, an `@axe-core/playwright`
-scan of the page as it is, failing on `serious` and `critical` violations with `target-size` (WCAG 2.2
-SC 2.5.8) switched on, because axe-core ships it disabled. It is called from the existing page-level specs
-that already load the public routes, after each spec's own readiness assertion: `e2e/smoke.spec.ts` (`/` ends
-on `/en`), `e2e/example-form.spec.ts` (`/en/example-form`) and, for the not-found route no other spec loads,
-`e2e/layout-geometry.spec.ts` (`/en/e2e-unknown-route-xyz`, once, at the first width). No `test()` block was
-added, so the suite count
-and the ceiling in `scripts/gate-tiers.json` do not move; the cost is one `analyze()` per page on a page the
-spec was loading anyway. The package is a devDependency at the range `template-spa-pwa` uses.
-
-**Why**: the static `jsx-a11y` rules read JSX and cannot see what the browser composes from it: contrast, a
-landmark rendered twice, a label a component swallows, a target under 24 px. Axe reads the rendered DOM, so it
-is the layer the static rules do not cover; the template had no check at that layer before.
-
-**Why these specs and not a new one**: `AGENTS.md` § What earns a browser test. A scan is not a new
-invariant of a new shell, it is a second measurement of pages already on screen. `e2e/layout-geometry.spec.ts`
-also visits the routes, but at five widths each, so a scan of home or the form there would repeat per width.
-The not-found route is the exception: only that spec loads it, so it is scanned there, once, at the first
-width (the markup does not change with the width, and the geometry spec measures the target sizes itself).
-
-**Why serious and critical only**: moderate and minor results are advice that needs a design position a
-template does not have; failing on them would redden the first fork over choices that are the fork's to make. A finding is fixed in
-the component. There is no allow-list in the helper: a rule that cannot hold for a template is a decision to
-record here, not a silent exclusion.
-
-**Scan after readiness**: axe scans the DOM that exists. A page caught before it rendered has almost nothing to
-violate, the same way a geometry measurement of an empty shell passes (SKELETONS § Layout measurements can pass
-by measuring nothing), so the call sits after the assertion that the page is up.
-
-## [2026-10] Playwright `failOnFlakyTests` in CI
-
-**Decision**: `playwright.config.ts` and `playwright.dev.config.ts` set `failOnFlakyTests: isCI`
-(`isCI = Boolean(process.env.CI)`, the same value as `!!process.env.CI`), next to the existing
-`retries: isCI ? 2 : 0`. The option is in the installed Playwright
-(`node_modules/playwright/types/test.d.ts`, `failOnFlakyTests?: boolean`, documented there as "Whether to
-exit with an error if any tests are marked as flaky. Useful on CI."). A test that fails and then passes on a
-retry is reported as flaky and now fails the run; before, it passed green with the failure visible only in
-the report.
-
-**Why**: a retry is there for an infrastructure blip. Without this flag it also turns a test that is wrong
-part of the time into a green run, and the first sign is the day the odds change. The cost is a red CI run
-the first time a real flake appears, which is the point: fix the cause or quarantine with a written reason.
-
-**Measured in this repo, 2026-10-04**: the CI logs of the last 12 successful and the 5 readable failed runs
-of the `CI` workflow contain no `flaky` and no `retry #` marker (`gh run view <id> --log`). The one other
-failed run's log is empty (expired). The flake that motivated the change was seen in `template-spa-pwa`
-only, so this is a preventive guard here, not a fix for an observed flake, and no test was quarantined.
-
-**Red to green**: `scripts/check-playwright-gate-config.test.mjs` asserts, for both configs, that
-`failOnFlakyTests` is `true` with `CI` set (with `retries` above zero) and `false` without it. Before the
-change the four new cases failed (`expected undefined to be true` and `to be false`); after it the file
-passes 8 of 8. `CI=1 npx playwright test --list` still loads the config (19 tests in 7 files).
-
-## [2026-10] zizmor audits the workflows in `security.yml`; the 2026-07-17 watch item fired
-
-**Decision**: a `zizmor` job (`Workflow audit (zizmor)`) in `security.yml` runs the official
-`zizmorcore/zizmor-action` (SHA-pinned, `# v0.6.4`) on push, PR and the weekly cron, over
-`.github/workflows` with the config in `.github/zizmor.yml`, and `min-severity: medium`, so any finding at
-medium or above fails the job. It is one pass with one config: the job and the local command
-`uvx zizmor@1.30.1 .github/workflows` read the same file, so a run on a laptop gives the verdict CI gives.
-zizmor is pinned by `version: 1.30.1` in the action (the action runs a digest-pinned container image of that
-release; to move it, change the number to a version listed in the action's `support/versions`, normally
-with the action bump Dependabot opens). `advanced-security: false` and `annotations: true`: findings show
-as annotations on the run, with no SARIF upload and no `security-events` permission, so the job works
-without GitHub code scanning, unlike CodeQL in the same file. The step is a `uses:`, so no `run:` entry was
-added to `scripts/gate-tiers.json` § `ci.allowedRunSteps`. The audit reads only this repository's workflow
-files; an online run also queries the GitHub API about the actions they reference, with the job's read-only
-token.
-
-**Closes the watch item** recorded 2026-07-17 ("zizmor: only if workflows grow beyond current ~2 files/repo,
-size-triggered"). This repo has five workflow files (`ci`, `docs`, `mutation`, `release`, `security`), so the
-trigger has fired.
-
-**Required check**: `Workflow audit (zizmor)` is in `.github/ruleset.json` `required_status_checks`, so a
-finding blocks the merge. `docs:check` `rulesetContexts` accepts the context because the job's `name:`
-produces it. The live ruleset is applied by hand from that file (`README.md` § "What your fork does not inherit"): add the context
-there after the job has reported once, because a required check that has never reported blocks every merge.
-
-**Measured, 2026-10-04, zizmor 1.30.1: online and offline grade differently.** Online (the action's default,
-with `github.token`) zizmor reads the pinned `actions/checkout` and grades a checkout without
-`persist-credentials: false` as Low for checkout v6 and newer; offline the same finding is Medium. On a
-copy outside the repo with that line removed from one checkout, `--min-severity medium` without the config
-exits 0 online and 13 offline, so the obvious gate (`min-severity: medium`) let the finding through in CI
-while a local offline run caught it. The repo baseline measured online was 10 findings, all Low: 7
-`artipacked` and 3 `adhoc-packages` (the `npm install -g npm@^11.14.0` steps in `ci.yml`); at
-`--min-severity medium` the same run reported nothing, so that gate would have been green over all 10.
-
-**Fixed at the source**: `persist-credentials: false` on every checkout that does not push (`ci.yml` x3,
-`docs.yml`, `mutation.yml`, `security.yml` x2 plus the new job's own).
-
-**Two entries in `.github/zizmor.yml`, each with its reason on the line above it**:
-
-- `artipacked` is remapped to medium (`rules.<id>.remap.severity`): the answer to the online grade above. With
-  the remap and the line removed from one checkout, `--min-severity medium` exits 13 online and 13 offline,
-  naming that checkout; the same copy with `--no-config` exits 0 online. The final tree exits 0 both ways.
-- `adhoc-packages` is ignored for `ci.yml` as a whole file, with no line numbers. The three
-  `npm install -g npm@^11.14.0` steps are deliberate (the step's own comment says why) and npm cannot be
-  pinned through `package.json`. The finding is Low, under the medium gate, so the entry only keeps a local
-  run without `--min-severity` quiet; a whole-file entry does not go stale when lines move.
-
-Findings of the `auditor` and `pedantic` personas (one `secrets-outside-env`, five `anonymous-definition`,
-two `undocumented-permissions`) are outside the default persona and were not addressed.
-
-## [2026-10] First-load JS budget: `size:check`, right after `build`, full phase only
-
-**Decision**: `npm run size:check` (`scripts/check-bundle-budget.mjs`, zero dependencies) fails when the
-brotli size of the shared first-load JS, or of the heaviest PUBLIC route's first-load JS, passes a limit in
-`scripts/bundle-budget.json`. It sits right after `build` in `verify:enterprise:inner`, so it runs in the
-full phase (phase 1, CI, `GATE_PHASE=full`) and is SKIPPED, printed, at phase 0 with the build it reads.
-Nothing was added to phase 0 and the push gate got no new stage at scaffold.
-
-**What is measured**, from the manifests the build leaves behind (Next 16 prints no "First Load JS" table):
-
-- shared first-load JS = the JS files in `.next/build-manifest.json` `rootMainFiles` (webpack runtime,
-  `next-vendor-*`, `main-app`; the css is not JS). `polyfillFiles` are nomodule-only and excluded.
-- a route's first-load JS = the shared JS plus that route's own client chunks, each file counted once.
-- size = `zlib.brotliCompressSync` at its default quality, in KB of 1024 bytes.
-- public routes are discovered from `.next/app-path-routes-manifest.json`, minus `excludeRoutes` in the
-  budget file (`/_not-found`, `/_global-error`, `/dev` and everything under it), so a route a fork adds is
-  inside the budget until someone excludes it on purpose. Today that is `/[locale]` and
-  `/[locale]/example-form`.
-- fail closed: a missing manifest, a chunk that is not on disk, no public route, an empty shared set or a
-  malformed budget file is a red run, never a pass over fewer files.
-
-**Premise corrected**: the first design read a route's chunks from `entryJSFiles` in
-`server/app/<route>/page_client-reference-manifest.js`. In a `next build --webpack` that field is not
-filled (this build: absent); Next's own route bundle stats code, which reads it, runs for Turbopack builds.
-The chunks are in `clientModules[*].chunks` of the same manifest (paths URL-encoded, `?dpl=` suffixed when a
-deployment id is set). Checked against the prerendered HTML: the decoded JS in `clientModules`, plus
-`rootMainFiles`, plus the one polyfill file, is exactly the `<script src>` set of
-`.next/server/app/en.html` (23 scripts = 22 + polyfill) and `en/example-form.html` (29 = 28 + polyfill). The script reads both fields, so a build that fills `entryJSFiles` is
-counted the same way.
-
-**Measured** 2026-10-04 on the build of master `ab50035` (`next build --webpack` with
-`NEXT_PUBLIC_APP_URL=https://template-next-seo.invalid`), brotli, 1 KB = 1024 bytes:
-
-| Quantity | Files | Bytes | KB | Limit (KB) | Headroom |
-| --- | --- | --- | --- | --- | --- |
-| shared first-load JS | 14 | 124,086 | 121.18 | 134 | +10.58% |
-| `/[locale]` first-load JS | 22 | 151,340 | 147.79 | (not the heaviest) | - |
-| `/[locale]/example-form` first-load JS (heaviest) | 28 | 188,852 | 184.43 | 203 | +10.07% |
-
-Each limit is the measurement + 10%, rounded up to a whole KB: 121.18 x 1.10 = 133.30 -> 134, and
-184.43 x 1.10 = 202.87 -> 203. The whole-KB rounding is what lifts the shared headroom above 10%; no limit
-carries more slack than that rounding. The CLI takes 0.85 s on this build.
-
-**Red-to-green**: a fixture one byte over either limit fails and one exactly on it passes; a route whose
-chunks are listed twice (and a chunk shared with `rootMainFiles`) is counted once. Mutation proofs: dropping
-either de-duplication fails 2 tests each; tightening the heaviest-route `>` to `>=` fails 3, loosening the
-shared check by one byte fails 2. Against the real build, a budget file lowered to 121 KB (shared) or 184 KB
-(heaviest route) exits 1 with the measurement and the limit named; the shipped file exits 0.
-
-**How to move a limit**: re-measure on a build (`npm run build`, then `npm run size:check`), put the new
-number and its build and date in this entry, and set the limit to the measurement + at most 10%, rounded up.
-A number raised to turn a red run green, with no new measurement here, is the failure this gate exists to
-catch. Dropping a limit after a real reduction is encouraged the same way.
-
-**Not covered**: `/dev/*`, `_not-found` and `_global-error` (not public in production), CSS, images and
-fonts, and lazily loaded chunks a route fetches after interaction (they are not first-load by definition).
-
-## [2026-10] Every GitHub Action is SHA-pinned; workflow tokens default to read-only
-
-**Every `uses:` in `.github/workflows/*.yml` is pinned to a full 40-hex commit SHA since 2026-10-04**,
-with the version it resolves to as a trailing comment (`actions/checkout@<sha> # v7.0.1`). The versions
-are the ones the workflows already used; nothing was upgraded. The reason is that GitHub's immutable
-releases lock only a release's own tag, and only when the publisher opts in, so a floating `@vN` tag
-stays movable: the publisher (or whoever takes over the account) can retarget it, and the next run of
-our workflow executes the new code with our token. Only a commit SHA cannot be moved. gitleaks was
-already pinned this way; the official `actions/*`, `github/codeql-action` and `googleapis/release-please-action`
-steps now match it. `.github/dependabot.yml` keeps the `github-actions` ecosystem, which updates both
-the SHA and its version comment, so the pins do not go stale.
-
-**Token permissions.** `release.yml` declares `permissions: contents: read` at the workflow level and
-gives the single job that writes (`release-please`) `contents`, `issues` and `pull-requests` write;
-`security.yml` declares `permissions: contents: read` at the top, with each job keeping its own scopes.
-No job's effective permissions changed; the point is that a job added later starts from read-only instead
-of inheriting write.
-
-## [2026-10] delta audit fixes
-
-A second audit round reproduced three silent holes and closed each at the cheapest static or
-unit-test layer, plus three real doc ↔ code contradictions.
-
-**A new page under `app/[locale]/**` had no static check against `app/sitemap.ts`.** Exported
-`ROUTES` from `sitemap.ts` (no behaviour change) and added `app/sitemap.test.ts`: it walks
-`app/[locale]/**/page.tsx` (excluding `[dynamic]` segments, which a sitemap can't enumerate) and
-asserts every discovered route path appears in `ROUTES`. Proven: adding a throwaway
-`app/[locale]/probe-route/page.tsx` with no matching entry turns it red; removing the probe is
-green.
-
-**`RATE_LIMIT_TRUST_PROXY=first-hop` warned nowhere, unlike `none`.** `first-hop` trusts the
-leftmost `X-Forwarded-For` hop, which is trivially spoofable unless a proxy in front overwrites
-that header first. Added a second one-time production warning in
-`shared/lib/middlewareRequest.ts`'s `emitModeWarningOnce`, naming the spoofing risk and the
-proxy-overwrite requirement; the rate-limit algorithm itself is unchanged. Proven: a test that
-resets the module (`vi.resetModules()`, since the "once" flag is module-level state) and calls
-`getRateLimitKey` in a stubbed `NODE_ENV=production` asserts exactly one `console.warn` naming
-`first-hop`, "spoofed" and "overwrites X-Forwarded-For"; removing the new branch turns it red.
-
-**`scrollbar-gutter: stable` had no regression guard here**, unlike the sibling `template-1`
-(its "F4" fix). Ported the same one-line assertion into the existing per-width test in
-`e2e/layout-geometry.spec.ts` (not a new `test()`), guarded to run once per width on the first
-route. Proven: removing the CSS rule from `app/globals.css` turns all 5 width cases red
-(`auto` measured instead of `stable`); restoring it is green. Run via `verify:measure` rather
-than `e2e:one` against `next dev` — Turbopack refuses to resolve `next` through this worktree's
-symlinked `node_modules` ("points out of the filesystem root"), which does not reproduce against
-the webpack production build `verify:measure` uses.
-
-**`no-empty` was not enabled anywhere** — a `catch {}` passed every check silently. Added
-`'no-empty': ['error', { allowEmptyCatch: false }]` to `eslint.config.js`. Proven: a probe file
-with an empty `catch {}` turns `error` red; no existing code in this repo had one to fix.
-
-**The pre-commit `docs:check` trigger (`.husky/pre-commit`) missed the checker's own files** —
-same fix as the sibling templates: added `|^scripts/docs-check\.|^package\.json$` to the
-`grep -qE` regex. Proven: `scripts/docs-check.mjs` does not match the old pattern (exit 1) and
-matches the new one (exit 0); same for `package.json`.
-
-**Doc fixes, no behaviour change:**
-- `.cursor/rules/global.mdc:17` claimed `code-style` and `fsd-architecture` were part of the
-  `alwaysApply: true` set that is "always loaded." Both carry `alwaysApply: false` in their own
-  frontmatter (confirmed by `grep`) — this repo's own "[2026-09] Rules load" entry below records
-  deliberately moving them to glob-scoped loading, and the routing table was never updated to
-  match. Removed them from the "always loaded" list and added them as two conditional-routing
-  bullets instead.
-- `.cursor/rules/project-config.mdc:68` told agents to "verify against `.dark` tokens, don't tune
-  light only," presupposing a reachable light theme. `app/layout.tsx` hardcodes
-  `className="... dark"` on `<html>` with no theme toggle anywhere in the repo, so `.dark` is
-  always active and the `:root` (light) tokens in `app/globals.css` never render. Reworded to
-  state the dark-only reality.
-- This file's own "`outline-hidden`, never `outline-none`" entry (below) claimed the fix was
-  "pinned three ways," including `focus-indicator.test.tsx` / `SkipLink.test.tsx` and
-  `better-tailwindcss/no-deprecated-classes`. Neither test file exists in this repo (there is no
-  `SkipLink` component here either — the claim was carried over from the sibling
-  `template-spa-pwa`, which does have them), and the installed
-  `eslint-plugin-better-tailwindcss@4.7.0`'s `no-deprecated-classes` deprecation table (read from
-  its source) covers only Tailwind 4.0/4.1 renames and does not list `outline-none` /
-  `outline-hidden` at all — both remain valid, non-deprecated classes with different behaviour, so
-  the rule gives this regression no protection. Reworded to state the one real layer
-  (`e2e/forced-colors.spec.ts`) honestly.
-
-## [2026-10] guard audit fixes
-
-An audit sabotaged 73 guards in the sibling `template-1` and 53 caught the injected defect. F1 and
-F2 apply here too (F3–F7 are t1/spa-specific and out of scope for this repo).
-
-**F1 — `docs:check` flags a CI step that bypasses the gate.** New check derives every `run:` step
-in a PR-triggered workflow — a single line or every non-empty line inside a `run: |`/`run: >`
-block scalar, each reported at its OWN line — and compares it against `gate-tiers.json` §
-`ci.allowedRunSteps`; anything else names the file:line and asks for it to move into `verify` or
-be listed with a reason. Replays the 2026-07-28 "gate lied" class (`fb36cde` in `template-1`): an
-unlisted `npm run lint:extra` step, both on its own and inside a block scalar alongside an allowed
-line, turned `docs:check` red on exactly that line; the current workflow measures clean. (Review
-finding R1, 2026-10-03: the first cut skipped block scalars outright, the most common way to write
-a multi-line step. Fixed by reading the block's own lines instead of skipping them.)
-
-**F2 — `docs:check` flags a ruleset context no workflow produces.** New check derives each job's
-required-status-check name (its `name:` or id, plus matrix values from an inline `[a, b]` list or
-a block `- value` list, GitHub's own convention) from every workflow and compares it against
-`.github/ruleset.json`'s `required_status_checks`; a mismatch names the file:line and asks for the
-job to be renamed back or the context listed in `ci.rulesetContextAllowlist` with a reason. A job
-whose exact context GitHub renders only at runtime (a matrix `include:`/`exclude:` key, or a
-`name:` carrying a `${{ }}` expression) prints one loud, non-failing line instead, and only
-ruleset contexts starting with that job's static base name are exempted from the strict
-comparison — every other context still has to resolve exactly. Reproduces the class `6e47f3d`
-(#70) this repo already fixed once (the `dev-smoke` job here is named `Turbopack dev smoke`, and
-the ruleset context matches that explicit `name:`, not the job id — the check reads the right
-one): renaming the `cross-browser` job turned `docs:check` red; all five current contexts resolve
-to a real job and none is a block-list or `include`/`exclude` matrix or an expression name, so the
-exemption never fires on real data. (Review finding R2, 2026-10-03: the first cut read only an
-inline matrix and had no notion of either undecidable shape, so a fork using either got a false
-red no allowlist entry could fix.)
-
-`scripts/docs-check.mjs` stays byte-identical with `template-1`, `template-spa-pwa` and
-`template-rn` (shared-file rule); `scripts/gate-tiers.json` § `ci` carries this repo's own
-`allowedRunSteps` data instead.
-
-## [2026-10] `next` RCE (direct dep, raised within major) + `brace-expansion` floor raised (2026-10-02)
-
-**`next` raised from `^16.2.12` to `^16.3.6`.** `GHSA-vcvr-r3jv-pc5j` (critical — RCE in `next/og`
-`ImageResponse`) covers `>=16.2.0, <16.3.6`, fixed in 16.3.6. `next` is a direct dependency, so the fix
-is a version bump in `dependencies`, not an override. `npm install` resolved `16.3.7` — the newest
-release that also clears `.npmrc`'s `min-release-age=3` cooldown (16.3.7 published 2026-09-29, 16.3.8
-published 2026-09-30 and still inside the 3-day window at the time of this fix) — so no
-`--min-release-age=0` was needed. `eslint-config-next` (still `^16.2.12`) resolved to `16.3.5`
-independently; it is not part of this advisory and was left alone. `@next/env` was realigned to
-`16.3.7` in the same commit (exact pin, matching the practice recorded in "[2026-09] Test toolchain
-majors" below) — not strictly required by `docs:check`, which does not flag this gap, but left stale
-once and then corrected on review rather than carried forward; `npm ls next @next/env` shows `16.3.7`
-for both.
-
-**`brace-expansion` floor raised, same entry, same cap.** `"brace-expansion": ">=5.0.9 <6"` aged into
-three new high advisories published after it was written: `GHSA-q2hr-2g5m-vwhr` (quadratic-time
-`{a},b}` expansion, fixed 5.0.12), `GHSA-qhr7-859c-m2p7` (unbounded recursion on nested brace groups,
-fixed 5.0.11), `GHSA-6j4f-fj2g-mc7p` (unbounded recursion in `parseCommaParts`, fixed 5.0.10). Raised
-to `">=5.0.12 <6"`, which clears all three.
-
-`npm audit --audit-level=high` and `audit:gate` both report zero high/critical afterward (3 moderate
-remain, pre-existing `fast-uri`/`qs`, untouched).
-
-## [2026-10] Playwright `maxFailures: 10` on the gate run and in CI
-
-**Decision**: `playwright.config.ts` caps `maxFailures` at 10 when `isCI || isProdServer` is true
-(CI or `PLAYWRIGHT_PROD_SERVER=1`); the desk run against `next dev` stays uncapped. Each config
-also writes to its own `outputDir` (`test-results/e2e`, `test-results/dev`) so `--last-failed`
-never reads the wrong suite's record.
-
-**Why**: measured in a sibling product forked from this template over 30 days — 22 of 60 pushes
-went red, and a red push ran up to 21 minutes against ~5 for a green one because every failing
-test waited out its own timeout with no cap. The cap value comes from one measured break of a
-shared invariant in that product (630 tests, six workers): uncapped, the run took 7.5 min and
-reported 55 failures; capped at 10 it stopped at 21 s; capped at 5 it stopped at 15 s — 5 s less,
-at the cost of reporting half as many of the failing neighbours. 10 is the value that measurement
-settled on.
-
-## [2026-09] Agent limits in a committed `.claude/settings.json`; one Dependabot group; release token wired
-
-**Decision**: `.claude/settings.json` is tracked and denies, in every permission mode: reading .env files
-other than the example, editing itself, force pushes, `--no-verify`, `git reset --hard`, `git clean -f`; it
-asks before edits of the gate files and of `next.config.ts` and `proxy.ts` (invariant 7). The rule text lives in `AGENTS.md` § Lanes. Reopened on 2026-09-28 by
-the owner's decision: the 2026-09-12 review had deferred it until an agent was seen editing a listed file,
-and two public guides now name a deny list as the baseline of a professional agent setup.
-
-**What it is not**: a security boundary. Per the Claude Code permissions docs, a Bash rule matches the
-command as written, and `sh -c`, a full binary path or a `git -C` / `git -c` prefix walks past it; Read and
-Edit denies cover the built-in file tools and the file commands Claude Code recognises in Bash (`cat`,
-`head`, `tail`, `sed`, `tee`), not a script that opens the file itself nor `grep -r` run over the folder.
-The boundary stays the required CI check. Cursor and Codex do not read the file.
-
-**Review, 2026-09-28** (two adversarial passes before merge): a force push through a `+branch` refspec and
-through a bundled `-fu` got past the first rules, both reproduced in a scratch repo, so `git push -f*`,
-`git push *+*` and `git commit -n*` replaced the space-anchored forms. `-uf` and a trailing `-n` still get
-through; more wildcards would start catching commit messages, so they stay documented, not chased. A claim
-that deny rules lapse in `bypassPermissions` was checked and rejected: the permission-modes docs say deny
-rules block in every mode, bypass included.
-
-**Dependabot**: the production and development groups both rewrote `package-lock.json`, so the second PR
-conflicted once the first merged (2026-09-27). One `minor-and-patch` group now carries every non-major
-update; a major still opens its own PR.
-
-**Release token**: `release.yml` passes `secrets.RELEASE_PLEASE_TOKEN || github.token`. With the secret
-absent nothing changes (release PR runs wait in `action_required` for one approval); with a fine-grained
-PAT in it, release PRs get CI like any other PR.
-
----
-
-## [2026-09] Test toolchain majors: vitest 5, Stryker 10, jsdom 30
-
-**Decision**: take the three majors in one pass, one commit each, measured on the same tree — and
-then hold vitest back at `4.1.x` in THIS repo only, because the measurement below showed the mutation
-gate cannot run under vitest 5 here (the sibling templates took vitest 5 too, and their weekly mutation
-runs went red from 2026-09-14; they returned to `4.1.x` on 2026-10-02 with this repo's numbers — see
-`template-1`'s `.cursor/brain/DECISIONS.md` § "[2026-10] vitest 5 hold"). TypeScript stays `~6.0.x`
-because `typescript-eslint@8.69` still peers `<6.1.0`. `oxlint` moved to
-`~1.81.0` in lockstep with `eslint-plugin-oxlint` in the preceding compatible-updates commit, and
-`@next/env`'s exact pin was realigned to the `next` version `npm update` picked (16.3.4) — it has to
-match, because `scripts/check-build-env.mjs` reads `.env*` through it to mirror what `next build`
-sees.
-
-**What moved cleanly.** vitest 5 exposes `document` as a getter-only global in the jsdom
-environment, so a plain `globalThis.document = stub` throws — `scripts/probe.test.mjs` now uses
-`vi.stubGlobal` / `vi.unstubAllGlobals`. `vitest.config.ts` also needed its `coverage.exclude`
-entries changed from bare directory prefixes (`'app/'`, `'scripts/'`) to real globs (`'app/**'`,
-`'scripts/**'`) — coverage-v8 5 stopped treating a trailing-slash string as an implicit prefix match,
-so without this fix `scripts/` and `app/` silently re-entered the coverage scope (statements dropped
-from 93.82% to 68.2%, the exact regression the exclude list exists to prevent). `scripts/mutation-scope.test.mjs`
-parses that same array as text to mirror it against `stryker.config.json`'s `mutate` list, so its
-trailing-segment regex was widened to strip `/**` as well as a bare `/`, or that mirror check would
-itself go stale-red. `vitest.config.ts`'s `resolve.alias['@']` also dropped `path.resolve(__dirname, './')`
-for `import.meta.dirname` — vitest 5 warns that `__dirname` is unsupported by the config loader it
-plans to default to; harmless either way, but it removes the warning and it is the fix vitest's own
-message names. jsdom 30 needs Node `^24.15.0`; `.nvmrc` says `24`, so `nvm use` resolves to the newest
-installed 24.x — a machine on an older 24.x fails `engine-strict` at install, the intended signal.
-
-**What did NOT move under vitest 5: the mutation gate, so vitest was put back.** With vitest 5.0.0
-`npm run test:mutation` measured 2.94% (17 killed of 567) against the 2026-08-09 baseline of 40.21%,
-and a one-file probe (`stryker run --mutate shared/lib/rateLimitCore.ts`) printed `Ran 0.00 tests per
-mutant` with all 48 mutants surviving — the runner's per-test coverage came back empty, so it selected
-no test for any mutant. Ruled out before deciding: Stryker 9.6.1 vs 10.0.0 (same result on both once
-vitest is 5.x), `coverageAnalysis: "all"` vs `"perTest"`, the Vite dep cache, the `import.meta.dirname`
-alias change, and a leaked alias into the original tree (a plain vitest run from a sandbox copy with a
-broken module fails as it should — the copy IS what runs). The debug log shows the runner loading
-`vitest.config.ts` from the Stryker sandbox with cwd switched there, as designed. Same tree, vitest
-4.1.11 + coverage-v8 4.1.11, Stryker 10.0.0: the one-file probe kills 37 of 48 (79.17%, 1.75 tests per
-mutant) and the full run scores **40.24%** (1.65 tests per mutant) against the unchanged floor of 35.
-`@stryker-mutator/vitest-runner@10.0.0` (2026-08-14) predates `vitest@5.0.0` (2026-09-03). The two
-sibling Vite templates looked as if they ran the same pair and killed mutants, but that reading came
-from a local run that reused Stryker's incremental report. Their cold weekly runs scored about 9.6 from
-2026-09-14, and both returned to vitest 4.1 on 2026-10-02. So the incompatibility is not specific to
-this repo's shape. It was not root-caused further here.
-
-**Why hold vitest rather than ship a red weekly job.** A strength gate that cannot fail is worse than
-a test runner one minor behind: the weekly `mutation.yml` job would have gone red on every run and
-taught everyone to ignore it. So vitest and `@vitest/coverage-v8` stay `^4.1.11` in this repo, the
-compatible fixes made for vitest 5 stay (they hold on 4.1 too: `vi.stubGlobal` in `scripts/probe.test.mjs`,
-the glob-form `coverage.exclude`, `import.meta.dirname`), `.github/dependabot.yml` ignores `vitest >=5`
-and `@vitest/coverage-v8 >=5` with this reason, and the hold is listed under "Version holds" in
-`AGENTS.md`. **Lift trigger** (checked 2026-10-07: latest vitest-runner is still 10.0.0 from 2026-08-14 and the one-file probe under vitest 5.0.3 killed 0 of 48, hold stands; next check 2026-11-07): a `@stryker-mutator/vitest-runner` release dated after 2026-09-03, then
-`npm install -D vitest@5 @vitest/coverage-v8@5` and the one-file probe above — take vitest 5 when it
-kills mutants again, in the same commit that drops the Dependabot ignore. Coverage under 4.1.11 with the
-glob excludes: 52 files / 350 tests, 92.91 / 74.21 / 91.34 / 92.96 against 85 / 70 / 75 / 85.
-
-**Gate hygiene found on the way (2026-09-06).** A Stryker debug run that crashed left
-`.stryker-tmp/sandbox-*` behind, and the next push failed with 44 lint errors that were all inside that
-copy (prettier "Delete ⏎" on the copied files, ESLint "multiple candidate TSConfigRootDirs"). `.stryker-tmp`
-was in `.gitignore` only. It is now also in `.prettierignore` and in ESLint's `globalIgnores`: a tool's
-temp directory belongs in every ignore list the gate reads, not only in git's, or a crashed tool run
-reddens the gate for an unrelated change and looks like a regression.
-
----
-
-## [2026-07] The gate ladder: `verify` ⊂ `verify:ci` ⊂ `verify:full`
-
-**Decision.** Three commands, each predicting a named part of CI. `verify` holds every offline check.
-`verify:ci` is `audit:gate && verify` and predicts the `validate` job — husky **pre-push** runs it.
-`verify:full` is `verify:ci && smoke:dev` and predicts the whole pipeline including `dev-smoke`.
-
-**Superseded in part**: pre-push now runs `verify:push`, phase-aware (`verify:ci` from phase 1 — see
-"[2026-07] Playwright e2e inside `verify:enterprise` + pre-push" below), and the pre-commit repo-wide pass
-also runs `typecheck`; the ladder itself stands.
-
-**Why.** `verify:enterprise` ran `npm test`, without `--coverage`, while CI ran `test:coverage`. Vitest
-only enforces thresholds when `--coverage` is passed, so the 85/70/75/85 numbers in `vitest.config.ts`
-were defined but unenforceable locally — a change could drop coverage, pass the push gate and die in CI.
-CI also ran `npm audit --audit-level=high`, which existed nowhere locally.
-
-**Consequence, accepted.** `verify` is slower: it now runs coverage instead of a bare test pass, and
-installs Playwright browsers on demand. `audit:gate` sits in `verify:ci` rather than `verify` because it
-needs the network, so an offline implementer can still run the complete offline gate.
-
-**`smoke:dev` stays out of the push gate.** `dev` runs Turbopack, `build` runs webpack with a custom
-`splitChunks` hook, so `validate` only ever exercises the webpack output and a Turbopack-only crash
-would ship unnoticed. But a cold Turbopack boot costs 10-30s, which is a poor trade on every push for a
-path that breaks mainly when routing or configuration changes. It runs as its own parallel CI job —
-mandatory on every PR, free locally — and `verify:full` chains it for the rare local run that needs it.
-
-**`playwright.config.ts` must keep `testIgnore: 'dev/**'`.** Without it the production project collects
-`e2e/dev/**` and runs the Turbopack smoke against `next start`, where it can PASS — a production build
-is quieter than a dev one — making the Turbopack coverage an illusion while looking like a win.
-
-**Advisory exceptions are data, not thresholds.** `audit:gate` replaces `npm audit --audit-level`: it
-fails on every high or critical advisory, on an expired allowance, on an allowance whose advisory has
-disappeared, and on its own inability to complete. Lowering a threshold to make a finding go away is not
-available; writing the reason down with an expiry is.
-
-**An allowance is the last resort, not the first, and the allowlist is now EMPTY.**
-`GHSA-mh99-v99m-4gvg` (brace-expansion, unbounded expansion → OOM) was allowlisted on the reading that
-`minimatch@3` is pinned by eslint's own dependencies and by the plugins arriving through
-`eslint-config-next`, so nothing could be bumped. True of the *direct* dependencies, wrong about the
-*transitive* one: `brace-expansion@5.0.8` is outside the advisory range `<=5.0.7`, so a root override
-`"brace-expansion": ">=5.0.8"` closes it with `minimatch@3` untouched — 5.0.8 is dual-published, so
-`require()` still resolves a CommonJS build. `npm audit` reports zero. What made the allowance look
-inevitable was npm's own suggested remediation, a semver-major **downgrade** of a lint plugin. Read the
-advisory's fixed range directly instead of trusting `fixAvailable`.
-
-**Removing an allowance and adding the override are ONE commit.** The moment the override lands the
-advisory disappears from the audit, which makes the allowance **stale**, which fails the gate by design.
-That is the stale check working — it is what stops allowances outliving the problem they described.
-
-**The gate must be runnable from a clean clone.** `verify` builds, the production
-build requires `NEXT_PUBLIC_APP_URL`, and `.env.example` used to suggest
-`http://localhost:3000` — a value `shared/lib/env.ts` deliberately REJECTS in
-production. So following the repo's own instructions produced a red gate, and the
-failure surfaced as a Zod trace under "Failed to collect configuration for
-/_not-found" with no hint about what to set. Three changes, none of which weaken the
-production check: `.env.example` now carries the reserved `.invalid` placeholder so
-`cp .env.example .env.local` leaves a passing gate; `scripts/check-build-env.mjs`
-runs before the build and prints the one-line remedy; the README and AGENTS.md name
-the copy as a bootstrap step next to `npm run prepare`.
-**The guard loads `.env*` through `@next/env`, the same loader `next build` uses.**
-Reading `process.env` alone would report "not set" for a value sitting in
-`.env.local`, because Node does not read `.env.local` — only Next does. That is a
-worse failure than the one being fixed: a gate that blocks a valid state.
-`@next/env` is therefore an explicit devDependency rather than a borrowed
-transitive of `next`, and it is CommonJS — a named ESM import throws
-`SyntaxError: Named export 'loadEnvConfig' not found`, so the default import is
-destructured.
-
-**Pre-commit is repo-scoped.** `lint-staged` fixes and re-stages the staged set, but for a partially
-staged file it restores the unstaged hunks *after* fixing, so formatting drift survived the commit and
-only failed at push — leaving files already fixed and never committed. The hook now also runs the TDD
-sibling gate and repo-wide `lint:oxlint` + `format:check`, collecting both failures so one attempt
-reports everything. **Not adopted:** a hook that commits for you.
-
-**Revisit trigger:** if a PR goes red on `dev-smoke` twice in one month, move `smoke:dev` into
-`verify:ci`.
-
-## [2026-07] ESLint 10; `settings.react.version` must be a literal
-
-**Decision.** ESLint 10, ahead of the 9.x end of life on 2026-08-06 — the deadline the hold below set
-for itself. The plugin peers did NOT widen; the resolution is three `overrides` entries mapping
-`eslint-plugin-react`, `eslint-plugin-jsx-a11y` and the transitive `eslint-plugin-import` peer to
-`$eslint`. `npm install` and `npm ci` both succeed with **no `--legacy-peer-deps`**; the blanket flag
-was rejected as a permanent posture in a repo with a hardened `.npmrc`. Plan B from the hold ADR
-(`@eslint-react/eslint-plugin` + a config rewrite) was not needed.
-
-**`settings.react.version` is `'19.2'`, never `'detect'`.** `eslint-plugin-react` resolves `'detect'`
-through `detectReactVersion` -> `resolveBasedir`, which calls the `context.getFilename()` API that
-ESLint 10 removed. Pinning only our own settings block is NOT enough: `eslint-config-next` sets
-`'detect'` for its own patterns, so the run then crashes on files matched solely by that config. A
-trailing config object with no `files` key repeats the pin and wins for every linted file.
-
-**Verified not fail-open**, because a config that lints nothing looks identical to a clean run from the
-exit code: 1236 rules declared, 57 active, 9 plugins loaded on a real source file.
-
-**Note on strictness relative to the sibling templates.** 57 active rules here versus 237 in the Vite
-templates, because this repo then built on `eslint-config-next` rather than `typescript-eslint`
-`strictTypeChecked`. Since 2026-10 the TypeScript block extends `strictTypeChecked` +
-`stylisticTypeChecked` (see "ESLint + Oxlint" below), so those counts are the pre-change baseline.
-
-## [2026-07] `no-magic-numbers`, with HTTP status codes ignored
-
-**Decision.** `@typescript-eslint/no-magic-numbers` blocks in the gate. Ignored: the trivial set
-(-1, 0, 1, 2), universal units (60, 100, 1000), **and the HTTP status codes**. Config files
-(`*.config.{ts,js,mjs}`) and test files are exempt entirely.
-
-**Why the status codes are ignored rather than extracted.** Enabling the rule produced 54 findings, and
-the large majority were `{ status: 404 }`-shaped literals in route handlers, plus Next's own
-`images.deviceSizes` table. A status code is a standard, universally known table — `status: 404` is
-self-documenting at the use site, which this repo's own constants ADR names as a reason NOT to extract.
-Naming twenty of them would move an HTTP table into our vocabulary and buy nothing.
-
-**What was left, and named.** Five genuine values survived the exemptions, and each encoded intent the
-bare number hid: the CSP-report field truncation (an attacker-influenced value bounded before it reaches
-a log), the nonce byte length (128 bits of entropy), the rate-limit key prefix that goes into a log line
-(privacy, not convenience), and the user-agent slice in the anonymous rate-limit key (bounds bucket
-cardinality so a spoofed unbounded UA cannot mint a fresh key per request). Those are the findings the
-rule exists for.
-
-
-## [2026-05] Magic strings → constants (CSP Reporting-Endpoint contract only)
-
-**Decision**: extract magic strings used in 2+ places OR carrying external contract to named constants in `shared/constants/`. Apply selectively per scope rules. NOT blanket extraction (Ghost Principle + existing Template scaffolding seeds stay intentionally inline as patterns for consumers to copy).
-
-**Audit result — narrow extraction surface**: this template has minimal magic-string duplication. Server Components + Server Actions remove most client-side string fan-out. The only duplicated strings with external-contract semantics are the CSP Reporting-Endpoint name and the `/api/csp-report` path, which must stay in lock-step between `next.config.ts` (header announcement) and `shared/lib/cspHeader.ts` (`report-to <name>` directive) plus the route handler filesystem path.
-
-**Extraction sites added this commit**:
-
-- `shared/constants/index.ts` extended with:
-    - `CSP_REPORTING_ENDPOINT_NAME = 'csp-endpoint'` — referenced by `next.config.ts` `Reporting-Endpoints` header AND `shared/lib/cspHeader.ts` `report-to` directive. Drift between the two silently drops CSP violation reports.
-    - `API_PATHS = { CSP_REPORT: '/api/csp-report' } as const` — referenced by `next.config.ts` header. Browser sends CSP reports here; must match `app/api/csp-report/route.ts` filesystem path. Single source for the URL string.
-
-**Items LEFT INLINE (scope discipline proof)**:
-
-- `/api/vitals` — 1 call site (`app/WebVitalsReporter.tsx`); single use, route handler self-documents
-- `/api/example-form` — 0 production call sites (form uses Server Action `app/actions/example-form.ts`); only test fixtures reference it
-- `/api/health` — 0 production call sites (only `e2e/health.spec.ts` and `proxy.test.ts`)
-- `/api/` prefix — `app/robots.ts` disallow + `proxy.ts` matcher use `startsWith('/api/')` pattern, not literal path comparison
-- `appOrigin` Server Action `allowedOrigins` — already deduplicated via local `const appOrigin` in `next.config.ts`
-- Zustand `STORAGE_KEYS` / `DEVTOOLS_NAMES` — NO Zustand stores exist in template (only `shared/lib/utils-store/createSelectors` utility); `persist` / `devtools` never called
-- `localStorage` / `sessionStorage` keys — never used in source (only referenced in `shared/lib/api/safeFetch.ts` JSDoc as something the helper avoids)
-- Custom event names — never dispatched (only `window.addEventListener('load', …)` in `app/providers.tsx`, DOM standard event)
-
-**Pattern**: `as const` objects, NOT `enum`. Type via `typeof OBJ[keyof typeof OBJ]`.
-
-**When NOT to extract**: single-use, self-documenting, i18n keys, intentional Template scaffolding seed examples (per SKELETONS.md "Template scaffolding" rule), prototype scope.
-
-**Revisit trigger**: if consumer fork removes more than half the constants in their first product slice = signal pattern doesn't fit their flow, drop from template seed.
-
-## [2026-05] Boundary validation via Zod safeFetch + Server Action output schemas
-
-**Decision**: validate ALL external boundary crossings using Zod schemas. Wrapper: `shared/lib/api/safeFetch.ts`. Reference example: `app/actions/example-form.ts` (Server Action output schema). Pattern is opt-in for consumer forks — add per boundary.
-
-**Why (Next 16-specific)**:
-
-1. **Server Components fetching**: `await fetch()` in RSC returns untyped `Response`; consumers cast to expected shape. Zod parse = runtime guarantee.
-2. **Server Action returns**: Server Actions return `Promise<unknown>` to client; client must trust the shape. `ServerActionResultSchema.parse(result)` before return = client-side runtime contract.
-3. **Route handlers**: incoming body via `await request.json()` is `unknown`. Standard Zod input validation — already convention.
-4. **External APIs**: when consumer pulls from Stripe/Twilio/etc — boundary validation = SLA against vendor schema drift.
-
-**Scope**:
-
-- Route handlers (input + output) — `request.json()` → `Schema.safeParse(...)` + return `Schema.parse(result)`
-- Server Actions — input via `formData` schema (already pattern) + **output** via result schema (new pattern this ADR adds)
-- RSC `fetch()` calls — wrap with `safeFetch(url, schema)`
-- Client Components (if TanStack Query added later) — same `safeFetch` wrapper
-
-**When NOT to use**: trusted same-process internal calls (Server Component calling local function); throwaway prototypes; tRPC end-to-end codegen.
-
-**Trade-offs**: +0 KB bundle (Zod in deps); ~50-200μs parse per call; schemas duplicate BE types (acceptable for solo/small-team).
-
-**Revisit trigger**: if consumer ships ≥5 boundary crossings without safeFetch within 60 days of fork-start, drop from template seed (signal pattern overhead > benefit for their use case).
-
-## Tailwind CSS v4
-
-- Configuration lives in **`app/globals.css`** (`@import 'tailwindcss'`, `@theme inline`, design tokens). **`tailwind.config.ts` removed.** PostCSS uses **`@tailwindcss/postcss`** only (no `autoprefixer`; v4 handles intended targets).
-- Animation: **`tw-animate-css`** replaces `tailwindcss-animate`.
-
-## Production build: webpack by default
-
-- **`next build`** defaults to Turbopack in Next 16; this repo defines a custom **`webpack()`** hook for vendor chunking and bundle analyzer.
-- **Decision:** `package.json` **`build`** / **`build:analyze`** use **`next build --webpack`** so production builds remain deterministic with custom splits. **`build:turbo`** is optional for Turbopack-only experiments.
-
-## Monorepo / multiple lockfiles
-
-- When the repo sits under a parent folder with another lockfile, Next may pick the wrong workspace root.
-- **Mitigation:** `next.config.ts` sets **`outputFileTracingRoot`** and **`turbopack.root`** to the package directory (`import.meta.url`).
-
-## ESLint + Oxlint (strict, template-1 parity)
-
-- **Oxlint:** CLI `oxlint` + `.oxlintrc.json` — fast first pass (react, typescript, jsx-a11y and nextjs plugins, core JS rules). The last two are enabled on purpose: `eslint-plugin-oxlint` `flat/all` switches off ESLint's own `jsx-a11y/*` (36) and `@next/next/*` (21) rules as "covered by oxlint", so while `.oxlintrc.json` did not load those plugins no linter checked them at all. `npm run lint` runs **`lint:oxlint` then `eslint`**. Overrides for tests, e2e, scripts, logger/web-vitals (no-console off where intentional).
-- **Oxlint a11y blind spot:** `jsx-a11y/control-has-associated-label` does not see inside components, so an icon-only button whose only child is a lucide icon component is NOT caught; give such buttons an `aria-label` by convention.
-- **ESLint base:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`, then **`eslint-plugin-oxlint` `flat/all`** (disables ESLint rules already covered by oxlint so custom severities win).
-- **Imports:** **`eslint-plugin-import-x`** + `eslint-import-resolver-typescript` via `import-x/resolver-next` — `import-x/order`, `import-x/no-cycle`, recommended import-x rules.
-- **React:** **`eslint-plugin-react`** — flat recommended + `jsx-runtime`, plus `react/no-array-index-key`, `no-unstable-nested-components`, `jsx-no-useless-fragment`, `self-closing-comp`; `react/prop-types` off (TypeScript).
-- **Type-aware strictness:** `parserOptions.projectService` + the `typescript-eslint` `strictTypeChecked` and `stylisticTypeChecked` presets, extended inside the TypeScript block so they sit AFTER the oxlint block (`flat/all` switches off every rule oxlint implements, including ones `.oxlintrc.json` never enables, `ban-ts-comment` among them). On top: `no-floating-promises`, `no-misused-promises` with **`checksVoidReturn.attributes: false`** (React event/async handlers), `no-import-type-side-effects`, `switch-exhaustiveness-check`, `ban-ts-comment` (`@ts-ignore` banned, `@ts-expect-error` only with a description). Carve-outs, each in `eslint.config.js` with its reason: `next.config.ts` (webpack `config` is `any` in Next's own type; `headers()` must be async), `proxy.ts` (frozen nonce pipeline, two rules), `app/**/route.ts` (`require-await`), and test files (`unbound-method`, `require-await`).
-- **Suppressions carry their reason:** `@eslint-community/eslint-plugin-eslint-comments` with `require-description` and `no-unlimited-disable` as errors, so a bare or blanket `eslint-disable` fails the gate. `no-unused-disable` is not enabled: ESLint's own unused-directive report is a warning and `--max-warnings 0` fails on it.
-- **Imports / style:** `no-restricted-imports` — no `FC`; parent-relative `../` banned in favor of `@/`.
-- **Prettier in ESLint:** **`eslint-plugin-prettier/recommended`** (last config block) so `prettier/prettier` runs as an ESLint rule.
-- **Playwright / e2e:** `typescript-eslint` `disableTypeChecked` + `import-x/order` & `import-x/no-cycle` off.
-- **Not enabled:** `func-style: expression` globally — Next idioms use `export async function` for routes, **`proxy`**, and Server Actions; enabling would fight the framework.
-
-## ESLint & TypeScript majors (hold — SUPERSEDED)
-
-**Superseded by "[2026-07] ESLint 10" above.** The 9.x hold met its own 2026-08-06 deadline. Its
-analysis of the plugin peers was correct and they never widened; what it missed is that `overrides`
-resolves the install conflict, and that the single runtime crash path is
-`settings.react.version: 'detect'`. Plan B was never needed. Kept for the reasoning.
-
-- **ESLint 9.x hold — closed 2026-09-12, ESLint 10 is installed** — Snapshot 2026-05-22: ESLint 10.0.0 shipped 2026-02-09; latest 10.4.0 shipped 2026-05-15. ESLint 9.x EOL is 2026-08-06 (`maintenance` dist-tag `9.39.4`). `eslint-plugin-react@7.37.5` (latest stable) peers stop at ESLint **`^9.7`**; `eslint-plugin-jsx-a11y@6.10.2` peers stop at **`^9`**. ESLint 10 removed `context.getFilename()` + `sourceCode.isSpaceBetweenTokens` + `sourceCode.getAllComments` + RuleTester `type` field — `eslint-plugin-react@7.x` calls these at runtime (crash, not warning). Other plugins (`eslint-plugin-react-hooks@7.1.1`, `typescript-eslint@8.59.x`, `eslint-plugin-react-refresh`, `eslint-plugin-import-x`, `eslint-config-next`) already accept ESLint **10**. `eslint-plugin-react@7.8.0-rc.0` shipped with a broken peer (`^3 || ^4` only), so the RC is not viable. PR #3979 (eslint-plugin-react ESLint 10) blocked transitively by `import-js/eslint-plugin-import#3230`; PR #1081 (eslint-plugin-jsx-a11y) awaiting `ljharb` review since Mar 2026. The monthly review from 2026-07-01 no longer applies. Plan B if upstream still blocked: switch to `@eslint-react/eslint-plugin@5.8.4+` (peer `eslint ^10.3.0`, requires Node ≥22, NOT drop-in — config rewrite ~3-5h) + `eslint-plugin-jsx-a11y-x@0.2.0+` (es-tooling org, drop-in).
-- **TypeScript 6.0.x (ACTIVE — bumped 2026-05-09)** — `typescript-eslint@8.59.2` peer relaxed to `>=4.8.4 <6.1.0`, unblocking TS 6.0.x. Repo bumped from `~5.9.3` → `~6.0.3`. Keep within `~6.0.x` until `typescript-eslint` ships its next major widening the upper bound.
-- **`@types/node` ^24.x** — aligns with **`engines: node >= 24`** (not Node 25 type defs by default). Latest 24.x patch is `24.12.4` (snapshot 2026-05-22). Dependabot config (`.github/dependabot.yml`) ignores @types/node ≥25.
-
-## Lint command (Next.js 16)
-
-- **Next.js 16** removed the **`next lint`** CLI command from the default `next` binary. **`package.json`** uses **`eslint . --max-warnings 0`** with the flat **`eslint.config.js`** instead.
-
-## Webpack vendor splits
-
-- Production client **`splitChunks`** uses named groups (React, Next, Zustand, UI, next-intl `i18nVendor`, form, **`common`**) so dependency upgrades do not silently reshuffle critical vendors into anonymous chunks.
-
-## i18n: next-intl SSR (2026-04-20)
-
-- **Migrated from** `i18next` + `react-i18next` (client-only, HTTP backend to `public/locales/**`, FOUC masked via `html.i18n-*` classes) **to** `next-intl` (App Router SSR, `[locale]` dynamic segment, server-rendered translations).
-- **Why:** SEO surfaces (sitemap `hreflang`, per-locale metadata, localized canonical URLs) require translations at render time, not after hydration. i18next's client-only initialization produced a flash of untranslated content on cold loads and prevented localized `generateMetadata`.
-- **Structure:** `i18n/routing.ts` (`defineRouting({ locales: ['en'], defaultLocale: 'en' })`) → `i18n/request.ts` (`getRequestConfig`) → `i18n/navigation.ts` (typed `Link` / `redirect`). Document routes live under `app/[locale]/`. `proxy.ts` composes the next-intl middleware with nonce CSP + rate limit.
-- **Title-template cascade:** Next.js does not apply `title.template` to the segment that defines it — only to descendants. Root `app/layout.tsx` owns the locale-independent `title.default` + `title.template`; `app/[locale]/layout.tsx` contributes only `description` / `openGraph` / `twitter`.
-- **Server Actions:** translate responses via `getTranslations('namespace')`; tests mock `next-intl/server` with a messages-indexed resolver.
-- **Single source:** `messages/<locale>.json`. `public/locales/**` and `shared/lib/i18n/**` were deleted. `i18nVendor` `splitChunk` regex retargeted to `/next-intl/`.
-- **Locale set:** kept at `['en']` — add new locales in `routing.locales` + `messages/<locale>.json`; no other code changes required.
-
-## Security headers (two layers)
-
-- **`next.config.ts` `headers()`:** applies static CSP (document-safe **`script-src 'self'`** in production via **`buildStaticContentSecurityPolicy`**), HSTS (prod), frame options, COOP/CORP, Reporting-Endpoints, Permissions-Policy, etc., on **`/:path*`**.
-- **`proxy.ts`:** for **`config.matcher`** paths only, sets per-request **nonce** CSP (**`strict-dynamic`** in production) on the outgoing response and forwards **`x-nonce`** on the request for handlers that need it.
-- **CSP violation reporting:** policy includes `report-to csp-endpoint`; **`Reporting-Endpoints`** points at **`/api/csp-report`**; POST handler logs payloads. **`X-XSS-Protection`** omitted (deprecated).
-- **Coverage side effect of the headers test:** `next.config.test.ts` imports `next.config.ts`, so that file now counts toward the vitest coverage totals (it is not in `coverage.exclude`). The thresholds still pass. Measured 2026-10-04 on the full coverage run (42 test files, 387 tests): lines 92.53, statements 92.64, functions 90.56, branches 83.5 percent against thresholds 85 / 85 / 75 / 70; `next.config.ts` alone is 76.47 lines, 50 functions, 57.14 branches, and the same run without it gives 93.63 / 93.73 / 92.16 / 85.56.
-
-## Public app URL (SEO)
-
-- **`NEXT_PUBLIC_APP_URL`** is validated in **`shared/lib/env.ts`** (Zod) and drives **`metadataBase`**, sitemap URLs, and robots `sitemap` in production.
-
-## `server-only` vs Edge proxy
-
-- **`shared/lib/rateLimit.ts`** re-exports **`./rateLimitCore`** behind **`import 'server-only'`** for Node server imports. **`proxy.ts`** and **Vitest** import **`rateLimitCore.ts`** directly because the `server-only` package does not run in those bundles. **`shared/lib/index.ts`** does not re-export rate-limit helpers to avoid pulling `server-only` into client barrels.
-
-## Next.js `experimental` (16.x)
-
-- **`experimental.serverActions`:** `allowedOrigins` from **`NEXT_PUBLIC_APP_URL`** (fallback `http://localhost:3000`), **`bodySizeLimit: '1mb'`**.
-- **`experimental.webVitalsAttribution`:** `['LCP', 'INP', 'CLS']` for build-time attribution hints.
-
-## API and Server Action rate limiting
-
-- **Where it runs:** **`proxy.ts`**, on **`config.matcher`** (`/api/:path*`, `/dev/:path*`, and broad non-asset document paths). Limiter applies when request is API (`/api/**`) or carries `next-action`, so document-route Server Actions are covered once they traverse the matcher.
-- **Default:** in-memory prune + cap via **`rateLimitCore`** when **Upstash env is unset**.
-- **Enterprise:** optional **Upstash Redis** via **`@upstash/ratelimit`** + **`UPSTASH_REDIS_REST_URL`** / **`UPSTASH_REDIS_REST_TOKEN`** — distributed quota (`shared/lib/upstashRateLimit.ts`).
-
-## Content Security Policy: nonce on dynamic, `'unsafe-inline'` on ISR (2026-05-09)
-
-The template runs **two** CSP strategies in parallel because Next.js 16 RSC has
-no nonce path for ISR'd HTML:
-
-- **ISR / static document routes** (`/[locale]`, `/[locale]/example-form`,
-  `/sitemap.xml`, `/robots.txt`, `/dev/ui` in dev): `script-src 'self'
-'unsafe-inline'` from `next.config.ts` `headers()` via
-  `buildStaticContentSecurityPolicy`. Required because Next emits inline
-  `<script>self.__next_f.push(...)` scripts into prerendered HTML at BUILD
-  time; ISR HTML is cached and a per-request nonce in the response header
-  never reaches those cached `<script>` tags. Per Next.js docs CSP guide,
-  "Nonces only support dynamic routes." Hash-based CSP for the inline
-  scripts is impractical because the `__next_f.push` payload differs per
-  page (infinite hashes). The XSS surface is constrained by the rest of
-  the policy: `frame-ancestors 'none'`, `object-src 'none'`,
-  `base-uri 'self'`, `connect-src 'self'`, `form-action 'self'`.
-
-- **Dynamic routes** (`/api/*`, `/dev/*`): `script-src 'strict-dynamic'
-'nonce-<random>'` from `proxy.ts` via `buildContentSecurityPolicy`.
-  Each request gets a fresh nonce; Next renders fresh HTML server-side
-  and (when given the `x-nonce` request header in middleware) automatically
-  attaches `nonce` to its inline scripts. Strictest setting available for
-  routes that can support it.
-
-- **Why not nonce everywhere?** Tried in commit history (proxy briefly applied
-  nonce CSP to document routes via mutated request headers + `intlMiddleware`).
-  Empirical curl on production server: HTML still had 0 `<script nonce=...>`
-  attributes — ISR cache served prerendered HTML without nonce, the response
-  header just announced a nonce that nothing matched → all 8 inline
-  `__next_f` scripts blocked by browser → hydration broken. Reverted
-  document-route CSP to the static `'unsafe-inline'` path; nonce kept only
-  for the dynamic surface where it actually works.
-
-- **Trade-off:** `'unsafe-inline'` weakens the ISR surface against inline-script
-  injection. The ISR'd HTML is server-prerendered with no user input in inline
-  scripts by design. Forks that ship user-generated content into ISR routes
-  must either escape strictly or move to a dynamic route + nonce CSP.
-
-## Webpack `/dev` exclusion
-
-- **Removed:** mutating **`config.entry`** to drop `/dev` chunks (fragile on Next upgrades).
-- **Replaced:** production **`proxy.ts`** returns **404** for **`/dev/*`** (within matcher); tracing excludes remain in **`outputFileTracingExcludes`** where useful.
-
-## E2E (Playwright)
-
-- **Config:** `playwright.config.ts` — `e2e/` specs, Chromium only; **local** uses `webServer` → `npm run dev` with `reuseExistingServer` so an existing dev server is reused; **CI** (`CI=true`) uses `npm run start` after `npm run build` for production-like runs.
-- **Vitest** excludes `e2e/**` so `*.spec.ts` in `e2e/` is not picked up by unit tests.
-
-## Verification benchmarks
-
-**Superseded in part (2026-08-30)**: pre-push runs `verify:push`, phase-aware — not the full `verify`; the
-bench script stands.
-
-- **`npm run verify:enterprise`** — full gate sequence (lint, format, tsc, test, build, **e2e** via `test:e2e:prod` / `CI=true` → `next start`).
-- **`npm run bench:verify`** — same steps with **per-step timings** (`scripts/bench-verify.mjs`) for local regression checks.
-- **Husky `pre-push`** — runs the full `verify` gate (not typecheck-only).
-
-## [2026-07] Playwright e2e inside `verify:enterprise` + pre-push
-
-**Decision**: append `npm run test:e2e:prod` after `build` in `verify:enterprise`, and point `.husky/pre-push` at full `npm run verify` (with `NEXT_PUBLIC_APP_URL` default for the build).
-
-**Why**: CI was the first place that caught nav/runtime regressions; local gate stopped at build. Prod-mode Playwright after build matches CI's `CI=true` webServer and fails the push before the PR.
-
-**Trade-off**: verify is slower (~extra e2e minutes); first-time clones need `npm run test:e2e:install`. Accepted so e2e cannot be skipped by habit.
-
-**Superseded in part (2026-08-30)**: `.husky/pre-push` now runs `npm run verify:push`, which is
-phase-aware (`scripts/gate-tiers.json`): phase 0 skips build, e2e and smoke until the first deploy;
-phase 1 runs the full `verify:ci`. CI always runs the full chain regardless of phase. The
-e2e-inside-`verify:enterprise` half of this decision stands. Tier law: `AGENTS.md` § Commands
-(exact) › _The tier law_.
-
-## Button primitive
-
-- Base variant omits **`ring-offset-background`** (aligns with enterprise template; focus ring stays via `ring-*`).
-
-## [2026-05] CI coverage enforcement (`npm test` → `npm run test:coverage`)
-
-**Superseded by "[2026-07] The gate ladder" above — CI is one `verify:ci` step and the coverage run lives
-inside `verify`; kept for the reasoning.**
-
-**Decision**: `.github/workflows/ci.yml` "Run tests" step calls **`npm run test:coverage`**, NOT `npm test`. Per /consilium 2026-05-23 APPLY Item 11 (6/6 voters YES, no dissent).
-
-**Why**: Vitest thresholds in `vitest.config.ts` (statements 85 / branches 70 / functions 75 / lines 85) only enforce when `--coverage` is passed. Previous `npm test` ran without it → thresholds were defined-but-unenforced, worst of both worlds (false-signal contract). One-line fix turns defined thresholds into PR-gating reality. `bench:verify` script unchanged (still runs `vitest` not `test:coverage`).
-
-## [2026-05] `web-vitals@^5.2.0` explicit dependency (alongside `next/web-vitals`)
-
-**Decision**: pin `web-vitals: ^5.2.0` as explicit dependency alongside the existing `next/web-vitals` wrapper used in `app/WebVitalsReporter.tsx`. Per /consilium 2026-05-23 APPLY Item 12 (4 YES / 2 NO — Pragma+Mini gang-of-two flagged speculative).
-
-**Why**: `next/web-vitals` is a thin wrapper; consuming attribution metrics not exposed by the wrapper requires the raw `web-vitals` package (per existing README "Restore playbook"). Adding it explicit + pinned removes the "where does this transitive come from" question and gives the consumer fork-time access without an `npm install` round-trip when the first `useReportWebVitals` attribution use lands.
-
-**Minority dissent (carrying forward)**: Pragma+Mini NO — speculative, no observed attribution-metric gap. Sec+Future+Ergo+Econ YES on triviality (5KB install, zero runtime cost, removes future "where does this come from" question). Tally crossed ≥4 YES threshold; minority concern documented here, not silenced.
-
-**Revisit trigger (60-day, 2026-07-23; checked 2026-09-12, no fork data yet, re-armed 2026-12-01)**: if first consumer fork builds and never imports raw `web-vitals` directly within 60 days, revert this addition (Pragma+Mini were right; remove explicit dep).
-
-## [2026-05] REJECT list — explicit non-adoption (2026-05-23 /consilium)
-
-**Decision**: explicit DO-NOT-ADOPT register so future agents + forks don't re-litigate the same items in template-next-seo context. Per /consilium 2026-05-23 APPLY Item 14 (6/6 voters YES). Sibling templates (template-1, template-spa-pwa, template-rn) carry equivalent sections.
-
-### React Compiler enable in template-next-seo (VETOED)
-
-**Status**: skip. **Why**: /consilium 2026-05-23 Item 3 (`experimental.reactCompiler: true` in next.config.ts + `babel-plugin-react-compiler@1.0.0`) — 3 YES / 1 NO / 1 COND / 1 NO + **Adversarial killer Q VETO**: "Name one Compiler-enabled production app at >100K MAU where #35105 or #35644 reproducers have been ruled out as of 2026-05-23" — unanswerable. Open silent-bailout bugs: [facebook/react#35105](https://github.com/facebook/react/issues/35105) (filed 2025-11-11, `Status: Unconfirmed`, no assignees), [#35644](https://github.com/facebook/react/issues/35644) (filed 2026-01-27, same status). Independent verifier Nadia Makarevich ([developerway.com Dec 4, 2024](https://www.developerway.com/posts/how-react-compiler-performs-on-real-code)) N=1 mixed-positive — Compiler fixed only 1-2 of 8-10 noticeable re-renders.
-**Revisit (quarterly, 2026-08-23; checked 2026-09-12: react #35105 and #35644 both still open, hold stands, next 2026-12-01)**: if either bug closes AND ≥1 named >100K-MAU app publishes "ruled out" retro, re-evaluate. `eslint-plugin-react-hooks@7.1.1` already loaded via `eslint-config-next/core-web-vitals` — Compiler correctness rules already fire as lint-only signal.
-
-### Lighthouse CI (LHCI) in template-next-seo (REJECTED on cost cascade)
-
-**Status**: skip. **Why**: /consilium 2026-05-23 Item 7 (`@lhci/cli` + `numberOfRuns: 3` + multi-URL + desktop+mobile + accessibility error≥0.95 + total-byte error≤200KB in `verify:enterprise`) — Econ math: 3 URLs × 3 runs × 2 form factors = 18 Lighthouse runs × ~30-60s = 9-18 min added per `verify:enterprise`. Compounds to 90-180h attention drain over 6mo (mirrors 2026-05-03 LLM-judge hook rejection on cost-cascade). Mini+Econ gang-of-two NO. Sibling `template-spa-pwa` ships LHCI; this template intentionally doesn't (different cost/benefit at SEO-focused Next 16 boundary).
-**Revisit (60-day, 2026-07-23; checked 2026-09-12, the push gate is `verify:push`, re-armed 2026-12-01)**: if `verify:enterprise` becomes the canonical pre-PR gate AND consumer forks observe perf regression that LHCI would have caught, re-evaluate scoped to single URL × 3 runs × desktop only.
-
-### memlab / WDYR / `react-native-flipper` / `vite-plugin-bundlesize`
-
-See sibling template `template-rn/.cursor/brain/DECISIONS.md` REJECT list section — same reasoning applies (no observed leak, Compiler-incompat / not applicable to web, sunset, size-limit preferred — though template-next-seo uses webpack not Vite, so size-limit + Vite-specific bundle gates are template-1 / template-spa-pwa concern).
-
-### React Doctor `lint-staged --staged --fail-on warning` PR-gate (REJECTED)
-
-**Status**: skip. **Why**: /consilium 2026-05-23 Item 1 — 0 YES / 4 NO / 2 COND. Speculative infra (no dated bug Doctor would have caught), `lint-staged` scope mismatch (Doctor is project-level scan, not staged-file linter — Ergo "category error"), gang-of-two Pragma+Mini NO, Adversarial flagged [typicode/husky#1462](https://github.com/typicode/husky/issues/1462) Windows-path issues on cross-platform forks.
-**Revisit (60-day, 2026-07-23; checked 2026-09-12: react-doctor 0.9.14, no 1.0, re-armed 2026-12-01)**: if React Doctor 1.0 ships AND ≥1 dated bug observed in a fork that Doctor would have caught, re-evaluate scoped to `npm run doctor` ad-hoc + GitHub Action `millionco/react-doctor@<commit-sha>` (NOT `@main`) with `--offline` + PR comment only (NOT lint-staged blocking).
-
-### Zstd compression (Brotli universal mandatory)
-
-**Status**: skip. **Why**: Safari Zstd landed 26.3 Feb 11, 2026 ([WebKit blog](https://webkit.org/blog/17798/webkit-features-for-safari-26-3/)) but [caniuse zstd](https://caniuse.com/zstd) global compat 45/100 — pre-26.3 long-tail huge. Brotli still mandatory. Next.js does not currently expose a Zstd-aware compression hook for static asset serving; deploy-side encoding negotiation handles this when needed.
-**Revisit (no trigger needed)**: revisit only when caniuse Zstd global crosses 80/100 AND Next.js exposes a per-route encoding negotiation contract.
+Why things are the way they are, one entry per decision. History lives in `git log -p -- .cursor/brain/DECISIONS.md` and the linked PRs: a wrong, superseded or dead decision is deleted from here, not archived. An entry stays under 30 lines (context, decision, consequences, status, evidence link); a decision a guard enforces names the guard and is stated once. The law itself is in `AGENTS.md`.
+
+| Decision | Date | Status |
+| --- | --- | --- |
+| Dependencies: newest compatible, a hold only for a measured incompatibility | 2026-10 | in force |
+| `agentRules: false` keeps `next dev` out of `AGENTS.md` | 2026-10 | in force |
+| Footer year is read once at module load | 2026-10 | in force |
+| Doc pointers are backticked paths, never `@` imports | 2026-10 | in force |
+| Runtime axe scan inside the existing page specs | 2026-10 | in force |
+| Playwright `failOnFlakyTests` in CI | 2026-10 | in force |
+| zizmor audits the workflows in `security.yml` | 2026-10 | in force |
+| First-load JS budget: `size:check`, right after `build`, full phase only | 2026-10 | in force |
+| Every GitHub Action is SHA-pinned; workflow tokens default to read-only | 2026-10 | in force |
+| Guards born of the 2026-10 audits | 2026-10 | in force |
+| Playwright `maxFailures: 10` on the gate run and in CI | 2026-10 | in force |
+| Docs: ADR-lite, one canonical place per fact, an always-on core of Cursor rules | 2026-10 | in force |
+| Agent limits in a committed `.claude/settings.json` | 2026-09 | in force |
+| CI plumbing: one Dependabot group, release token optional | 2026-09 | in force |
+| vitest is held at 4.1.x because the Stryker runner kills nothing under vitest 5 | 2026-09 | in force |
+| Content variance is measured in a browser, not asserted in jsdom | 2026-08 | in force |
+| The 44 px touch floor is a ratchet, not a redesign | 2026-08 | in force |
+| `outline-hidden`, never `outline-none` | 2026-08 | in force |
+| Tailwind class lint: two rules adopted, `no-unknown-classes` refused | 2026-08 | in force |
+| Gate hygiene: no fail-open shape, no second list | 2026-08 | in force |
+| Cross-engine coverage is opt-in and scoped | 2026-08 | in force |
+| Complexity ratchet: thresholds above the measured ceiling, production code only | 2026-08 | in force |
+| Mutation testing is a weekly strength gate, outside `verify` | 2026-08 | in force |
+| The gate ladder: `verify` is a subset of `verify:ci`, which is a subset of `verify:full` | 2026-07 | in force |
+| Advisory exceptions are data; an allowance is the last resort | 2026-07 | in force |
+| The gate runs from a clean clone: `check-build-env` | 2026-07 | in force |
+| ESLint 10, with `$eslint` overrides and a literal `settings.react.version` | 2026-07 | in force |
+| `no-magic-numbers` ignores HTTP status codes | 2026-07 | in force |
+| Constants only for a second call site or an external contract | 2026-05 | in force |
+| External data is parsed at the boundary with Zod | 2026-05 | in force |
+| Content Security Policy: nonce on dynamic routes, `'unsafe-inline'` on ISR routes | 2026-05 | in force |
+| `web-vitals` is an explicit dependency next to `next/web-vitals` | 2026-05 | in force |
+| Rejected, and the event that reopens each | 2026-05 | in force |
+| ESLint and Oxlint are layered, and the type-aware presets sit after the Oxlint block | 2026-04 | in force |
+| i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
+| Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
+| Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## Dependencies: newest compatible, a hold only for a measured incompatibility
+
+2026-10 · in force · guard `scripts/check-version-holds.mjs` · evidence: PR #100, `scripts/version-holds.json`
+
+- **Context:** a version pinned "to be safe" is a decision nobody re-reads; the holds had drifted between prose,
+  `dependabot.yml` and the lockfile, and nothing stopped an agent bumping a held package.
+- **Decision:** every package goes to its newest compatible stable release. A version is held only for an
+  incompatibility someone measured; the hold is one entry in `scripts/version-holds.json` (range, reason, lift
+  condition, evidence) plus a matching Dependabot `ignore`. `AGENTS.md` carries one line per hold and points there.
+  `.npmrc` keeps `min-release-age=3`; skipping that cooldown is a per-instance operator call, never a default.
+- **Consequences:** a lockfile or manifest outside a held range, a hold without its Dependabot ignore, or a hold on
+  an absent package fails `verify`. A hold is lifted by the event named in its `lift` field, in one commit with
+  its Dependabot ignore.
+- **Status:** in force. The audit allowance for `braces` lives in `scripts/audit-allowlist.json`, which expires on its own.
+
+## `agentRules: false` keeps `next dev` out of `AGENTS.md`
+
+2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `next.config.ts:34`
+
+- **Context:** Next 16.4 `next dev` writes a managed `nextjs-agent-rules` block into `AGENTS.md` whenever it
+  detects a coding agent and the block is missing. `AGENTS.md` is this repo's own law and must not drift under a
+  dev server (measured: 10 added lines on 16.3.8 with the default, byte-identical with `false`).
+- **Decision:** `agentRules: false` in `next.config.ts`. The one useful line of that block, where the
+  version-matched Next docs live (`node_modules/next/dist/docs/`), is written by hand under `AGENTS.md` § Stack.
+- **Consequences:** none at runtime. The option is documented in the installed Next at
+  `node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/agentRules.md`.
+- **Status:** in force.
+
+## Footer year is read once at module load
+
+2026-10 · in force · evidence: PR #100, `shared/ui/common/Footer/index.tsx:10`
+
+- **Context:** oxlint 1.86 `react/purity` flagged `new Date().getFullYear()` called during render and turned
+  `oxlint --deny-warnings` red.
+- **Decision:** `CURRENT_YEAR` is a module constant. The rule is not silenced: weakening a lint severity to get
+  green is out of scope for this template.
+- **Consequences:** on a long-lived server the year changes at the next restart or build, not on 1 January.
+  Prerendered pages already carry the build-time year.
+- **Status:** in force.
+
+## Doc pointers are backticked paths, never `@` imports
+
+2026-10 · in force · guard `docs:check` (`memoryImports`) · evidence: PR #98, PR #99
+
+- **Context:** Claude Code expands a bare `@path` outside a code span as a recursive memory import, and
+  `CLAUDE.md` is `@AGENTS.md`. Every session loaded eight files (about 158 KB) before the first prompt, and two
+  subagents died of autocompact thrashing.
+- **Decision:** every pointer to a file is a code span. The only import is the `@AGENTS.md` line in `CLAUDE.md`;
+  the brain files are read on demand.
+- **Consequences:** the load closure is `CLAUDE.md` + `AGENTS.md`. `docs:check` refuses an agent-memory import
+  anywhere else in either file.
+- **Status:** in force.
+
+## Runtime axe scan inside the existing page specs
+
+2026-10 · in force · evidence: PR #97, `e2e/support/a11y.ts`
+
+- **Context:** the static `jsx-a11y` rules read JSX and cannot see what the browser composes from it (contrast,
+  a landmark rendered twice, a swallowed label, a target under 24 px). The template had no check at that layer.
+- **Decision:** `expectNoSevereA11yViolations(page)` runs `@axe-core/playwright` with `target-size` (WCAG 2.2
+  SC 2.5.8, off by default in axe) switched on, failing on `serious` and `critical`. It is called after the
+  readiness assertion of the specs that already load the public routes: `e2e/smoke.spec.ts`,
+  `e2e/example-form.spec.ts` and, for the not-found route, `e2e/layout-geometry.spec.ts` (once, first width).
+  No `test()` block was added, so the suite ceiling in `scripts/gate-tiers.json` does not move.
+- **Consequences:** moderate and minor findings are advice that needs a design position a template does not
+  have, so they do not fail. There is no allow-list: a rule that cannot hold for a template is recorded here.
+  A scan before the page rendered passes by measuring nothing, hence the call sits after readiness.
+- **Status:** in force.
+
+## Playwright `failOnFlakyTests` in CI
+
+2026-10 · in force · guard `scripts/check-playwright-gate-config.test.mjs` · evidence: PR #97
+
+- **Context:** with `retries: 2` a test that fails then passes was green, the failure visible only in the report.
+- **Decision:** `playwright.config.ts` and `playwright.dev.config.ts` set `failOnFlakyTests: isCI`. A real flake
+  is fixed or quarantined with a written reason.
+- **Consequences:** preventive here: the last CI logs showed no flaky marker; the flake that motivated it was
+  seen in `template-spa-pwa`.
+- **Status:** in force.
+
+## zizmor audits the workflows in `security.yml`
+
+2026-10 · in force · guard required check `Workflow audit (zizmor)` in `.github/ruleset.json` · evidence: PR #97
+
+- **Context:** five workflow files outgrew the 2026-07 "only if workflows grow" trigger for a workflow audit.
+- **Decision:** a `zizmor` job in `security.yml` runs the SHA-pinned `zizmorcore/zizmor-action` over
+  `.github/workflows` with `.github/zizmor.yml` and `min-severity: medium`; the same file backs the local
+  command `uvx zizmor@<pinned version> .github/workflows`. No SARIF upload, so it works without code scanning.
+- **Consequences:**
+  - Online and offline runs grade differently: online, a checkout without `persist-credentials: false` is Low;
+    offline it is Medium. `artipacked` is therefore remapped to medium in `.github/zizmor.yml`, so both runs fail
+    on it. Every checkout that does not push sets `persist-credentials: false`.
+  - `adhoc-packages` is ignored for `ci.yml` as a whole file: the three `npm install -g npm@^11.14.0` steps are
+    deliberate and npm cannot be pinned through `package.json`.
+  - A new required check goes into the live ruleset only after the job has reported once.
+- **Status:** in force. The `auditor` and `pedantic` personas are outside the default persona and not addressed.
+
+## First-load JS budget: `size:check`, right after `build`, full phase only
+
+2026-10 · in force · guard `scripts/check-bundle-budget.mjs` · evidence: PR #96, `scripts/bundle-budget.json`
+
+- **Context:** nothing bounded the JavaScript a first visit downloads; a heavy import could land unnoticed.
+- **Decision:** `npm run size:check` fails when the brotli size of the shared first-load JS, or of the heaviest
+  PUBLIC route, passes a limit in `scripts/bundle-budget.json`. It sits right after `build` in
+  `verify:enterprise:inner`, so it runs in the full phase and is printed as skipped at phase 0.
+- **What is measured:** from the manifests the build leaves (Next 16 prints no table): shared = JS in
+  `.next/build-manifest.json` `rootMainFiles`; a route = shared plus its own chunks from `clientModules[*].chunks`
+  of its client-reference manifest (`entryJSFiles` is empty under `--webpack`), each file once; brotli default
+  quality, 1 KB = 1024 bytes. Public routes come from `.next/app-path-routes-manifest.json` minus `excludeRoutes`,
+  so a route a fork adds is inside the budget until someone excludes it on purpose. It fails closed on a missing
+  manifest, a missing chunk, no public route or a malformed budget.
+- **Baseline (master `ab50035`):** shared 121.18 KB, heaviest route `/[locale]/example-form` 184.43 KB; each limit
+  is the measurement + at most 10%, rounded up (134 and 203).
+- **Moving a limit:** re-measure on a build, put the number, the build and the date in the commit message, and
+  keep the limit at measurement + at most 10%. A number raised to turn a red run green is the failure this gate
+  exists to catch. Not covered: `/dev/*`, CSS, images, fonts, lazily loaded chunks.
+- **Status:** in force.
+
+## Every GitHub Action is SHA-pinned; workflow tokens default to read-only
+
+2026-10 · in force · guard Dependabot `github-actions` keeps pins current · evidence: PR #93, `.github/workflows/`
+
+- **Context:** a floating `@vN` tag stays movable by its publisher (or whoever takes the account over), and the
+  next run executes the new code with our token. Only a commit SHA cannot be moved.
+- **Decision:** every `uses:` is a full 40-hex SHA with the resolved version as a trailing comment.
+  `release.yml` and `security.yml` declare `permissions: contents: read` at the top; a job that writes
+  (`release-please`) gets its own scopes, so a job added later starts read-only.
+- **Consequences:** Dependabot updates the SHA and its version comment together.
+- **Status:** in force.
+
+## Guards born of the 2026-10 audits
+
+2026-10 · in force · evidence: PR #93, PR #95, PR #96; each guard is the named file
+
+- **Context:** audit rounds reproduced silent holes; each is closed at the cheapest static or unit layer.
+- **Decision and guards:**
+  - A page under `app/[locale]/**` missing from `app/sitemap.ts`: `app/sitemap.test.ts` walks the pages.
+  - `RATE_LIMIT_TRUST_PROXY=first-hop` trusts a spoofable header: a one-time production warning in
+    `emitModeWarningOnce` (`shared/lib/middlewareRequest.ts`), covered by its unit test.
+  - `scrollbar-gutter: stable` regression: asserted per width in `e2e/layout-geometry.spec.ts`.
+  - `catch {}` passed every check: `no-empty` with `allowEmptyCatch: false` in `eslint.config.js`.
+  - Pre-commit missed the checker's own files: `.husky/pre-commit` triggers `docs:check` on
+    `scripts/docs-check.*` and `package.json` too.
+  - A CI `run:` step outside the gate (the 2026-07 "gate lied" class): `docs:check` `ciSteps` against
+    `ci.allowedRunSteps` in `scripts/gate-tiers.json`, read per line, block scalars included.
+  - A required ruleset context no job produces: `docs:check` `rulesetContexts` against `.github/ruleset.json`; a
+    context GitHub renders only at runtime prints one loud non-failing line.
+- **Status:** in force. `scripts/docs-check.mjs` is a shared file, byte-identical across the four templates.
+
+## Playwright `maxFailures: 10` on the gate run and in CI
+
+2026-10 · in force · guard `scripts/check-playwright-gate-config.test.mjs` · evidence: commit `3bdfc64`
+
+- **Context:** measured in a product forked from this template: 22 of 60 pushes went red and a red push ran up
+  to 21 minutes against about 5 for a green one, because every failing test waited out its own timeout.
+- **Decision:** `playwright.config.ts` caps `maxFailures` at 10 when `isCI || isProdServer`; the desk run against
+  `next dev` stays uncapped. Each config writes its own `outputDir` (`test-results/e2e`, `test-results/dev`) so
+  `--last-failed` never reads the wrong suite's record. 10 beat 5 on one measured break (21 s vs 15 s, twice the
+  failing neighbours reported).
+- **Consequences:** the cap can stop short of tests it never reached; the push re-runs the whole gate.
+- **Status:** in force.
+
+## Docs: ADR-lite, one canonical place per fact, an always-on core of Cursor rules
+
+2026-10 · in force · guard `docs:check`, `scripts/check-version-holds.mjs` · evidence: `AGENTS.md` § Pull requests, brain docs, replies
+
+- **Context:** `AGENTS.md` had grown to 457 lines, this file to 1048, and the mandatory read to about 75 KB; facts
+  were restated across files, revisit dates sat in prose where a keyword check read them as deadlines, and nothing
+  stopped an agent bumping a held package.
+- **Decision:** entries here stay under 30 lines (context, decision, consequences, status, evidence link);
+  a superseded or wrong decision is deleted, not archived, and history lives in `git log -p` and the linked PRs.
+  `AGENTS.md` holds rules and pointers (versions in `package.json`, commands in the `README.md` table), one line
+  per hold. Revisits are events (an upstream release, a Dependabot PR), not calendar dates; only structured files
+  carry dates. Only the `alwaysApply` core of `.cursor/rules` loads on every Cursor turn; the rest load by glob.
+- **Consequences:** `docs:check` has no prose-date rule and `check-version-holds` fails on a held package outside
+  its range. A fork starts its own decisions file: `README.md` § What your fork does not inherit.
+- **Status:** in force.
+
+## Agent limits in a committed `.claude/settings.json`
+
+2026-09 · in force · evidence: commit `c32df99`, `.claude/settings.json`, `AGENTS.md` § Lanes
+
+- **Context:** reopened 2026-09-28 by the owner: the earlier review had deferred it until an agent edited a
+  listed file, and public guides now name a deny list as the baseline of an agent setup.
+- **Decision:** the file is tracked. It denies in every permission mode (bypass included): reading `.env` files
+  other than the example, editing itself, force pushes, `--no-verify`, `git reset --hard`, `git clean -f`. It
+  asks before edits of the gate files and of `next.config.ts` and `proxy.ts`. The rule text is in `AGENTS.md`.
+- **Consequences:** it is not a security boundary: a rule matches the command as written, so `sh -c`, a full
+  binary path or a `git -C` prefix walks past it, and `-uf` or a trailing `-n` still get through (more wildcards
+  would catch commit messages). The boundary is the required CI check. Cursor and Codex do not read the file.
+- **Status:** in force. Two adversarial passes found `+branch` and `-fu` pushes; `git push -f*`, `git push *+*`
+  and `git commit -n*` replaced the space-anchored forms.
+
+## CI plumbing: one Dependabot group, release token optional
+
+2026-09 · in force · evidence: commits `9d1aeef`, `a05de4b`
+
+- **Decision:** one `minor-and-patch` Dependabot group carries every non-major update (a major still opens its
+  own PR): two groups both rewrote `package-lock.json`, so the second PR conflicted after the first merged.
+  `release.yml` passes `secrets.RELEASE_PLEASE_TOKEN || github.token`.
+- **Consequences:** with the secret absent, release PR runs wait in `action_required` for one approval; with a
+  fine-grained PAT in it, release PRs get CI like any other PR.
+- **Status:** in force.
+
+## vitest is held at 4.1.x because the Stryker runner kills nothing under vitest 5
+
+2026-09 · in force · guard `scripts/version-holds.json` · evidence: commits `4e8221c`, `48f68a5`
+
+- **Context:** vitest 5.0.0 plus `@stryker-mutator/vitest-runner` 10.0.0 (2026-08-14, older than vitest 5) runs
+  zero tests per mutant: the one-file probe `stryker run --mutate shared/lib/rateLimitCore.ts` kills 0 of 48, and
+  the full run scored 2.94% against a 40.24% baseline. Under vitest 4.1.11 the same probe kills 37 of 48.
+  Stryker 9.6.1, `coverageAnalysis` and the alias change were ruled out. The sibling Vite templates hit the same
+  from 2026-09-14 and returned to 4.1.x on 2026-10-02. Not root-caused further.
+- **Decision:** `vitest` and `@vitest/coverage-v8` stay `^4.1.11`; `dependabot.yml` ignores `>=5`. A strength
+  gate that cannot fail is worse than a runner one major behind: the weekly job would go red every run and teach
+  everyone to ignore it.
+- **Lift:** a vitest-runner release dated after 2026-09-03, then `npm install -D vitest@5 @vitest/coverage-v8@5`
+  and the probe above; take vitest 5 when it kills mutants, in the commit that drops the Dependabot ignore.
+- **Consequences:** the fixes made for vitest 5 stay (they hold on 4.1): `vi.stubGlobal` in
+  `scripts/probe.test.mjs`, glob-form `coverage.exclude` (a bare `'app/'` stopped matching as a prefix), and
+  `import.meta.dirname` for the `@` alias. jsdom 30 needs Node `^24.15.0`. `.stryker-tmp` sits in `.gitignore`,
+  `.prettierignore` and ESLint `globalIgnores`: a crashed run left a sandbox copy that reddened lint.
+- **Status:** in force; mutation floor `thresholds.break` 35, measured 40.24.
 
 ## Content variance is measured in a browser, not asserted in jsdom
 
-**Decision.** Every content-bearing primitive is rendered once per content state on a dev-only route
-(`/dev/ui/content-stress`) and MEASURED by Playwright at 390 / 640 / 768 / 1024 / 1440. The invariants
-live as pure predicates in `e2e/support/geometry.ts`, shared by that spec and by
-`e2e/layout-geometry.spec.ts`, which measures the assembled pages instead of the primitives. Two
-consumers, one definition — two copies of a rule is the defect the module exists to prevent.
+2026-08 · in force · guard `e2e/dev/content-stress.spec.ts`, `e2e/layout-geometry.spec.ts` · evidence: `e2e/support/geometry.ts`
 
-**Why a browser.** jsdom has no layout, so a unit test can pin a class string and nothing more. The
-defects this found on the first run were all invisible to the unit suite: 172px of overflow from a
-40-character unbroken token at 390, a button row 1161px wide inside a 798px container at 1440 (so NOT a
-narrow-viewport problem), and 28px of horizontal DOCUMENT scroll from the header on every route at 390.
+- **Context:** jsdom has no layout, so a unit test can only pin a class string. The first run found defects the unit
+  suite could not see: 172 px of overflow from a 40-character unbroken token at 390, a button row 1161 px wide in a
+  798 px container at 1440, and 28 px of horizontal document scroll from the header on every route at 390.
+- **Decision:** each content-bearing primitive renders once per content state on the dev-only route
+  `/dev/ui/content-stress`, and Playwright measures it at 390, 640, 768, 1024 and 1440. The invariants are pure
+  predicates in `e2e/support/geometry.ts`, shared with `e2e/layout-geometry.spec.ts`, which measures the assembled
+  pages: one definition, two consumers. Text states are `minimal` (one character), `typical`, `long`, `unbroken`
+  (the load-bearing one: a sentence wraps on its spaces and hides a missing wrap guard); collections are `none`,
+  `one`, `many`. No RTL state, because no RTL locale ships.
+- **Consequences:** counts are derived, never literal: the fixture publishes `data-stress-total` and
+  `data-stress-components` and the spec compares what it found against them, with a floor and a named state set.
+  The fixture is unreachable from `next start`, so it runs under `verify:full` and the mandatory `dev-smoke` CI job;
+  `playwright.config.ts` keeps `dev/**` in `testIgnore`, or the production project reports a pass on a 404.
+- **Status:** in force.
 
-**Why the fixture is dev-only.** A stress page in the production bundle would be the wrong trade. That
-choice has a consequence worth stating: the fixture is unreachable from the `next start` run inside
-`verify`, so it needs its own server and its own rung — `verify:full`, plus a mandatory `dev-smoke` CI
-job. `playwright.config.ts` MUST keep `dev/**` in `testIgnore`: without it the production project
-collects the dev spec, runs it against `next start` where the route 404s, and the coverage becomes an
-illusion that still reports a pass.
+## The 44 px touch floor is a ratchet, not a redesign
 
-**Counts are derived, never literal.** The fixture publishes `data-stress-total` /
-`data-stress-components` from its own case list and the spec compares what it FOUND against those, with a
-floor and a named state set. A hardcoded `toHaveCount(32)` means adding a component silently requires
-editing the spec, and the version that forgets is green.
+2026-08 · in force · guard `e2e/support/control-targets.ts`, `control-targets.test.ts` · evidence: same files
 
-**States: `minimal` / `typical` / `long` / `unbroken` for text, `none` / `one` / `many` for collections.**
-`unbroken` is the load-bearing one — a long sentence wraps on its spaces and hides a missing wrap guard.
-`minimal` is one character rather than the empty string, because an unreadable label is a content bug and
-not a layout one. **Not included, deliberately:** an RTL state, because no RTL locale ships here and
-adding one is a product decision, not a fixture decision.
+- **Context:** exactly two rendered sizes sit below 44 across all routes and content states: 40 (`Button`, from
+  `h-10` and `size-10`) and 36 (`Input`, from `h-9`). Both are shadcn's default scale, shipped unaltered.
+- **Decision:** the gate accepts those two EXACT sizes, each with a reason and an exit condition; any other size
+  below the floor fails. Raising the kit to 44 would change the visual scale of every app scaffolded here, which is
+  the consuming app's design decision.
+- **Consequences:** an acceptance list fails by wrongly accepting, and sabotage never points that way, so the unit
+  test is all near-misses: 37, 38, 39, 41 and 42 refused, an icon-only control refused at an accepted height but a
+  narrow width.
+- **Status:** in force.
 
-## The 44px touch floor is a ratchet here, not a redesign
+## `outline-hidden`, never `outline-none`
 
-**Measured:** exactly two rendered sizes sit below the floor across every route and content state — 40
-(`Button`, from `h-10` and `size-10`) and 36 (`Input`, from `h-9`). Both are shadcn's default scale, which
-this template ships unaltered.
+2026-08 · in force · guard `e2e/forced-colors.spec.ts` · evidence: `shared/ui/button.tsx`, `shared/ui/input.tsx`
 
-**Decision.** `e2e/support/control-targets.ts` accepts those two EXACT sizes with a stated reason and an
-exit condition; every other size below the floor fails the gate. Raising the whole kit to 44 would change
-the visual scale of every app scaffolded from here, which is the consuming app's design decision. Keying
-on the exact size is what keeps this a ratchet: a 38px control matches nothing in the list.
+- **Context:** compiled from the installed Tailwind: `.outline-hidden` emits `outline-style: none` plus a
+  `forced-colors: active` transparent outline; `.outline-none` emits only the first. Controls here pair the reset
+  with a `ring-*` (a `box-shadow`), and forced-colors mode suppresses box shadows, so a Windows high-contrast user
+  had no focus indicator (WCAG 2.4.7).
+- **Decision:** `outline-hidden` everywhere; the committed browser test emulates forced colors. Restoring
+  `outline-none` makes it report `outline=none shadow=none`.
+- **Consequences:** `better-tailwindcss/no-deprecated-classes` does not help: both classes are valid and not
+  deprecated. The build emits no warning, so on every Tailwind minor bump read the release notes for renamed
+  utilities; this one test is the only guard.
+- **Button ring offset:** the `Button` base variant omits `ring-offset-background` (`shared/ui/button.tsx:10`); the
+  focus ring comes from `ring-*` and `ring-offset-2` alone, matching the sibling enterprise template. Nothing
+  guards it: do not re-add the shadcn default.
+- **Status:** in force.
 
-An acceptance list is the one gate component that fails by wrongly ACCEPTING, and sabotage never points
-that way, so `control-targets.test.ts` is all near-misses: 37/38/39/41/42 refused, an icon-only control
-refused at an accepted height but a narrow width, and the input entry proven unable to excuse an
-icon-only control.
+## Tailwind class lint: two rules adopted, `no-unknown-classes` refused
 
-## `outline-hidden`, never `outline-none` — an accessibility change wearing a rename's clothes
+2026-08 · in force · guard `better-tailwindcss` rules in `eslint.config.js:393` · evidence: same file
 
-**Compiled from the installed Tailwind rather than recalled:** `.outline-hidden` emits
-`outline-style: none` PLUS `@media (forced-colors: active) { outline: 2px solid transparent;
-outline-offset: 2px }`; `.outline-none` emits only the first. Every focusable control here pairs the
-outline reset with a `ring-*`, which is a `box-shadow`, and `forced-colors` suppresses box-shadows. So
-with `outline-none` a Windows high-contrast user had NO focus indicator at all (WCAG 2.4.7).
+- **Context:** a pre-flight found `no-deprecated-classes` 2 findings, both genuine, `enforce-canonical-classes` 0,
+  `no-unknown-classes` 0.
+- **Decision:** the first two are `error`. `no-unknown-classes` stays off despite zero findings: in a template its
+  failure mode is a false positive on the first hand-written CSS class a fork adds, and `i18n-loading` is applied
+  imperatively where the rule cannot see it.
+- **Consequences:** zero findings today is no evidence it is safe for what gets scaffolded later.
+- **Status:** in force.
 
-Swept in `button.tsx` and `input.tsx` (this template has no `SkipLink` component). **Pinned one way,
-verified 2026-10**: a committed browser test that emulates the mode (`e2e/forced-colors.spec.ts`).
-`better-tailwindcss/no-deprecated-classes` is configured (see below) but gives this regression no
-protection — checked against the installed `eslint-plugin-better-tailwindcss@4.7.0` source, whose
-deprecation table covers only Tailwind 4.0/4.1 renames (shadow, blur, rounded, opacity utilities,
-`flex-shrink`/`-grow`, `bg-`/`object-` position) and does not list `outline-none` or `outline-hidden` —
-both remain valid, non-deprecated Tailwind classes with different behaviour, so the rule has nothing to
-flag. There is no class-string unit test here either (unlike the sibling `template-spa-pwa`, which has a
-real `SkipLink` plus a `focus-indicator.test.tsx`). Mutation check: restoring `outline-none` makes the
-browser test report `outline=none shadow=none`. **On every Tailwind minor bump, read the release notes
-for renamed utilities** — the build emits no warning, and today only this one browser test would catch a
-regression here.
+## Gate hygiene: no fail-open shape, no second list
 
-## Tailwind class hygiene: two rules adopted on a pre-flight, one refused
+2026-08 · in force · guard `scripts/check-coverage.mjs`, `scripts/bench-verify.mjs`, `scripts/ensure-playwright.mjs` · evidence: their tests
 
-`no-deprecated-classes` 2 findings / 2 genuine · `enforce-canonical-classes` 0 · `no-unknown-classes` 0.
-The first two are enabled; `no-unknown-classes` is NOT, despite scoring zero, because its failure mode in
-a TEMPLATE is a false positive on the first hand-written CSS class a consumer adds, and this repo already
-applies `i18n-loading` imperatively rather than through a `className` the rule can see. Zero findings
-today is not evidence it is safe for whatever gets scaffolded from here. Both plugins stay — the rule sets
-do not overlap.
+- **Coverage dropout:** with an unparseable file in the coverage scope, vitest prints `Failed to parse <file>.
+  Excluding it from coverage.` and exits 0, so the percentage describes a smaller set. `check-coverage.mjs` refuses
+  on that marker, proven both ways. It is marker-based on purpose: a file-count baseline in a template records the
+  count of an empty scaffold.
+- **`bench:verify` drifted** from the gate it claimed to mirror (no `check-hooks`, no `ensure-playwright`). Its step
+  list is now derived from the `verify` script and throws on a segment it cannot parse: a second list claiming the
+  gate's scope always drifts narrower.
+- **`npx` needs `--no-install`** in `ensure-playwright.mjs`: with an incomplete `node_modules` it fetches the newest
+  Playwright and installs browsers for a version this repo does not pin.
+- **Test budgets follow what the test does:** the `verify-push` CLI cases boot node, npm and node, took seconds
+  under a busy worker pool, and timed out at vitest's 5 s default. The describe block carries a 20 s budget
+  (`scripts/verify-push.test.mjs:113`). A `skip` was rejected: those cases prove phase routing and exit-code
+  passthrough, the thing a silent pass would hide.
+- **Status:** in force.
 
-## Gate hygiene: three fail-open shapes closed
+## Cross-engine coverage is opt-in and scoped
 
-- **Coverage dropout.** Measured: with an unparseable file inside the coverage scope, vitest prints
-  `Failed to parse <file>. Excluding it from coverage.` and **exits 0**, so the percentage describes a
-  smaller set of files and can even go up. `scripts/check-coverage.mjs` wraps the run and refuses on that
-  marker; proven in both directions. Marker-based rather than a file-count baseline on purpose — a
-  baseline in a template would record the file count of an empty scaffold.
-- **`bench:verify` had drifted from the gate it claimed to mirror**, missing the `check-hooks` and
-  `ensure-playwright` steps while its own header said "same steps as `npm run verify`". The step list is
-  now DERIVED from the `verify` script and throws on a segment it cannot parse, so a step cannot silently
-  disappear from the benchmark. A second list claiming the gate's scope always drifts narrower than the
-  gate; the fix is to have no second list.
-- **`npx` without `--no-install`** in `ensure-playwright.mjs`: with an incomplete `node_modules`, npx
-  fetches the newest Playwright and installs browsers for a version this repo does not pin.
+2026-08 · in force · guard `scripts/check-cross-browser-selection.mjs` · evidence: `e2e/support/cross-browser.ts`
 
-## Cross-engine coverage is opt-in and scoped, and it earned its place immediately
-
-`CROSS_BROWSER=1` adds Firefox and WebKit projects, `testMatch`-scoped to the geometry specs. Not in the
-default run: three engines on every spec triples the local e2e wall-clock, and a WebKit font-metric
-difference in an unrelated spec would fail a push for a reason unconnected to the change.
-
-**What it found on the first run, which no amount of reasoning had:** Firefox reports `clientWidth: 0`
-for an inline `<label>` — CSS `overflow` does not apply to inline non-replaced elements and CSSOM defines
-their client box as zero — while Chromium reports a box. Every `<label>` on the page read as a 176px
-overflow in one engine and as nothing in the other. The engine difference is real; the defect was in the
-rule, which now exempts exactly `display: inline` and is tested in both directions.
-
-A `testMatch` that matches nothing collects ZERO tests and reports success, so
-`scripts/check-cross-browser-selection.mjs` asks Playwright whether every configured project actually has
-work, and fails closed on a report it cannot read.
+- **Context:** three engines on every spec triple the local e2e wall-clock, and a WebKit font-metric difference in
+  an unrelated spec would fail a push for a reason unrelated to the change.
+- **Decision:** `CROSS_BROWSER=1` adds Firefox and WebKit projects, `testMatch`-scoped to the geometry specs. The
+  first run found a rule defect no reasoning had: Firefox reports `clientWidth: 0` for an inline `<label>`
+  (CSSOM gives non-replaced inline elements a zero client box), so every label read as 176 px of overflow in one
+  engine. The rule now exempts exactly `display: inline`, tested both ways.
+- **Consequences:** a `testMatch` that matches nothing collects zero tests and reports success, so the selection
+  check asks Playwright whether every configured project has work and fails closed on a report it cannot read.
+- **Status:** in force.
 
 ## Complexity ratchet: thresholds above the measured ceiling, production code only
 
-Five ESLint core rules (`complexity` 15, `max-depth` 4, `max-params` 6, `max-lines-per-function` 130,
-`max-lines` 200) gate `app`/`features`/`shared`/`i18n`, tests and `shared/lib/test-utils` exempt.
-Thresholds come from a measurement, not taste: an ESLint API probe with every rule at warn-zero
-measured the ceiling at complexity 12 (`app/api/csp-report/route.ts`, `ExampleForm.tsx`) / depth 3 /
-params 5 (`shared/lib/rateLimitCore.ts`) / 102 lines per function (`ExampleForm.tsx`) / 143 per file
-(`ContentStressPage.tsx`) on 2026-08-09 — so the gate is clean on day one and fires only on future
-drift. **Tests are exempt on purpose**: a `describe` block is one function to these rules and
-table-driven suites are long by design; indexing the ratchet on test style is the failure mode that
-killed this rule set in a sibling repo's review. When a threshold fires, split the function; raising a
-number requires a fresh measurement recorded here.
+2026-08 · in force · guard five ESLint core rules in `eslint.config.js:421` · evidence: the measured table at `eslint.config.js:401`
 
-## Mutation testing: weekly strength gate, deliberately outside `verify`
+- **Decision:** `complexity` 15, `max-depth` 4, `max-params` 6, `max-lines-per-function` 130, `max-lines` 200 gate
+  `app`, `features`, `shared` and `i18n`. The thresholds sit above the measured ceiling (12 / 3 / 5 / 102 / 143),
+  so the gate is clean on day one and fires only on drift. Tests and `shared/lib/test-utils` are exempt on
+  purpose: a `describe` block is one function to these rules, and table-driven suites are long by design.
+- **Consequences:** when a threshold fires, split the function. Raising a number needs a fresh measurement in the
+  commit message.
+- **Status:** in force.
 
-**Re-measured 2026-09-06 on Stryker 10.0.0 + vitest 4.1.11: 40.24%** (1.65 tests per mutant), the
-same floor of 35. Under vitest 5 the runner ran zero tests per mutant here, which is why vitest is held
-at 4.1.x in this repo — detail and the lift trigger: § "[2026-09] Test toolchain majors" at the top of
-this file. The scope-mirror reasoning below stands; "StrykerJS 9.6.1" below is the version of the
-2026-08-09 baseline run.
+## Mutation testing is a weekly strength gate, outside `verify`
 
-`npm run test:mutation` (StrykerJS 9.6.1 + vitest runner) measures what coverage cannot: whether the
-tests would CATCH a wrong implementation. Baseline measured 2026-08-09: **mutation score 40.21%** —
-228 of 567 mutants detected, 145 survived, 194 in code no test covers — against a green 85% coverage
-floor. That gap is the reason the tool exists here. `thresholds.break: 35` is a floor-of-record: the
-weekly `mutation.yml` job (cron + dispatch) fails only when strength regresses below the measured
-baseline; raise the floor after a good run, never lower it to go green. NOT in `verify`/pre-push: a
-full run costs 2m28s locally and more on CI runners. **Scope mirrors the coverage scope** —
-`features`/`shared`/`i18n`; `app/` stays out of BOTH for the same measured reason (the coverage
-exclude comment in `vitest.config.ts`: including `app/` moved statements 196→331 and dropped lines
-93%→82%), and `app/` regressions are what the Playwright suite is for. Stated honestly: mutants in
-route handlers and Server Actions are invisible to this score. Also stated honestly: the score
-measures only the KILL side — whether the suite would catch a breakage — and cannot detect an
-over-strict test that wrongly rejects a legitimate implementation; that side stays with review
-discipline. Hardenings from an external review:
-`.stryker-tmp`/`reports` are gitignored AND `ignorePatterns` keeps `.env*` out of Stryker's sandbox
-copy (Stryker does not read `.gitignore`); the runner's tree enters the fail-closed audit gate — if
-it ever carries a high advisory, the remedy is an override floor with a major cap, not an allowlist
-entry.
+2026-08 · in force · guard `stryker.config.json` `thresholds.break: 35`, `.github/workflows/mutation.yml` · evidence: `stryker.config.json`
 
-## Override floors: fresh-advisory sweep of 2026-08-09, and the uncapped-floor class
+- **Context:** coverage cannot say whether tests would CATCH a wrong implementation. The baseline run scored
+  40.21% (228 of 567 mutants killed, 194 in code no test covers) against a green 85% coverage floor; the latest
+  run on Stryker 10.0.0 with vitest 4.1.11 scored 40.24%.
+- **Decision:** `npm run test:mutation` runs weekly (cron and dispatch), not in `verify`: a full run costs 2m28s
+  locally and more on CI. The floor of 35 is a floor of record: raise it after a good run, never lower it to
+  go green. The scope mirrors coverage (`features`, `shared`, `i18n`); `app/` is out of both, so route handlers
+  and Server Actions are invisible to this score and the Playwright suite covers them.
+- **Consequences:** the score measures only the kill side; an over-strict test that rejects a legitimate
+  implementation is for review. `.stryker-tmp` and `reports` are gitignored and `.env*` is in `ignorePatterns`
+  (Stryker does not read `.gitignore`). The runner's tree is in the fail-closed audit; a high advisory there gets
+  an override floor with a major cap, not an allowlist entry. Why vitest is held: its own entry above.
+- **Status:** in force.
 
-Fresh high advisories landed on the existing tree at once: `js-yaml` <4.3.1 (commitlint→cosmiconfig,
-scoped floor), `undici` <7.29.0 (jsdom), `nanoid` <3.3.17 (postcss, scoped floor). Two of the failing
-floors were our own uncapped ones (`brace-expansion: ">=5.0.8"`, `fast-uri: ">=3.1.4"`) that aged into
-the vulnerable ranges — the override that once cleared an advisory became the reason the gate was red,
-the exact failure mode the sibling doityourohm ADR predicted on 2026-08-04. All floors now carry a
-major cap (`">=fixed <next-major"`), and `next.postcss` — the one uncapped floor left, which that ADR
-said to cap "the next time that line is touched" — was capped in the same pass (`>=8.5.10 <9`). An
-uncapped floor is a delayed regression.
+## The gate ladder: `verify` is a subset of `verify:ci`, which is a subset of `verify:full`
 
-## [2026-09] Gate hygiene: a test budget is set by what the test does
+2026-07 · in force · guard `scripts/gate-tiers.json`, `bench:verify` · evidence: `AGENTS.md` § The tier law
 
-The `verify-push` CLI cases in `scripts/verify-push.test.mjs` timed out at vitest's 5 s default inside the
-full coverage run while passing alone in ~260 ms each. Each case boots node → npm → node, and an npm boot
-on a machine with every vitest worker busy takes seconds, so the budget was a unit-test budget applied to a
-process-spawn test. The describe block now carries a 20 s budget with the measurement next to it. A
-quarantine (`skip`) was rejected: the cases prove the push dispatcher's phase routing and exit-code
-passthrough, the exact thing a silent pass would hide.
+- **Context:** `verify:enterprise` ran `npm test` without `--coverage`, so the thresholds in `vitest.config.ts`
+  were unenforceable locally while CI enforced them; CI also ran an audit that existed nowhere locally.
+- **Decision:** `verify` holds every offline check; `verify:ci` adds `audit:gate` (network) and predicts the
+  `validate` job; `verify:full` adds `smoke:dev`. Which moment runs which is in the tier law, not here.
+  `smoke:dev` stays out of the push: a cold Turbopack boot costs 10-30 s, so it is its own mandatory parallel CI
+  job. `playwright.config.ts` keeps `testIgnore: 'dev/**'`, or the production project runs the Turbopack smoke
+  against `next start`, where it can pass and make the coverage an illusion.
+- **Consequences:** `verify` is slower (coverage instead of a bare pass). Pre-commit is repo-scoped (TDD sibling
+  gate, repo-wide oxlint and format check) because lint-staged restores unstaged hunks after fixing.
+- **Status:** in force. Revisit when a PR goes red on `dev-smoke` twice in one month: then move `smoke:dev`
+  into `verify:ci`.
 
-## [2026-09] Rules load: `code-style` and `fsd-architecture` are glob-scoped again
+## Advisory exceptions are data; an allowance is the last resort
 
-Both carried `globs` for `.ts/.tsx` (and `.js/.jsx`) AND `alwaysApply: true`, which makes the globs dead and
-loads about 210 lines on every Cursor turn regardless of what is being edited. They now load by glob, like
-the other stack rules; `agent-pipeline`, `global`, `project-config`, `workflow` and `test-driven-development`
-stay always-on (the last one is process, not a file-type rule). Measured context: always-loaded documents
-were ~7% of a lane's entry on the sibling project, so this is hygiene, not a token lever.
+2026-07 · in force · guard `audit:gate`, `scripts/audit-allowlist.json` · evidence: commit `9cf441c`
+
+- **Context:** a high advisory on `brace-expansion` was allowlisted on the belief nothing could be bumped; true of
+  the direct dependencies, wrong of the transitive one. npm's `fixAvailable` suggested a major downgrade of a lint
+  plugin.
+- **Decision:** `audit:gate` fails on every high or critical advisory, an expired allowance, an allowance whose
+  advisory vanished, and its own inability to finish. Lowering a threshold is not available; a written reason with
+  an expiry is. Read the advisory's fixed range, not `fixAvailable`. Removing an allowance and adding its override
+  are one commit: the stale check fails the gate the moment the override lands.
+- **Consequences:** security floors in `package.json` `overrides` are written `">=fixed <next-major"`, never
+  uncapped (an uncapped one aged into its own advisory's vulnerable range). Do not remove a floor to quiet npm.
+- **Status:** in force; the allowlist was empty at this entry.
+
+## The gate runs from a clean clone: `check-build-env`
+
+2026-07 · in force · guard `scripts/check-build-env.mjs` · evidence: `README.md` § Environment Variables
+
+- **Context:** the production build requires `NEXT_PUBLIC_APP_URL`, and `.env.example` once suggested
+  `http://localhost:3000`, which `shared/lib/env.ts` rejects in production, so the repo's own instructions gave a
+  red gate with a Zod trace and no hint.
+- **Decision:** `.env.example` carries the reserved `.invalid` placeholder; `scripts/check-build-env.mjs` runs
+  before the build and prints the one-line remedy. It loads `.env*` through `@next/env`, the loader `next build`
+  uses (Node alone would report "not set" for a value in `.env.local`), so `@next/env` is an explicit
+  devDependency whose pin matches `next`; it is CommonJS, so the default import is destructured.
+- **Consequences:** the production check is unchanged; cloning needs one copy-the-example step next to
+  `npm run prepare`.
+- **Status:** in force.
+
+## ESLint 10, with `$eslint` overrides and a literal `settings.react.version`
+
+2026-07 · in force · guard `eslint.config.js` (trailing settings block) · evidence: `eslint.config.js:432`, `package.json` `overrides`
+
+- **Context:** the 9.x line ends its support on 2026-08-06, and `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and
+  the transitive `eslint-plugin-import` still cap `eslint` at `^9` in their peers.
+- **Decision:** ESLint 10 with three `overrides` entries mapping those plugins' `eslint` to `$eslint`. `npm install`
+  and `npm ci` both pass without `--legacy-peer-deps`, which a hardened `.npmrc` rules out as a permanent posture.
+  `settings.react.version` is `'19.2'`, never `'detect'`: `eslint-plugin-react` resolves `'detect'` through
+  `context.getFilename()`, which ESLint 10 removed. `eslint-config-next` sets `'detect'` for its own patterns, so
+  pinning only our block is not enough: a trailing config object with no `files` key repeats the pin and wins.
+- **Consequences:** an install that fails on these peers is the signal to re-check the override, not to add a flag.
+  A config that lints nothing looks like a clean run, so it was checked once to be live: 57 rules active, 9 plugins
+  loaded on a real source file. Hold and lift: `scripts/version-holds.json` (`eslint`, `@eslint/js`).
+- **Status:** in force.
+
+## `no-magic-numbers` ignores HTTP status codes
+
+2026-07 · in force · guard `@typescript-eslint/no-magic-numbers` in `eslint.config.js:175` · evidence: same file
+
+- **Context:** enabling the rule gave 54 findings, mostly `{ status: 404 }` in route handlers and Next's own
+  `images.deviceSizes` table. A status code is a universal table and self-documenting at the use site.
+- **Decision:** the rule blocks the gate. It ignores -1, 0, 1, 2, the units 60, 100 and 1000, and a listed set of
+  HTTP status codes; `*.config.{ts,js,mjs}` and test files are exempt. Naming twenty status codes would move an
+  HTTP table into our vocabulary and buy nothing.
+- **Consequences:** five real values survived and were named, because the bare number hid intent: the CSP report
+  field truncation, the nonce byte length, the rate-limit key prefix that reaches a log line, and the user-agent
+  slice in the anonymous rate-limit key (it bounds bucket cardinality against a spoofed user agent).
+- **Status:** in force.
+
+## Constants only for a second call site or an external contract
+
+2026-05 · in force · guard `@typescript-eslint/no-magic-numbers`; `.cursor/rules/constants.mdc` · evidence: `shared/constants/index.ts`
+
+- **Context:** this template has little string duplication. The only strings that must stay in lock-step across
+  files are the CSP `Reporting-Endpoints` name and the `/api/csp-report` path; drift silently drops violation reports.
+- **Decision:** `CSP_REPORTING_ENDPOINT_NAME` and `API_PATHS` live in `shared/constants/` (`next.config.ts` and
+  `shared/lib/cspHeader.ts` read them). Extract a string or number only with 2+ call sites or an external contract;
+  single-use, self-documenting values, i18n keys and the scaffold's seed examples stay inline. Constants are
+  `as const` objects, never `enum`.
+- **Consequences:** a fork that deletes more than half the constants in its first product slice is the signal that
+  the pattern does not fit its flow.
+- **Status:** in force.
+
+## External data is parsed at the boundary with Zod
+
+2026-05 · in force · guard `.cursor/rules/resilience.mdc` · evidence: `shared/lib/api/safeFetch.ts`, `app/actions/example-form.ts`
+
+- **Context:** `await fetch()` in a Server Component returns an untyped `Response`, a Server Action returns an
+  unchecked shape to the client, and `request.json()` is `unknown`.
+- **Decision:** route-handler input and output, Server Action input (`formData` schema) and output (a result
+  schema), and RSC `fetch()` calls (through `safeFetch(url, schema)`) are parsed with Zod. Reference
+  implementation: `app/actions/example-form.ts`. Not for trusted same-process calls or throwaway prototypes.
+- **Consequences:** no bundle cost (Zod is already a dependency), about 50-200 microseconds per parse, and
+  schemas that duplicate back-end types, which is acceptable for a small team.
+- **Status:** in force. Opt-in per boundary for a fork.
+
+## Content Security Policy: nonce on dynamic routes, `'unsafe-inline'` on ISR routes
+
+2026-05 · in force · guard `proxy.test.ts`, `next.config.test.ts` · evidence: `proxy.ts:109`, `shared/lib/cspHeader.ts`
+
+- **Context:** Next 16 emits inline `self.__next_f.push(...)` scripts into prerendered HTML at build time. A cached
+  ISR page cannot carry a per-request nonce ("Nonces only support dynamic routes" in the Next CSP guide), and a hash
+  list is impractical because the payload differs per page.
+- **Decision:** two policies. ISR and static document routes get `script-src 'self' 'unsafe-inline'` from
+  `next.config.ts` `headers()` (`buildStaticContentSecurityPolicy`), together with HSTS in production, frame options,
+  COOP/CORP, Permissions-Policy and `Reporting-Endpoints` pointing at `/api/csp-report`. `/api/*` and `/dev/*` get
+  `script-src 'strict-dynamic' 'nonce-<random>'` from `proxy.ts` (`buildContentSecurityPolicy`), with the nonce
+  forwarded in `x-nonce`. The rest of the static policy bounds the ISR surface: `frame-ancestors 'none'`,
+  `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'`, `form-action 'self'`.
+- **Rejected:** a nonce on document routes. Tried through `intlMiddleware`: the production HTML had 0
+  `<script nonce>` attributes, the header announced a nonce nothing matched, all 8 inline scripts were blocked and
+  hydration broke.
+- **Consequences:** `'unsafe-inline'` weakens the ISR surface. The prerendered HTML carries no user input in inline
+  scripts by design; a fork that puts user-generated content into an ISR route must escape strictly or move that
+  route to a dynamic one with the nonce policy. `X-XSS-Protection` is omitted (deprecated).
+- **Status:** in force.
+
+## `web-vitals` is an explicit dependency next to `next/web-vitals`
+
+2026-05 · in force · evidence: `package.json`, `app/WebVitalsReporter.tsx`
+
+- **Context:** `next/web-vitals` wraps the raw package and does not expose attribution metrics. Two of six voters
+  called the addition speculative; four accepted it as trivial (about 5 KB, no runtime cost).
+- **Decision:** `web-vitals` stays a direct dependency so a fork can read attribution without a new install.
+  `experimental.webVitalsAttribution: ['LCP', 'INP', 'CLS']` (`next.config.ts:87`) is the Next-side half: Next
+  documents attribution as off by default and enabled per metric; this list is the set that carries it here.
+- **Consequences:** revisit when a fork has built and never imports the raw package: then remove it.
+- **Status:** in force; no fork data yet.
+
+## Rejected, and the event that reopens each
+
+2026-05 · in force · evidence: the 2026-05-23 decision panel; sibling `template-rn` carries the same register
+
+- **React Compiler (`experimental.reactCompiler`):** vetoed on unanswerable evidence. facebook/react issues
+  #35105 and #35644 (silent bailouts) were open and unconfirmed. Reopen when both close and a named app above
+  100K monthly users publishes that they are ruled out. The Compiler's correctness rules already fire through
+  `eslint-plugin-react-hooks`.
+- **Lighthouse CI:** 3 URLs x 3 runs x 2 form factors is 18 runs, 9-18 minutes on every `verify:enterprise`.
+  Reopen when `verify:enterprise` is the pre-PR gate AND a fork shows a regression LHCI would have caught, then
+  scope it to one URL, three runs, desktop.
+- **React Doctor as a `lint-staged` PR gate:** a project-level scan is not a staged-file linter. Reopen when it
+  ships 1.0 AND a fork has a dated bug it would have caught, as an ad hoc `npm run doctor` plus a SHA-pinned
+  action in `--offline` comment-only mode, never blocking.
+- **Zstd compression:** Safari support landed in 26.3 but global support was 45 of 100 (caniuse, 2026-05). Brotli
+  stays mandatory. Reopen at 80 of 100 AND when Next exposes per-route encoding negotiation.
+- **Not applicable to web:** memlab, why-did-you-render, `react-native-flipper`, `vite-plugin-bundlesize`
+  (reasons in `template-rn`'s register; `size:check` covers the bundle here).
+- **Status:** in force.
+
+## ESLint and Oxlint are layered, and the type-aware presets sit after the Oxlint block
+
+2026-04 · in force · guard `npm run lint` · evidence: `eslint.config.js`, `.oxlintrc.json`
+
+- **Context:** `eslint-plugin-oxlint` `flat/all` switches off every ESLint rule Oxlint implements, including rules
+  `.oxlintrc.json` never enables. While Oxlint did not load `jsx-a11y` and `nextjs`, no linter checked 36 a11y
+  and 21 `@next/next` rules at all.
+- **Decision:** Oxlint loads `react`, `typescript`, `jsx-a11y` and `nextjs`. ESLint runs `eslint-config-next`, then
+  `flat/all`, then `strictTypeChecked` and `stylisticTypeChecked` inside the TypeScript block so they come AFTER
+  the Oxlint block. `no-misused-promises` sets `checksVoidReturn.attributes: false` for React handlers;
+  `@ts-ignore` is banned and `@ts-expect-error` needs a description. Each carve-out (`next.config.ts`, `proxy.ts`,
+  `app/**/route.ts`, tests) has its reason in `eslint.config.js`.
+- **Consequences:**
+  - Suppressions carry a reason: `eslint-comments/require-description` and `no-unlimited-disable` are errors;
+    `no-unused-disable` is off because `--max-warnings 0` already fails on ESLint's own unused-directive report.
+  - Oxlint's `control-has-associated-label` cannot see inside components, so an icon-only button needs an
+    `aria-label` by convention.
+  - `func-style: expression` is not enabled: routes, `proxy` and Server Actions use `export async function`.
+- **Status:** in force.
+
+## i18n is next-intl SSR with a `[locale]` segment
+
+2026-04 · in force · guard `i18n/request.test.ts` · evidence: `i18n/routing.ts`, `AGENTS.md` § Architecture and contracts
+
+- **Context:** a client-only i18next setup produced a flash of untranslated content and could not localize
+  `generateMetadata`, canonical URLs or sitemap `hreflang`.
+- **Decision:** `next-intl` with `i18n/routing.ts` (`defineRouting`), `i18n/request.ts` and `i18n/navigation.ts`;
+  document routes live under `app/[locale]/`; `proxy.ts` composes the next-intl middleware with the nonce CSP and
+  the rate limit. Server Actions translate through `getTranslations`. The single message source is
+  `messages/<locale>.json`; the locale set is `['en']`, and a new locale needs `routing.locales` plus its file.
+- **Consequences:** Next applies `title.template` only to descendants, so the root `app/layout.tsx` owns
+  `title.default` and `title.template`, and `app/[locale]/layout.tsx` adds only `description`, `openGraph` and
+  `twitter`.
+- **Status:** in force.
+
+## Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe
+
+2026-04 · in force · guard `shared/lib/rateLimitCore.test.ts`, `proxy.test.ts` · evidence: `shared/lib/rateLimit.ts`
+
+- **Context:** `server-only` does not run in the proxy bundle or in Vitest.
+- **Decision:** the limiter applies to `config.matcher` paths when the request is `/api/**` or carries
+  `next-action`, so document-route Server Actions are covered. The default is the in-memory `rateLimitCore`
+  (prune plus cap); with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` set it is the distributed
+  `shared/lib/upstashRateLimit.ts`. `rateLimit.ts` re-exports the core behind `import 'server-only'` for Node
+  imports; `proxy.ts` and Vitest import `rateLimitCore.ts` directly; `shared/lib/index.ts` does not re-export the
+  limiter, so `server-only` never reaches a client barrel.
+- **Consequences:** `/dev/*` returns 404 in production from the same `proxy.ts` (`proxy.test.ts` covers it); this
+  replaced mutating `config.entry` to drop `/dev` chunks, which broke on upgrades.
+- **Status:** in force.
+
+## Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks
+
+2026-03 · in force · evidence: `package.json` `build`, `next.config.ts:63`, `app/globals.css`
+
+- **Webpack build.** `next build` defaults to Turbopack in Next 16, but this repo has a custom `webpack()` hook for
+  vendor chunking and the bundle analyzer, so `build` and `build:analyze` run `next build --webpack`. `build:turbo`
+  is an optional experiment.
+- **Vendor chunks.** Production `splitChunks` uses named groups (React, Next, Zustand, UI, `i18nVendor`, form,
+  `common`) so a dependency upgrade does not reshuffle critical vendors into anonymous chunks.
+- **Tailwind v4.** Configuration lives in `app/globals.css` (`@import 'tailwindcss'`, `@theme inline`, tokens);
+  there is no `tailwind.config.ts`. PostCSS runs `@tailwindcss/postcss` only, and `tw-animate-css` replaces
+  `tailwindcss-animate`.
+- **Parent lockfile.** Under a parent folder with another lockfile Next can pick the wrong workspace root, so
+  `next.config.ts` sets `outputFileTracingRoot` and `turbopack.root` to the package directory.
+- **Lint.** Next 16 removed `next lint`; `npm run lint` is `lint:oxlint` then `eslint . --max-warnings 0`.
+- **Status:** in force.

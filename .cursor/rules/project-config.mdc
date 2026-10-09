@@ -1,134 +1,35 @@
 ---
-description: 'Next.js project configuration, accessibility, SEO, and internationalization'
-alwaysApply: true
+description: 'UI quality, design tokens, interaction states, accessibility and i18n usage for Next.js'
+globs: ['**/*.tsx', '**/*.css', 'messages/**/*.json', 'i18n/**/*.ts']
+alwaysApply: false
 ---
 
-## Project Configuration
+## UI Quality: avoid the "AI aesthetic"
 
-### Technology Stack
+AI-generated UI has recognizable tells. For any UI work reject the generic default in favour of this template's design tokens (`@theme inline` + `:root` / `.dark` HSL vars in `app/globals.css`). This is a public, SEO-facing template, so "AI slop" output ships into every fork.
 
-See `AGENTS.md` § Stack; versions are `package.json`.
-
-## Project Structure
-
-### Folders and Files
-
-- **App Router** in `app/` (document routes live under `app/[locale]/*`):
-    - `layout.tsx` - Root layout (fonts, `WebVitalsReporter`, `Providers`, title cascade; no Header/Footer)
-    - `global-error.tsx` - Root catastrophic error UI
-    - `providers.tsx` - Client providers (analytics init on idle; i18n lives in `NextIntlClientProvider` in `[locale]/layout.tsx`)
-    - `[locale]/page.tsx` + `[locale]/example-form/` - Pages (file-based routing under the locale segment)
-    - `[locale]/error.tsx` - Locale-scoped error boundary
-    - `[locale]/not-found.tsx` - Locale-scoped 404 page
-    - No `loading.tsx` in the baseline - add per segment when a route gains slow data fetching
-- **Shared** in `shared/`:
-    - `ui/` - Shadcn UI primitives (button, input, card, etc.)
-    - `lib/` - Utilities and configs (`env`, `logger`, `cspHeader`, `rateLimit`, `utils`, `utils-store`, etc.; i18n config lives in root `i18n/`)
-    - `types/` - Shared TypeScript types
-    - `constants/` - Shared constants
-- **Entities** in `entities/` (business entities, each in its own folder with store/model) — **not in the baseline template**; the directory is created on first domain extraction
-- **Features** in `features/` (isolated features with ui/model/api segments) — baseline ships `features/example-form`
-- **Hooks** in `hooks/` (organized by domain) — **no `hooks/` directory exists in the baseline**; create it (or keep slice-local hooks under `features/*` / `entities/*`) when the first hook lands
-
-## SEO Configuration
-
-- **Metadata API** - Export `metadata` object in pages/layouts
-- **Dynamic Metadata** - Use `generateMetadata` function
-- **Sitemap** - `app/sitemap.ts` for automatic sitemap generation
-- **Robots.txt** - `app/robots.ts` for robots.txt configuration
-- **Open Graph** - Configured in metadata
-- **Structured Data** - Add via `metadata.other['application/ld+json']`
-
-### Example
-
-```typescript
-// app/page.tsx
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-    title: 'Home',
-    description: 'Welcome',
-    openGraph: {
-        title: 'Home',
-        description: 'Welcome'
-    }
-};
-```
-
-## UI Quality — avoid the "AI aesthetic"
-
-AI-generated UI has recognizable tells. For any UI work reject the generic default in favour of this template's design tokens (`@theme inline` + `:root` / `.dark` HSL vars in `app/globals.css`). This is a public, SEO-facing template — "AI slop" output is a tell and ships into every fork.
-
-- **Palette** — brand is **blue** (`--primary` = `hsl(221.2 83.2% 53.3%)`) on slate neutrals (`--secondary` / `--muted` / `--accent`), `--destructive` red. Use semantic classes (`bg-primary`, `text-foreground`, `bg-muted`, `border-border`, `ring-ring`) — never raw `purple-*` / `indigo-*` or arbitrary hex.
-- **Gradients** — none in `@theme`; keep surfaces flat. `tw-animate-css` is the only sanctioned animation layer — no hand-rolled gradient washes or glows.
-- **Radius** — tokens derive from `--radius: 0.5rem` (`--radius-sm` / `-md` / `-lg`). Vary radius by hierarchy; don't slap `rounded-2xl` / `rounded-full` on every card and button.
-- **Layout** — content-first and priority-driven (this is an SEO surface — the H1 and copy carry ranking weight), not a decorative hero followed by a uniform grid of identical cards.
-- **Copy** — realistic strings from `messages/<locale>.json` (next-intl), never lorem-ipsum; real length surfaces wrapping / overflow / truncation during dev.
-- **Padding & shadows** — no shadow tokens exist in `@theme`; lean on `shadow-*` sparingly (or `border-border` separation). Use the spacing scale, not blanket oversized padding.
-- **Dark mode only, in practice** — `app/layout.tsx` hardcodes `className="... dark"` on `<html>`, with no theme toggle anywhere in the repo, so `.dark` is always applied and the `:root` (light) tokens in `app/globals.css` never render. Verify new surfaces against the `.dark` values; don't tune against `:root` and assume it is reachable.
-- **Baseline APIs only** — stick to Baseline "Widely available" (`:has()`, container queries, `<dialog>`, `scroll-snap`, view-transitions); don't reach for "Newly available" (e.g. `scheduler.yield()`) without a fallback.
+- **Palette**: brand is **blue** (`--primary` = `hsl(221.2 83.2% 53.3%)`) on slate neutrals (`--secondary` / `--muted` / `--accent`), `--destructive` red. Use semantic classes (`bg-primary`, `text-foreground`, `bg-muted`, `border-border`, `ring-ring`), never raw `purple-*` / `indigo-*` or arbitrary hex.
+- **Gradients**: none in `@theme`; keep surfaces flat. `tw-animate-css` is the only sanctioned animation layer, no hand-rolled gradient washes or glows.
+- **Radius**: tokens derive from `--radius: 0.5rem` (`--radius-sm` / `-md` / `-lg`). Vary radius by hierarchy; no `rounded-2xl` / `rounded-full` on every card and button.
+- **Layout**: content-first and priority-driven (the H1 and copy carry ranking weight), not a decorative hero followed by a uniform grid of identical cards.
+- **Copy**: realistic strings from `messages/<locale>.json` (next-intl), never lorem-ipsum; real length surfaces wrapping, overflow and truncation during dev.
+- **Padding & shadows**: no shadow tokens exist in `@theme`; use `shadow-*` sparingly (or `border-border` separation) and the spacing scale, not blanket oversized padding.
+- **Dark mode only, in practice**: `app/layout.tsx` hardcodes `className="... dark"` on `<html>` and no theme toggle exists, so `.dark` is always applied and the `:root` (light) tokens never render. Verify new surfaces against the `.dark` values.
+- **Baseline APIs only**: stick to Baseline "Widely available" (`:has()`, container queries, `<dialog>`, `scroll-snap`, view-transitions); a "Newly available" API (e.g. `scheduler.yield()`) needs a fallback.
 
 ## Interaction & base-layer states (binding)
 
-- **States must be PERCEPTIBLY DISTINCT, not merely present.** A hover / active / focus / selection colour must not resolve to ≈ the element's own default or background colour — verify it is VISIBLE. Failure modes seen in the wild: a base link colour equal to its `hover:` colour (zero visible hover — only the cursor changes); a `::selection` highlight built on a near-background token (invisible selection). Chrome/nav links default to a neutral (`text-muted-foreground`) so the `hover:text-primary` shift shows.
-- **Compound states must stay COHERENT.** When two states co-occur (focus+invalid, hover+selected, disabled+focus) they must not visually fight — the more urgent state owns the shared channel (e.g. an invalid field recolours its focus ring, `aria-invalid:focus-visible:ring-destructive`, so focused+invalid reads as one error state; disabled cancels hover). Check state PAIRS, not just singles.
-- **Base-layer globals** (`::selection`, base links, `:focus-visible`) must be perceptibly distinct AND must NOT be built on quiet near-background tokens (`--muted`, or an `--accent` that is a slate-3-style near-background neutral). System feedback (selection, focus ring) is built on `--primary` / `--ring`, never the quiet hover token. If you define `::selection`, use `background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground));` — a quiet token renders the highlight invisible.
-
-## Secrets & configuration
-
-- **Never commit secrets or config — even PUBLIC ones.** Keys and configuration values, including public ones (Firebase web config, `NEXT_PUBLIC_*`), are NEVER committed to a repo file. `.env.example` placeholders only; real values live in the deploy platform's env / secret store (+ GitHub Secrets for CI). `NEXT_PUBLIC_*` values are inlined into the client bundle at build, so treat them as world-readable — but that is NOT a reason to commit them; keep them out of the repo. No "it's public so it's fine" exception.
+- **States must be PERCEPTIBLY DISTINCT, not merely present.** A hover / active / focus / selection colour must not resolve to about the element's own default or background colour. Seen in the wild: a base link colour equal to its `hover:` colour (only the cursor changes); a `::selection` highlight built on a near-background token (invisible selection). Chrome/nav links default to a neutral (`text-muted-foreground`) so the `hover:text-primary` shift shows.
+- **Compound states must stay COHERENT.** When two states co-occur (focus+invalid, hover+selected, disabled+focus) the more urgent one owns the shared channel (an invalid field recolours its focus ring, `aria-invalid:focus-visible:ring-destructive`; disabled cancels hover). Check state PAIRS, not just singles.
+- **Base-layer globals** (`::selection`, base links, `:focus-visible`) are built on `--primary` / `--ring`, never on quiet near-background tokens (`--muted`, a slate-3-style `--accent`). For `::selection` use `background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground));`.
 
 ## Accessibility
 
-- **Use semantic HTML tags**
-- **Add ARIA attributes** where needed (e.g., `role="status"`, `aria-live="polite"` for loading states)
-- **Use `role="alert"` and `aria-live="assertive"`** for critical messages (errors)
-- **Ensure keyboard navigation**
-- **Use shadcn/ui components** which include accessibility features
-- **Don't overuse ARIA** - prefer semantic HTML first
-- **A public route is scanned at runtime** - the page-level spec that loads it calls `expectNoSevereA11yViolations(page)` from `@/e2e/support/a11y` after its readiness assertion (serious and critical fail, `target-size` on). Add that one call, never a new `test()`
+- Semantic HTML first; ARIA only where needed (`role="status"` + `aria-live="polite"` for loading, `role="alert"` + `aria-live="assertive"` for critical errors); keyboard navigation always; shadcn/ui components carry their own a11y.
+- **A public route is scanned at runtime**: the page-level spec that loads it calls `expectNoSevereA11yViolations(page)` from `@/e2e/support/a11y` after its readiness assertion (serious and critical fail, `target-size` on). Add that one call, never a new `test()`.
 
-## Internationalization (i18n) — next-intl SSR
+## SEO and i18n usage
 
-- **next-intl App Router SSR** with a `[locale]` route segment; translations render on the server (no client-side JSON fetch, **no `public/locales/*`**).
-- **Single source of truth**: `messages/<locale>.json` (flat namespace tree: `common`, `errors`, `home`, `meta`, …).
-- **Config** lives under `i18n/` at repo root: `routing.ts` (`defineRouting({ locales: ['en'], defaultLocale: 'en' })`), `request.ts` (`getRequestConfig` messages loader), `navigation.ts` (typed `Link` / `redirect` / hooks), `request-locale.ts` (`requireLocale` narrowing).
-- **Locale set is `['en']`** by default — expand only when the caller asks.
-- **Type safety**: `global.d.ts` augments next-intl's `AppConfig`; `t('key')` calls are compile-time checked.
-
-### Structure
-
-```
-i18n/
-  routing.ts        # defineRouting({ locales, defaultLocale })
-  request.ts        # getRequestConfig (messages loader)
-  navigation.ts     # createNavigation (typed Link / redirect / hooks)
-messages/
-  en.json           # single source of truth (common, errors, home, meta, …)
-```
-
-### Usage in Components
-
-```typescript
-// Server Component
-import { getTranslations } from 'next-intl/server';
-
-const t = await getTranslations('home');
-return <h1>{t('title')}</h1>;
-```
-
-```typescript
-// Client Component
-'use client';
-
-import { useTranslations } from 'next-intl';
-
-const t = useTranslations('home');
-return <h1>{t('title')}</h1>;
-```
-
-### Adding a New Language
-
-1. Add the code to `locales` in `i18n/routing.ts`
-2. Create `messages/<code>.json` (copy `en.json`, translate values)
-3. Middleware and `alternates.languages` pick up the new locale automatically
+- Metadata API, `generateMetadata`, `app/sitemap.ts` and `app/robots.ts`: `routing.mdc` and `react-patterns.mdc`. Structured data goes in `metadata.other['application/ld+json']`.
+- next-intl SSR, no `public/locales/*`: `messages/<locale>.json` is the single source (flat namespaces `common`, `errors`, `home`, `meta`, …); config lives in root `i18n/` (`routing.ts`, `request.ts`, `navigation.ts`, `request-locale.ts`). `global.d.ts` augments next-intl's `AppConfig`, so `t('key')` is checked at compile time. Server: `getTranslations('home')` from `next-intl/server`; client: `useTranslations('home')`.
+- Locale set is `['en']`; adding a language is `README.md` § Adding Languages (`AGENTS.md` invariant 5).

@@ -15,8 +15,8 @@
  *
  * Pair with the `ServerActionResultSchema` pattern in
  * `app/actions/example-form.ts` to give clients a runtime contract for Server
- * Action return shapes. See `.cursor/brain/DECISIONS.md` ADR
- * "Boundary validation via Zod safeFetch + Server Action output schemas".
+ * Action return shapes. See `.cursor/brain/DECISIONS.md`
+ * "External data is parsed at the boundary with Zod".
  */
 
 import type { z } from 'zod';

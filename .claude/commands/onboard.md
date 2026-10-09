@@ -37,7 +37,7 @@ Do not take the reading at face value. Check, cheaply:
   predicts the `validate` job (CI is phase-blind); only `verify:full` also predicts the `dev-smoke`
   job, because the Turbopack path is deliberately outside the push gate. A check that lives only in
   a workflow is the defect this repo has a written decision about.
-- **The stack table**: versions in `AGENTS.md` against `package.json`. Stack tables rot first.
+- **The stack table**: `.cursor/brain/PROJECT_CONTEXT.md` § Tech Stack against `package.json`. Stack tables rot first.
 - **The layout**: `ls app/ features/ shared/ i18n/` against `MAP.md`. A directory in one and not the other is a finding.
 
 Report any drift you find. Do not silently work around a stale line — that is how a wrong doc survives

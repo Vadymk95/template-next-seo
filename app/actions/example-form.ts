@@ -14,7 +14,7 @@ import { logger } from '@/shared/lib/logger';
  * return value with Zod before handing it back gives the client a runtime
  * guarantee, and `z.infer<typeof …>` keeps the public static types in lockstep
  * with the runtime schema (no manual drift). See `.cursor/brain/DECISIONS.md`
- * ADR "Boundary validation via Zod safeFetch + Server Action output schemas".
+ * "External data is parsed at the boundary with Zod".
  */
 const ServerActionResultSchema = z.discriminatedUnion('success', [
     z.object({

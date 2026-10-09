@@ -116,7 +116,7 @@ npm start
 
 - **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
 - **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
-- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) is the offline gate; its stage order is the `verify:enterprise:inner` script, listed once in `AGENTS.md` § Commands (exact) and not repeated here. Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
+- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) is the offline gate; its stage order is the `verify:enterprise:inner` script in `package.json` (see also § Commands in this README). Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
 - **Mutation testing**: **`npm run test:mutation`** (StrykerJS) measures test strength — whether the suite would catch a wrong implementation, not just execute the code. Runs as a weekly `mutation.yml` CI job with a measured floor (`thresholds.break` in `stryker.config.json`), deliberately outside `verify` because a full run costs minutes.
 
 ### Security (production)
@@ -218,36 +218,40 @@ export default function RootLayout({ children }) {
 
 ## 🛠️ Commands
 
+The commands an agent or a developer runs per change (`verify:iter`, `verify:measure`, `e2e:one`, `test:one`, `probe`, `verify:push`, `trace:report`, `docs:check`, `fix`) are in `AGENTS.md` § Commands (exact); the law for which moment runs what is its _tier law_. Everything else:
+
 ```bash
-# Development
+# Development and build
 npm run dev              # Next.js dev server with Turbopack (default, faster)
-npm run dev:webpack      # Use Webpack instead (for compatibility)
-
-# Build
-npm run build            # Production build (uses Webpack for custom optimizations)
-npm run build:analyze    # Build with bundle analyzer
+npm run dev:webpack      # Webpack dev server (parity with the production build)
+npm run build            # Production build (`next build --webpack`, custom vendor chunks)
+npm run build:analyze    # Build with the bundle analyzer
 npm run build:turbo      # Turbopack build (no custom webpack splits)
+npm run start            # Serve the production build (after npm run build)
+npm run size:check       # first-load JS budget over an existing build (scripts/bundle-budget.json)
 
-# The moments (the law: AGENTS.md § Commands (exact) › The tier law)
-npm run verify:iter          # iteration tier: oxlint → tsc → vitest --changed; run per change
-npm run verify:measure       # MEASURE moment: build + look (-- e2e/<f>.spec.ts for one spec)
-npm run e2e:one -- <spec>    # one Playwright spec, FREE port, through the tracer
-npm run test:one -- <file>   # one unit test file, through the tracer
-npm run probe -- <route>     # LOOK: render, screenshot per width, print measured quantities
-npm run verify:push          # what pre-push runs, phase-aware
-npm run trace:report         # findings from .gate-trace.log: moments, budgets, worktrees
-npm run docs:check           # mechanical doc drift: paths, scripts, sentinels, versions, command table, dead docs, agent-memory imports
-
-# Drill-downs on a specific failure (none of these is a moment)
+# Checks: drill-downs on a specific failure, none of them is a moment
 npm run lint             # oxlint → ESLint
-npm run format           # Prettier formatting
+npm run typecheck        # tsc --noEmit (`type-check` is an alias)
+npm run format           # Prettier write
 npm run format:check     # Prettier check
-npm test                 # Run tests (the gate uses test:coverage)
-npm run test:watch       # Watch mode
-npm run test:coverage    # Coverage report
+npm test                 # unit tests (the gate uses test:coverage)
+npm run test:watch       # watch mode
+npm run test:coverage    # coverage report with thresholds
+npm run test:mutation    # StrykerJS strength gate, weekly CI job, not in verify
+npm run test:e2e         # Playwright (dev server locally unless CI=true)
+npm run test:e2e:prod    # Playwright against `next start` (what the gate runs)
 npm run test:e2e:ui      # Playwright UI mode
 npm run test:e2e:headed  # Playwright with a visible browser
-npm run start            # Serve the production build (after npm run build)
+npm run test:e2e:install # one-time Chromium install for Playwright
+npm run smoke:dev        # Turbopack dev smoke on its own (e2e/dev/, port 3003)
+npm run audit:gate       # fail-closed audit with a self-expiring allowlist
+
+# The chain the push and CI run (not desk tools)
+npm run verify:enterprise  # preflight → format → typecheck → lint → coverage → build → size → e2e
+npm run verify:ci          # verify + audit:gate: phase-1 pre-push and the CI validate job
+npm run verify:full        # verify:ci + smoke:dev: predicts the whole CI pipeline
+npm run bench:verify       # time each stage of the verify chain
 ```
 
 ## Releases
@@ -423,7 +427,7 @@ Next.js does **not** apply `title.template` to the segment that defines it — o
 
 ### Bundle Sizes
 
-- **First Load JS (brotli):** shared by every route 121.18 kB; `/[locale]` 147.79 kB; `/[locale]/example-form` 184.43 kB (measured 2026-10-04 on a webpack build, 1 kB = 1024 bytes). The full-phase gate runs `npm run size:check` against the limits in `scripts/bundle-budget.json` (134 kB shared, 203 kB heaviest public route); how they were set and how to move them: `.cursor/brain/DECISIONS.md` § "First-load JS budget". `npm run build:analyze` gives a breakdown.
+- **First Load JS (brotli):** the full-phase gate runs `npm run size:check` against the limits in `scripts/bundle-budget.json` (shared by every route, and the heaviest public route). What is measured, the baseline, and how to move a limit: `.cursor/brain/DECISIONS.md` § "First-load JS budget". `npm run build:analyze` gives a breakdown.
 - **Vendor chunks:** `optimizePackageImports` + webpack cache groups (React, Next, Zustand, i18n, forms, UI)
 
 ### Optimizations
@@ -586,7 +590,7 @@ npm start
 
 ## Removed dependencies (restore playbook)
 
-- **Web-vitals wrapper** — removed (nothing under `shared/lib/` wraps it); the app reports via `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). The raw **`web-vitals`** package is pinned as an explicit dependency (`^5.2.0`) for fork-time access to attribution metrics not exposed by the wrapper (see `.cursor/brain/DECISIONS.md`, 2026-05 ADR). To restore the wrapper module, recreate it and re-export from `shared/lib/index.ts` — no install needed.
+- **Web-vitals wrapper** — removed (nothing under `shared/lib/` wraps it); the app reports via `useReportWebVitals` from `next/web-vitals` (`app/WebVitalsReporter.tsx`). The raw **`web-vitals`** package is an explicit dependency for fork-time access to attribution metrics not exposed by the wrapper (see `.cursor/brain/DECISIONS.md` § "`web-vitals` is an explicit dependency next to `next/web-vitals`"). To restore the wrapper module, recreate it and re-export from `shared/lib/index.ts` — no install needed.
 
 ## Troubleshooting — stale content in dev
 
@@ -642,6 +646,12 @@ gh api repos/OWNER/REPO/rules/branches/master   # or main - whatever your defaul
 ```
 
 The order matters, and this one costs least: enable Actions, open one pull request and let every check report its name at least once, then post the ruleset. A required check that has never reported is Pending forever, so posting it first blocks every pull request with no error message anywhere - which is why the pull request comes first. The file targets `~DEFAULT_BRANCH` rather than a branch name, so it survives a rename; the check names inside it are the ones these workflows actually produce, so if you rename a CI job, update this file in the same commit.
+
+Three things in the files that a fork must handle on purpose:
+
+- **Start your own decisions file.** `.cursor/brain/DECISIONS.md` records why the template is the way it is, not why your product is. Replace it with a short file of your own whose first line points at the template's history (`git log -p -- .cursor/brain/DECISIONS.md` in this repository), and add an entry only when you decide something.
+- **Keep `scripts/version-holds.json`.** It is the list of packages held below a major, with the reason and the lift condition, and `scripts/check-version-holds.mjs` fails the gate when `.github/dependabot.yml` and the list disagree. Delete a hold only in the commit that takes the major and removes its Dependabot ignore.
+- **Re-check each hold against your own Dependabot pull requests.** The holds are measured against this template's dependency set. If a fork adds a plugin, a test runner or a toolchain piece, the same hold can lift earlier or a new one can appear; the first Dependabot PR for a held package is the moment to test it.
 
 Two things that are NOT settings and are easy to miss. `.npmrc` disables lifecycle scripts on purpose, so `npm install` alone leaves you with no git hooks - `npm run prepare` once after cloning is what installs them. And the workflows trigger on `main` and `master` both, so renaming your default branch to either does not silently stop CI; any other name has to be added to the `branches:` filters, or nothing runs and every required check stays Pending.
 

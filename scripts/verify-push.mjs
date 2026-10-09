@@ -2,7 +2,7 @@
 /**
  * Phase-aware push gate: what a push must prove depends on whether a prod boundary exists yet.
  *
- * Phase 0 (scaffold, pre-deploy): audit + hooks + format + types + lint + coverage. The build, the
+ * Phase 0 (scaffold, pre-deploy): audit + hooks + version holds + format + types + lint + coverage. The build, the
  * bundle size budget (it reads the build) and the prod e2e suite are SKIPPED (the dev smoke is
  * never inside verify:ci — it is CI's dev-smoke job — so no phase skips it) — before the first
  * deploy there is no production boundary for them to guard, and paying ~30s per push to check a
