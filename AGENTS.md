@@ -1,107 +1,41 @@
 # template-next-seo — agent guide
 
-Operating contract for any AI agent editing this repo. Read in full before the first
-change. Brain docs hold the detail; this file holds the rules that keep agents from
-drifting away from them.
+Operating contract for any AI agent editing this repo; read it in full before the first change. One canonical place per fact: rules live here, versions in `package.json` and the stack table of `.cursor/brain/PROJECT_CONTEXT.md`, the why in `.cursor/brain/DECISIONS.md`, the file map in `.cursor/brain/MAP.md`. **Code is ground truth:** if a line here conflicts with the code, follow the code and fix or flag the line in the same session. Cursor and Codex load this file natively and Claude Code through `CLAUDE.md`: edit THIS file, never the shim.
 
-## Source of truth (tiebreaker)
+## Stack
 
-- **This file is the canonical guide for every tool.** Cursor and Codex load it natively; Claude Code loads it through the one-line import in `CLAUDE.md`. Edit THIS file; never grow the shim.
-- **Code is ground truth; this file is a verifiable pointer.** If a line here conflicts with the code, follow the CODE and fix or flag the stale line in the same session.
-
-## Mission
-
-SEO-first Next.js 16 App Router template with **next-intl SSR**, FSD layering,
-split static + nonce CSP, Upstash-ready rate limiting, and a forkable scaffolding
-pattern. This is a **template, not a shipped product** — see Danger Zones.
-
-## Stack (pinned)
-
-Node **≥ 24** · Next.js **16** App Router (`build --webpack`, not Turbo) · React **19** ·
-Tailwind **v4** · TypeScript **6.0** strict · Zustand + `createSelectors` · react-hook-form + Zod ·
-**next-intl 4.13+** SSR (`[locale]`, `messages/*.json`) · Vitest + Testing Library + Playwright ·
-Oxlint → ESLint 10 (flat) → Prettier
-
-Detail: `.cursor/brain/PROJECT_CONTEXT.md`
-
-Next.js ships docs for the installed version in `node_modules/next/dist/docs/`: read the relevant guide
-there before writing Next-specific code, and heed its deprecation notices. `agentRules: false` in
-`next.config.ts` stops `next dev` from writing its own copy of this pointer into this file.
+SEO-first Next.js App Router **template, not a shipped product** (§ Danger zones): next-intl SSR under `[locale]`, FSD layers, a static + nonce CSP split, Upstash-ready rate limiting, a forkable scaffold. Node ≥ 24; the default `build` is `next build --webpack`. The installed Next ships its own docs in `node_modules/next/dist/docs/`: read the relevant guide before Next-specific code (`agentRules: false` keeps `next dev` from writing a copy of this pointer into this file).
 
 ## Invariants (do not violate)
 
-1. **Scope lock.** Change only what the task requires. No "while I'm here" edits,
-   no opportunistic refactors, no new abstractions for single use sites. If the
-   user asked for a bug fix, don't reorganize neighbours.
-2. **One task = one commit.** Conventional Commits, **≤ 96 chars** on the subject
-   line. No `Co-authored-by` tags. Never skip hooks (no `--no-verify`).
-3. **The gate is tiered by moment, and it is defined in exactly one place.**
-   `AGENTS.md` § Commands (exact) › _The tier law_ (right after the command
-   list) holds the four moments, the prohibitions, the traced-run rule, the
-   ports rule and the lanes — this invariant is a pointer, not a copy, and
-   nothing here is restated.
-
-4. **English only in code, comments, commits, docs.** Chat may be Russian; the
-   repo is not.
-5. **Locale set stays `['en']`** until the caller explicitly asks to expand it.
-   See **Adding Languages** in `README.md` for the full procedure.
-6. **Never push to `master`.** Work on feature branches; open a PR. Never
-   force-push a shared branch.
-7. **Security surface is frozen** unless the task is explicitly security work:
-   don't touch CSP directives in `next.config.ts`, the nonce pipeline in
-   `proxy.ts`, the rate-limit matcher, or COOP/CORP headers. `.claude/settings.json`
-   asks before any edit of `next.config.ts` or `proxy.ts`.
-8. **Template scaffolding is protected** — see Danger Zones.
-9. **Explicit in/out contracts.** Components/hooks/handlers declare their output:
-   a `FunctionComponent<Props>` annotation, an explicit return type
-   (`(): ReactElement`), or for RSC/route entries `Promise<ReactElement>` /
-   `Promise<NextResponse>` — enforced by
-   `@typescript-eslint/explicit-function-return-type` (inline callbacks exempt).
-   Interface callbacks use property style (`onSelect: (id: string) => void`) —
-   enforced by `method-signature-style`.
+1. **Scope lock.** Change only what the task requires: no "while I'm here" edits, no opportunistic refactors, no new abstraction for a single use site.
+2. **One task = one commit,** Conventional Commits, subject ≤ 96 chars, no `Co-authored-by`, never `--no-verify`. Never push to `master` or force-push a shared branch: branch, gate, PR.
+3. **The gate is tiered by moment, and it is defined in exactly one place:** § Commands (exact) › _The tier law_. This invariant is a pointer, not a copy; nothing is restated here.
+4. **English only** in code, comments, commits and docs. Chat may be Russian; the repo is not.
+5. **Locale set stays `['en']`** until the caller explicitly asks to expand it (`README.md` § Adding Languages).
+6. **Zero warnings, no silencing.** `eslint --max-warnings 0` and `oxlint --deny-warnings`: never downgrade, silence or `eslint-disable` a rule to go green; raise it with the caller. Guards: `eslint-comments` (a reason on every suppression), `ban-ts-comment`, `strictTypeChecked`. The complexity thresholds in `eslint.config.js` sit above the measured ceiling: a hit means new drift, so split the function; raising a number needs a fresh measurement and a `DECISIONS.md` entry.
+7. **Security surface is frozen** unless the task is explicitly security work: CSP directives in `next.config.ts`, the nonce pipeline in `proxy.ts`, the rate-limit matcher, COOP/CORP. `.claude/settings.json` asks before any edit of `next.config.ts` or `proxy.ts`.
+8. **Template scaffolding is protected** (§ Danger zones).
+9. **Explicit in/out contracts.** Components, hooks and handlers declare their output: `FunctionComponent<Props>`, an explicit return type, `Promise<ReactElement>` / `Promise<NextResponse>` for RSC and route entries (`explicit-function-return-type`); interface callbacks use property style (`method-signature-style`).
 
 ## Commands (exact)
 
-**Five agent commands** in `.claude/commands/`, mirrored by shims in
-`.cursor/commands/` so Cursor and Claude Code behave identically:
+Slash commands in `.claude/commands/` (shims in `.cursor/commands/`): `/onboard` orient and VERIFY the brain against the code · `/feat` reuse check → scope → plan → test-first → gate · `/test` corner cases at integration seams · `/review` leaks, security, bug hunt · `/docs` bring this file and the brain back in line with the code.
 
 ```bash
-/onboard   # get oriented: read the brain, VERIFY it against the code, report drift, stop
-/feat      # implement a feature: reuse check -> scope -> plan -> test-first -> gate
-/test      # write tests that hunt corner cases at integration seams, not the happy path
-/review    # senior review of the diff: leaks, security (incl. proxy composition), bug hunt
-/docs      # bring AGENTS.md + .cursor/brain/ back in line with the code and master's history
-```
-
-```bash
-npm run dev                 # Turbopack dev (fast)
-npm run dev:webpack         # webpack parity dev (debug splitChunks)
-npm run build               # next build --webpack (production)
-npm run build:analyze       # ANALYZE=true webpack build, opens bundle analyzer
-npm run size:check          # first-load JS budget over an existing build (scripts/bundle-budget.json); full phase only, after build
-npm run verify:iter         # iteration tier: oxlint → tsc → vitest --changed (seconds; run per change)
-npm run verify:measure      # MEASURE moment: build + look; add `-- e2e/<f>.spec.ts` for one prod-mode spec
-npm run e2e:one -- <spec>   # one Playwright spec, FREE port, through the tracer
-npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
-npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
+npm run verify:iter         # ITERATE: oxlint → tsc → vitest --changed (seconds; run per change)
+npm run verify:measure      # MEASURE: build + look; `-- e2e/<f>.spec.ts` for one prod-mode spec
+npm run e2e:one -- <spec>   # one Playwright spec on a FREE port, through the tracer
 npm run test:one -- <file>  # one unit test file, through the tracer (not around it)
+npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
+npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
-npm run docs:check          # docs class: paths, scripts, sentinels, versions, command table, dead docs, test quarantines, agent-memory imports (pre-commit when docs are staged; weekly CI adds --weekly)
-npm run verify              # THE offline gate (alias of verify:enterprise) — the push/CI chain, not a desk tool
-npm run verify:enterprise   # preflight → format → typecheck → lint → test:coverage → build → size → e2e
-npm run verify:ci           # verify + audit:gate — phase-1 pre-push and the CI validate job
-npm run verify:full         # verify:ci + smoke:dev — predicts the whole CI pipeline
-npm run smoke:dev           # Turbopack dev smoke on its own (e2e/dev/, port 3003)
+npm run docs:check          # mechanical doc drift (pre-commit when docs are staged; weekly CI adds --weekly)
 npm run fix                 # oxlint --fix → eslint --fix → prettier --write, repo-wide
-npm run audit:gate          # fail-closed audit with a self-expiring allowlist
-npm run test                # vitest run (the gate uses test:coverage — thresholds need --coverage)
-npm run test:e2e            # Playwright (dev server locally unless CI=true)
-npm run test:e2e:prod       # Playwright against `next start` (same as CI / verify gate)
-npm run test:e2e:install    # one-time Chromium install for Playwright
-npm run lint                # oxlint (--deny-warnings) → eslint (--max-warnings 0)
-npm run typecheck           # tsc --noEmit (canonical; `type-check` is kept as an alias)
-npm run test:mutation       # StrykerJS strength gate — weekly `mutation.yml` job, NOT in verify
+npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
 ```
+
+Every other script, one line each: `README.md` § Commands. After cloning run `npm run prepare` once (`.npmrc` disables lifecycle scripts, so husky does not install itself; `min-release-age=3` is a dependency cooldown in DAYS, so an urgent new package needs `--min-release-age=0`) and copy `.env.example` (`scripts/check-build-env.mjs` names the fix when the production build lacks `NEXT_PUBLIC_APP_URL`).
 
 <!-- shared-harness:begin -->
 <!-- This block is byte-identical in all four templates (template-1, template-spa-pwa, template-next-seo, template-rn). Change it in every template in the same commit, or not at all. Stack-specific facts (which stages `verify` runs, ports, what is skipped and why, timings) live OUTSIDE this block: in the command table above and in `.cursor/brain/VERIFICATION.md`. -->
@@ -219,239 +153,38 @@ that lives only in a conversation is not a plan.
 
 <!-- shared-harness:end -->
 
-**Zero-warnings gate** — `eslint --max-warnings 0`, `oxlint --deny-warnings`: a warning is a
-failure, not a note. `verify:enterprise` is authoritative; if a rule is wrong for a real reason,
-raise it with the caller first — never downgrade, silence, or `eslint-disable` it.
-Suppressions are guarded too: `@eslint-community/eslint-comments` (`require-description`,
-`no-unlimited-disable`) refuses a bare or blanket `eslint-disable`, `@typescript-eslint/ban-ts-comment`
-refuses `@ts-ignore` and an undescribed `@ts-expect-error`, and the TypeScript block extends
-`strictTypeChecked` + `stylisticTypeChecked` so the type-aware rules are on.
-
-**Bootstrap after clone**: `npm run prepare` (once) — `.npmrc` disables lifecycle
-scripts as a supply-chain guard, so husky hooks don't install themselves; the
-verify gate fails loudly if hooks are missing. Dependency cooldown is also on
-(`.npmrc` `min-release-age=3`, DAYS): a brand-new package or urgent patch needs
-`npm install <pkg> --min-release-age=0`.
-
-**Complexity ratchet** — `complexity` 15 / `max-depth` 4 / `max-params` 6 /
-`max-lines-per-function` 130 / `max-lines` 200 over `app`/`features`/`shared`/`i18n`,
-tests exempt. Thresholds sit above the measured ceiling (see `DECISIONS.md`), so a
-hit means new drift: split the function first; raising a number needs a fresh
-measurement and a `DECISIONS.md` line.
-
-**Mutation testing** — `npm run test:mutation` (StrykerJS, weekly `mutation.yml` CI
-job). Coverage proves code RUNS under tests; the mutation score proves tests would
-CATCH a wrong implementation. `thresholds.break` in `stryker.config.json` is a
-measured floor-of-record (currently 35): raise it after a good run, never lower it
-to go green. Scope mirrors the coverage scope — `app/` stays out of both (measured:
-including it drops lines 93%→82%); `app/` regressions are the e2e suite's job.
-Re-measured 2026-09-06: 40.24 on Stryker 10 with vitest 4.1.11 — vitest is held at 4.1.x
-here because under 5.0.0 the Stryker runner ran zero tests per mutant (see Version holds).
-
-**The gate builds, and the production build requires `NEXT_PUBLIC_APP_URL`.** One
-copy-the-example-env step after cloning — `scripts/check-build-env.mjs` names the fix if
-it's missing or points at localhost. Full rule and why: `README.md` § Environment
-Variables and `.cursor/brain/DECISIONS.md`.
-
 ## Version holds (do not "fix" by bumping)
 
-- **ESLint is 10.x** — the 9.x hold was lifted ahead of the 2026-08-06 end of
-  life. Three plugins still cap their `eslint` peer below 10, so each has an
-  `overrides` entry mapping that peer to `$eslint`; do not remove them and do not
-  reach for `--legacy-peer-deps`. **`settings.react.version` must stay a literal,
-  never `'detect'`** — see `.cursor/brain/DECISIONS.md`. Re-read 2026-10-07: the newest
-  `eslint-plugin-react` (7.37.5), `eslint-plugin-jsx-a11y` (6.10.2) and `eslint-plugin-import`
-  (2.32.0) still peer `eslint` at `^9`, and no major above the installed one is published (the `latest` tag is 10.12.0).
-- **TypeScript stays `~6.0.x`** — `typescript-eslint@8.71` peers
-  `typescript >=4.8.4 <6.1.0` (re-read 2026-10-07; the `typescript` `latest` tag is 7.0.2). Not a preference: a bump to 7.x makes **both**
-  `npm install` and `npm ci` fail with ERESOLVE, so the tree stops resolving at
-  all (`dependabot.yml` ignores `typescript >=6.1` for this reason). Lift the hold
-  only together with a `typescript-eslint` major that widens the peer.
-- **`oxlint` tilde-tracks `eslint-plugin-oxlint`** — lockstep releases; the
-  plugin pins `~<its version>`.
-- **vitest and `@vitest/coverage-v8` stay `^4.1.x` in this repo** — under vitest 5.0.0 the
-  Stryker vitest runner scores near-zero here (the sibling Vite templates hit the same and returned to 4.1 on 2026-10-02), so
-  `dependabot.yml` ignores `vitest >=5`. Lift trigger and the measured numbers: `DECISIONS.md`
-  § "[2026-09]". Re-probed 2026-10-07 with vitest 5.0.3 and the still-newest runner 10.0.0
-  (2026-08-14): 0 of 48 mutants killed, `Ran 0.00 tests per mutant`.
-- **`@types/node` stays 24.x** — types match `engines.node >= 24` (24.19.1 is the newest 24.x on 2026-10-07; 26.x is `latest`).
-- **`overrides` in `package.json` are security floors WITH major caps**
-  (`">=fixed <next-major"`) — an uncapped one of our own already aged into its advisory's
-  vulnerable range once and reddened the audit gate. Do not remove a floor to quiet npm, and
-  never write one without a cap; details in `DECISIONS.md`.
+`scripts/version-holds.json` is the register (range, reason, lift condition, evidence); `scripts/check-version-holds.mjs` runs in `verify` and fails a bump past a hold, a hold without its Dependabot `ignore`, and a hold on an absent package. One line per hold:
 
-## Architecture
+- `vitest`, `@vitest/coverage-v8` stay `<5`: the Stryker vitest runner kills 0 of 48 mutants under vitest 5.
+- `typescript` stays `<6.1`: `typescript-eslint` peers `<6.1.0`, and a bump to 7 breaks `npm install` and `npm ci` with ERESOLVE.
+- `eslint`, `@eslint/js` stay `<11`: three plugins still peer ESLint `^9`, bridged by the `$eslint` entries in `overrides` (keep them; no `--legacy-peer-deps`); `settings.react.version` stays a literal, never `'detect'`.
+- `@types/node` stays `<25`: the types match `engines.node >=24`.
+- `oxlint` tilde-tracks `eslint-plugin-oxlint` (lockstep releases).
+- `overrides` in `package.json` are security floors WITH a major cap (`">=fixed <next-major"`): never remove one to quiet npm, never write one uncapped (`DECISIONS.md` § Advisory exceptions).
 
-Four FSD layers with one-way imports: `app → features → entities → shared`.
-Absolute imports via `@/*` (repo root). No deep relative paths across layers.
-No circular barrels.
+## Architecture and contracts
 
-- **`app/`** — routes, layouts, Server Actions, API route handlers.
-- **`features/`** — feature slices (`model/` Zod schemas + types, `ui/` client
-  components). Canonical example: `features/example-form`.
-- **`entities/`** — domain slices (empty in baseline; add when you have them).
-- **`shared/`** — UI kit (`ui/`), `lib/`, constants, types, utils.
-
-Full file map: `.cursor/brain/MAP.md`
-
-**Reuse first** — before creating any function/util/component/constant, search for
-an existing equivalent and extend it. **Consistency beats preference** — match the
-surrounding file's style and patterns.
-
-**Content variance** — anything that renders authored copy is proven against content it has NOT seen:
-`minimal` / `typical` / `long` / `unbroken` for text, `none` / `one` / `many` for collections. The fixture
-is `/dev/ui/content-stress` (dev-only, 404 in production), measured by `e2e/dev/content-stress.spec.ts` at
-390 / 640 / 768 / 1024 / 1440; the assembled pages are measured by `e2e/layout-geometry.spec.ts`. Add a
-case when you add a content-bearing component, and keep a chrome LABEL separate from PROSE — feeding a
-paragraph to a `whitespace-nowrap` button measures the wrong thing (568px of content in a 292px column
-here, which reads as a broken primitive and is not one). Two rules earned the hard way: the RANGE of
-widths a guard covers is part of its specification, and a wrap class with no red-to-green proof gets
-deleted rather than kept "to be safe".
-
-**Rendering differences are measured, not predicted** — engines disagree about intrinsic sizing, font
-metrics (so any `ch` measure), scrollbar gutters and `forced-colors`. `CROSS_BROWSER=1` adds Firefox and
-WebKit to the geometry specs; CI runs that as its own job. Never reason about what an engine does — run
-it.
-
-## i18n contract (next-intl SSR)
-
-- **Single source of truth:** `messages/<locale>.json`. No `public/locales/*`,
-  no client-side JSON fetches.
-- **Locale segment:** routes live under `app/[locale]/*`. Every page + layout
-  entry narrows the route param via `requireLocale()` from
-  `@/i18n/request-locale`, then calls `setRequestLocale(locale)` **before** any
-  client descendant renders.
-- **Type safety:** `global.d.ts` augments `next-intl`'s `AppConfig` with
-  `Locale` (from `routing.locales`) and `Messages` (from `messages/en.json`).
-  All `useTranslations('ns')` / `t('key')` calls are compile-time checked.
-- **Title cascade quirk:** `title.template` does **not** apply to the segment
-  that defines it, only to descendants. Root `app/layout.tsx` owns
-  `title.default` + `title.template`; `app/[locale]/layout.tsx` sets only
-  `description` / `openGraph` / `twitter`. Do not move the template down.
-- **hreflang:** every localized route's `generateMetadata` builds
-  `alternates.languages` from `routing.locales`; `app/sitemap.ts` mirrors them
-  as `<xhtml:link>` entries.
-- **Server Actions** use `getTranslations({ locale })` for user-facing strings.
-
-Detail: `.cursor/brain/DECISIONS.md` (ADR "i18n: next-intl SSR")
-
-## Security contract
-
-- **Static document CSP** lives in `next.config.ts` `headers()` and applies to
-  all document routes. **Nonce CSP with `strict-dynamic`** lives in `proxy.ts`
-  and applies only to the matcher (`/api/:path*`, `/dev/:path*`, and the
-  broad document matcher that excludes `_next`, `_vercel`, static assets).
-- **`proxy.ts` composes** next-intl middleware + nonce CSP + rate limit +
-  `/dev` production-gate in a specific order. Do not reorder. Do not add a
-  branch **before** the rate limiter — it gates on `isApi || isServerAction`
-  and must see every protected surface.
-- **Rate limit:** Upstash if `UPSTASH_REDIS_REST_URL` + `…_TOKEN` are set,
-  otherwise in-memory per-isolate fallback. Matcher coverage is the only
-  guarantee — verify before assuming a route is throttled.
-- **COOP/CORP `same-origin`** may break OAuth popups; use same-tab redirects.
-
-Detail: `.cursor/brain/SKELETONS.md` (sections "`proxy` composition", "strict CSP")
+- **FSD, one-way imports:** `app → features → entities → shared`, absolute `@/*` imports, no deep relative paths across layers, no circular barrels. Reuse first: search for an existing equivalent before creating one, and match the surrounding file. Map: `.cursor/brain/MAP.md`.
+- **Content and rendering:** anything that renders authored copy is proven against content it has not seen (`minimal` / `typical` / `long` / `unbroken` text, `none` / `one` / `many` collections), and engines disagree about layout, so measure (`CROSS_BROWSER=1`), never predict (`DECISIONS.md` § Content variance, § Cross-engine coverage).
+- **i18n (next-intl SSR):** `messages/<locale>.json` is the only message source. Every page and layout narrows the route param with `requireLocale()` from `@/i18n/request-locale` and calls `setRequestLocale(locale)` BEFORE any client descendant renders; Server Actions use `getTranslations({ locale })`. The root `app/layout.tsx` owns `title.default` + `title.template` (Next applies a template only to descendants): do not move it down.
+- **Security:** the static document CSP lives in `next.config.ts` `headers()`, the nonce CSP with `strict-dynamic` in `proxy.ts` for its matcher. `proxy.ts` composes next-intl, nonce CSP, rate limit and the `/dev` production gate in a fixed order: do not reorder, and add no branch BEFORE the rate limiter (it gates on `isApi || isServerAction`). Matcher coverage is the only guarantee a route is throttled. COOP/CORP `same-origin` may break OAuth popups: use same-tab redirects. **Never commit keys or configuration values, public ones (`NEXT_PUBLIC_*`, a Firebase web config) included:** `.env.example` placeholders only, real values in the deploy platform's secret store and GitHub Secrets (`NEXT_PUBLIC_*` is inlined into the client bundle, so treat it as world-readable, which is still no reason to commit it). Detail: `.cursor/brain/SKELETONS.md`.
 
 ## Danger zones
 
-Read before editing these:
-
-- **`next.config.ts`** — custom webpack `splitChunks` (react/next/i18n/ui/form
-  vendors); broken by `next build` without `--webpack`. Don't assume Turbopack
-  parity for chunk names.
-- **`next.config.ts` import graph is alias-free.** Next transpiles the config
-  graph standalone, before any bundler `@/` alias exists — every file reachable
-  from `next.config.ts` (e.g. `shared/lib/cspHeader.ts`) must use relative
-  imports only. An alias import there fails the production build with
-  `Cannot find module` at config load.
-- **`proxy.ts`** — security-critical composition; see Security contract above.
-- **`app/[locale]/*`** — every entry needs `setRequestLocale` before client
-  descendants; missing calls swallow errors as `Error(void 0)` in prerender.
-- **Template scaffolding** — `lucide-react`, `shared/constants/index.ts`,
-  `features/example-form/**`, Web Vitals pipeline. These are load-bearing
-  examples; the inline `// Template scaffolding` comments mark each site. Do
-  not strip as "unused" unless the caller confirms "this is now my MVP".
-
-Full list with risks + mitigations: `.cursor/brain/SKELETONS.md`
-
-## Machine-agnostic configs
-
-Committed configs must never contain absolute local paths. The VS Code i18next
-extension rewrites `i18next.i18nPaths` with absolute paths when it can't resolve
-the configured ones — keep them relative and existing (here: `messages,i18n`).
-
-**Nor a DURATION measured on one machine.** A committed number of seconds is the same mistake in a different costume: it describes the hardware that measured it, and a fork on slower hardware inherits a ceiling it may be unable to meet. Measured spread between this workstation and a two-core CI runner, same two suites: 5.6x and 10.5x. So the push budget in `scripts/gate-tiers.json` holds a RATIO and a sample size, never seconds; the gate calibrates its own baseline from its own first runs into the gitignored `.gate-budget.json`, ratchets it down when the gate gets faster, and reports drift. A clone starts with no baseline, no red reading, and no number belonging to someone else.
-
-## Entering this repo cheaply (read this before sweeping the source)
-
-Measured on a sibling project 2026-08-30: an agent's entry is ~93% READING SOURCE to find where
-things are and whether the task is still needed, and ~7% the documents that load automatically. So
-the levers are pointing and looking, in this order:
-
-1. **Open `.cursor/brain/READING_INDEX.md` first** — it maps a SITUATION ("about to change a shared
-   primitive") to the two or three files that answer it. It is a pointer file: it never restates a
-   rule, so it cannot go stale in the way a summary does.
-2. **Check the work is still needed** — `git log --oneline -15` plus one grep for the thing the task
-   names. Two of five lanes in that measurement returned "already done" after ~430k tokens; both
-   were five minutes of grep.
-3. **LOOK instead of inferring** — `npm run probe -- <route> [widths]` renders the route, saves a PNG
-   per width under `.probe/` and prints the quantities the layout guards measure. One measurement
-   replaces a round of reasoning about pixels; it is an instrument, never a gate.
-4. **Name the files when you dispatch work to another agent.** The largest observed difference
-   between a 33-tool-call lane and a 191-tool-call lane was how precisely the task pointed.
-
-**Where a rule must live** (which tool reads which file, and why a rule that must reach every tool
-belongs in this file): § Commands (exact) › _The tier law_ › Lanes › _Two tools, one file_. Verify
-what each tool loads before moving a rule between files.
-
-## Brain docs (entry points)
-
-- `.cursor/brain/READING_INDEX.md` — situation → the files that answer it. **Read on demand, NOT
-  `@`-imported on purpose:** a pointer file only earns its tokens when a task actually needs it, and
-  importing it would put the index inside the budget it exists to protect.
-- `.cursor/brain/PROJECT_CONTEXT.md` — purpose, stack, layout, CI
-- `.cursor/brain/MAP.md` — every route, file, and responsibility
-- `.cursor/brain/SKELETONS.md` — danger zones
-- `.cursor/brain/DECISIONS.md` — ADRs (why things are the way they are)
-- `.cursor/brain/DICTIONARY.md` — project-specific vocabulary
-- `README.md` — user-facing docs (setup, adding languages, restore playbook)
-
-Consult them before acting on an unfamiliar area; they are the authoritative
-"why" that git history doesn't capture.
+- **`next.config.ts`:** the custom webpack `splitChunks` breaks under `next build` without `--webpack`; its import graph is alias-free (Next loads the config before any `@/` alias exists, so use relative imports only, or the build fails with `Cannot find module`).
+- **`app/[locale]/*`:** a missing `setRequestLocale` swallows errors as `Error(void 0)` in prerender.
+- **Template scaffolding** (`lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline; each site is marked `// Template scaffolding`) is load-bearing: strip it only when the caller says "this is now my MVP". Full list with mitigations: `.cursor/brain/SKELETONS.md`.
+- **Machine-agnostic configs:** no absolute local paths in committed configs (keep `i18next.i18nPaths` relative: `messages,i18n`), and no DURATION measured on one machine: the push budget in `scripts/gate-tiers.json` holds a ratio and a sample size, never seconds.
 
 ## Out of scope (ask before touching)
 
-- Adding or removing locales, or changing `routing.defaultLocale`.
-- Changing CSP directives, nonce pipeline, rate-limit matcher, or COOP/CORP.
-- Node engine bump (`package.json` `engines.node`) or `.npmrc` hardening flags.
-- Removing anything tagged `// Template scaffolding` or listed in the
-  "restore playbook" in `README.md`.
-- Adding analytics/telemetry vendors or expanding `app/api/vitals` beyond log.
-- Switching build tool (webpack ↔ Turbopack) for the default `build` script.
-- Weakening the verify gate, lint severities, or coverage thresholds to get
-  green.
+Locales or `routing.defaultLocale`; CSP, the nonce pipeline, the rate-limit matcher, COOP/CORP; `engines.node` or `.npmrc` hardening flags; anything tagged `// Template scaffolding` or in the README restore playbook; analytics or telemetry vendors, or `app/api/vitals` beyond logging; the default build tool (webpack ↔ Turbopack); weakening the gate, a lint severity or a coverage threshold to get green. When unsure, state the intent and wait: "I don't know" beats guessing.
 
-When unsure whether a change is in scope, state the intent and wait for
-confirmation. Saying "I don't know" is preferable to guessing.
+## Pull requests, brain docs, replies
 
-## Changes reach master through a pull request
-
-Branch, run the gate, push the branch, open a PR, merge when CI is green.
-
-In THIS repository that is not only a habit: `master` carries a ruleset requiring the checks named in `.github/ruleset.json`, and a direct push bypasses it, because the owner role always may. A rule bypassed on every change is worse than no rule — it reads as protection to the next person and to every agent, and protects nothing.
-
-**In YOUR fork the habit is all there is, until you set the rest up.** Rulesets, branch protection and required checks are repository SETTINGS, and settings do not travel with a fork — only files do. So a fork arrives with the whole gate and none of the enforcement: the hooks still run locally, CI still runs on pull requests, and nothing at all stops a push straight to your default branch. `README.md` § "What your fork does not inherit" lists what to switch on and in what order.
-
-## Response discipline
-
-- End any non-trivial implementation with a one-line
-  `Confidence: HIGH | MEDIUM | LOW — reason`.
-- Cite `path/to/file.ts:LINE` for code claims so the caller can verify.
-- Prefer editing existing files over creating new ones.
-- Never write emojis unless asked.
-
-## Maintaining this file
-
-Treat it like code. Add a rule when an agent or developer makes the same mistake
-twice — one line tied to the observed failure. Prune stale lines; a bloated file
-reduces compliance. One-line digests only — depth lives in `.cursor/brain/`.
+- **Changes reach `master` through a pull request:** branch, push, open a PR, merge when CI is green. Here `master` carries a ruleset (`.github/ruleset.json`); in a FORK settings do not travel, so a direct push is unprotected until you switch the rules on (`README.md` § What your fork does not inherit).
+- **Brain docs, read on demand and never `@`-imported:** start at `.cursor/brain/READING_INDEX.md` (situation → the files that answer it), then `PROJECT_CONTEXT.md` (purpose, stack table), `MAP.md`, `SKELETONS.md` (danger zones), `VERIFICATION.md` (what each stage runs), `DECISIONS.md` (the why, one entry per decision). Check the work is still needed (`git log --oneline -15` and one grep), LOOK with `npm run probe` before inferring pixels, and name the files when you dispatch work to another agent. Which tool reads which file: § The tier law › Lanes › _Two tools, one file_.
+- **Replies:** end non-trivial work with `Confidence: HIGH | MEDIUM | LOW — reason`, cite `path/to/file.ts:LINE` for code claims, prefer editing to creating, no emojis unless asked.
+- **Maintaining this file:** add a rule when the same mistake happens twice, one line tied to the observed failure; prune stale lines; depth lives in `.cursor/brain/`.

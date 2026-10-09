@@ -117,7 +117,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     // per page. The static CSP in `next.config.ts` headers() therefore allows
     // `'unsafe-inline'` for `script-src` — required by Next 16 RSC inline
     // bootstrap scripts on ISR routes. Trade-off documented in
-    // .cursor/brain/DECISIONS.md ("CSP: nonce on dynamic, unsafe-inline on ISR").
+    // .cursor/brain/DECISIONS.md ("Content Security Policy: nonce on dynamic routes").
     return intlMiddleware(request);
 }
 

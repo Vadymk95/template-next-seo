@@ -28,6 +28,9 @@ alwaysApply: false
 - **Use `describe`** for grouping tests
 - **Use `it` or `test`** for individual tests
 - **Use `beforeEach`, `afterEach`** for setup/teardown when needed
+- **Arrange-Act-Assert**: set up, act, then assert, in that order and visibly separated
+- **Independent tests**: each test builds its own state and never relies on another test's order or leftovers
+- **Mock external dependencies** (APIs, the network) at the boundary; do not mock the unit under test
 - **Use `renderWithProviders`** from test utilities — wraps the component in `NextIntlClientProvider` (locale + messages) so `useTranslations` works in tests
 
 ### Example

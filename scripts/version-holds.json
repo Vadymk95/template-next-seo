@@ -1,0 +1,44 @@
+[
+    {
+        "package": "vitest",
+        "held": "<5",
+        "reason": "Under vitest 5 the Stryker vitest runner (10.0.0, dated 2026-08-14) runs zero tests per mutant: the one-file probe kills 0 of 48 mutants where vitest 4.1.11 kills 37. Re-probed 2026-10-07 with vitest 5.0.3: still 0 of 48.",
+        "lift": "A @stryker-mutator/vitest-runner release dated after 2026-09-03; then run `npm install -D vitest@5 @vitest/coverage-v8@5` and `npx stryker run --mutate shared/lib/rateLimitCore.ts`, and take vitest 5 only when it kills mutants, in the commit that drops the Dependabot ignore.",
+        "evidence": ".cursor/brain/DECISIONS.md:249"
+    },
+    {
+        "package": "@vitest/coverage-v8",
+        "held": "<5",
+        "reason": "Moves in lockstep with vitest, which is held below 5 for the Stryker runner (see the vitest entry).",
+        "lift": "With the vitest hold: the same runner release and probe, in the same commit.",
+        "evidence": ".cursor/brain/DECISIONS.md:249"
+    },
+    {
+        "package": "typescript",
+        "held": "<6.1",
+        "reason": "typescript-eslint 8.71 peers typescript >=4.8.4 <6.1.0, so a bump to 7.x makes both npm install and npm ci fail with ERESOLVE and the tree stops resolving.",
+        "lift": "A typescript-eslint major whose peer range admits the next TypeScript release; bump both in one commit and drop the Dependabot ignore.",
+        "evidence": "https://registry.npmjs.org/typescript-eslint/8.71.1"
+    },
+    {
+        "package": "eslint",
+        "held": "<11",
+        "reason": "The repo is on ESLint 10. eslint-plugin-react, eslint-plugin-jsx-a11y and the transitive eslint-plugin-import still peer eslint at ^9, bridged by three package.json overrides mapping that peer to $eslint.",
+        "lift": "When the three plugins' peer ranges admit the next ESLint major, or the overrides are removed with them; then drop the Dependabot ignore in the same commit.",
+        "evidence": "https://registry.npmjs.org/eslint-plugin-react/7.37.5"
+    },
+    {
+        "package": "@eslint/js",
+        "held": "<11",
+        "reason": "Moves in lockstep with eslint, which is held below 11 behind the $eslint overrides (see the eslint entry).",
+        "lift": "With the eslint hold: the same event, in the same commit.",
+        "evidence": "https://registry.npmjs.org/eslint-plugin-jsx-a11y/6.10.2"
+    },
+    {
+        "package": "@types/node",
+        "held": "<25",
+        "reason": "The Node typings track the runtime floor: engines.node is >=24, so types for a later Node would let code use APIs the declared floor does not have.",
+        "lift": "When engines.node moves to the next major (an operator decision, see AGENTS.md § Out of scope); bump both in one commit and drop the Dependabot ignore.",
+        "evidence": "package.json:11"
+    }
+]

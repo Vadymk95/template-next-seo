@@ -7,13 +7,12 @@ until the operator approves them.**
 
 ## Scope — these files only
 
-- `AGENTS.md` — invariants, stack table, the command list, version holds, out-of-scope list.
+- `AGENTS.md` — invariants, the command list, version holds, out-of-scope list.
 - `.cursor/brain/PROJECT_CONTEXT.md` — purpose, stack, layout, the gate.
 - `.cursor/brain/MAP.md` — routes, files, responsibilities.
 - `.cursor/brain/SKELETONS.md` — danger zones, with the risk AND the mitigation.
-- `.cursor/brain/DECISIONS.md` — append an entry when a decision was made and has a rationale that
-  git history does not capture.
-- `.cursor/brain/DICTIONARY.md` — project vocabulary.
+- `.cursor/brain/DECISIONS.md` — one entry (at most 30 lines) when a decision was made and has a rationale
+  that git history does not capture; delete a superseded or wrong entry, never archive it.
 - `.cursor/brain/VERIFICATION.md` — mechanics and measured timings.
 - `.cursor/brain/READING_INDEX.md` — situations, pointers only.
 - `README.md` — only when the setup or the commands changed.

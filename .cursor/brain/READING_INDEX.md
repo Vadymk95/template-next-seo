@@ -6,7 +6,7 @@ job: the trigger, not the content. **It points and never restates** — a line s
 the moment that doc changes; a line naming the doc and its section does not. Where two files could
 answer, the entry says which one WINS.
 
-Why it exists: `AGENTS.md` § Entering this repo cheaply.
+Why it exists: `AGENTS.md` § Pull requests, brain docs, replies.
 
 ## 1. Picking this repo up cold
 
@@ -28,7 +28,8 @@ Why it exists: `AGENTS.md` § Entering this repo cheaply.
 - `.cursor/brain/MAP.md` — WINS: the route table, including which entries are thin re-exports.
 - `.cursor/brain/SKELETONS.md` "i18n" — `setRequestLocale` before any client descendant, and the
   title-template quirk.
-- `AGENTS.md` § i18n contract — the mechanical procedure and the typed-messages contract.
+- `AGENTS.md` § Architecture and contracts › i18n — the mechanical procedure.
+- `.cursor/rules/project-config.mdc` § SEO and i18n usage — the typed-messages contract.
 
 ## 4. About to touch security: CSP, the proxy, headers, rate limiting
 
@@ -46,7 +47,7 @@ Why it exists: `AGENTS.md` § Entering this repo cheaply.
 
 ## 6. About to add a dependency, or an advisory went red
 
-- `.cursor/brain/DECISIONS.md` "Override floors" + `AGENTS.md` § Version holds — WINS: the floor
+- `.cursor/brain/DECISIONS.md` "Advisory exceptions are data" + `AGENTS.md` § Version holds — WINS: the floor
   rules (a floor carries a major cap; an allowance is the last resort and needs an expiry).
 - `scripts/audit-allowlist.json` — the current allowances and their reasons.
 
