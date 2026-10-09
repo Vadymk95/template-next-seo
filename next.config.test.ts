@@ -21,6 +21,7 @@ const loadHeaders = async (nodeEnv: 'production' | 'development') => {
 const EXPECTED_HEADERS: [string, string][] = [
     ['X-DNS-Prefetch-Control', 'on'],
     ['X-Frame-Options', 'DENY'],
+    ['X-Content-Type-Options', 'nosniff'],
     ['Referrer-Policy', 'strict-origin-when-cross-origin'],
     ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
     ['Reporting-Endpoints', 'csp-endpoint="/api/csp-report"'],
