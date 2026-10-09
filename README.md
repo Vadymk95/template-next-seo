@@ -262,7 +262,7 @@ Versions follow the commit types (commitlint enforces Conventional Commits): `fe
 // app/api/example/route.ts
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
     return NextResponse.json(
         { data: 'example' },
         {

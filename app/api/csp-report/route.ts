@@ -21,7 +21,7 @@ function extractCspReportBody(parsed: unknown): Record<string, unknown> | null {
         if (parsed.length === 0) {
             return null;
         }
-        const first = parsed[0];
+        const first: unknown = parsed[0];
         if (typeof first !== 'object' || first === null) {
             return null;
         }

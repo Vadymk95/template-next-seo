@@ -26,7 +26,7 @@ describe('pruneAndCapRateLimitMap', () => {
     it('evicts oldest resetTime when over maxKeys', () => {
         const now = 1_000_000;
         for (let i = 0; i < 6; i++) {
-            map.set(`k${i}`, { count: 1, resetTime: now + 60_000 + i });
+            map.set(`k${String(i)}`, { count: 1, resetTime: now + 60_000 + i });
         }
         pruneAndCapRateLimitMap(map, now, 5);
         expect(map.size).toBe(5);

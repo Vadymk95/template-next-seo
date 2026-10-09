@@ -30,9 +30,9 @@ import type { z } from 'zod';
  */
 export class SchemaValidationError extends Error {
     public readonly url: string;
-    public readonly issues: readonly z.ZodIssue[];
+    public readonly issues: readonly z.core.$ZodIssue[];
 
-    constructor(url: string, issues: readonly z.ZodIssue[]) {
+    constructor(url: string, issues: readonly z.core.$ZodIssue[]) {
         super(`Schema validation failed for ${url}`);
         this.name = 'SchemaValidationError';
         this.url = url;
@@ -87,7 +87,7 @@ export async function safeFetch<T>(
     const response = await fetch(url, init);
 
     if (!response.ok) {
-        throw new Error(`Request to ${url} failed with status ${response.status}`);
+        throw new Error(`Request to ${url} failed with status ${String(response.status)}`);
     }
 
     return safeParseResponse(response, schema);

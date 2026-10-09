@@ -30,7 +30,11 @@ const CARD = 'rounded-lg border bg-card p-4 text-sm text-card-foreground';
 /* Its own foreground: inside muted copy the chip's text would sit on the muted background at 4.3:1. */
 const CODE = 'rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] break-all text-foreground';
 
-type SectionProps = { id: string; title: string; children: ReactElement };
+interface SectionProps {
+    id: string;
+    title: string;
+    children: ReactElement;
+}
 
 const Section = ({ id, title, children }: SectionProps): ReactElement => (
     <section aria-labelledby={id} className="mt-10">

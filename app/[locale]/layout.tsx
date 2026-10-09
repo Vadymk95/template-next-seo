@@ -11,10 +11,10 @@ export const generateStaticParams = (): { locale: (typeof routing.locales)[numbe
     return routing.locales.map((locale) => ({ locale }));
 };
 
-type LocaleLayoutProps = {
+interface LocaleLayoutProps {
     children: React.ReactNode;
     params: Promise<{ locale: string }>;
-};
+}
 
 export const generateMetadata = async ({
     params
@@ -44,6 +44,7 @@ export const generateMetadata = async ({
 const LocaleLayout = async ({ children, params }: LocaleLayoutProps): Promise<ReactElement> => {
     const { locale: rawLocale } = await params;
     const locale = requireLocale(rawLocale);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
     setRequestLocale(locale);
     const messages = await getMessages();
 

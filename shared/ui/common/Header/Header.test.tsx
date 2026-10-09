@@ -27,9 +27,7 @@ describe('Header', () => {
         renderWithProviders(<Header />);
 
         for (const link of screen.getAllByRole('link')) {
-            expect(link.className, `${link.textContent ?? '?'} lost its touch row`).toContain(
-                'min-h-11'
-            );
+            expect(link.className, `${link.textContent} lost its touch row`).toContain('min-h-11');
             // `min-h-11` is ignored on an inline box; the display mode is half the guard.
             expect(link.className).toContain('inline-flex');
         }

@@ -7,12 +7,12 @@
  * (User-Agent only) — see `emitModeWarningOnce` below for the runtime nudge.
  */
 
-export type RequestHeadersLike = {
+export interface RequestHeadersLike {
     get: (name: string) => string | null;
-};
+}
 
 /** Minimal request shape for rate-limit identity (NextRequest satisfies this). */
-export type RateLimitRequestLike = {
+export interface RateLimitRequestLike {
     headers: RequestHeadersLike;
     /**
      * Platform client IP when available — kept for tests / non-Next runtimes.
@@ -20,7 +20,7 @@ export type RateLimitRequestLike = {
      * undefined and the trust mode + headers are authoritative.
      */
     ip?: string | null;
-};
+}
 
 export type TrustedProxyMode = 'vercel' | 'first-hop' | 'none';
 
@@ -74,10 +74,12 @@ export function getRateLimitKey(request: RateLimitRequestLike): string {
     const mode = resolveTrustedProxyMode();
     emitModeWarningOnce(mode);
     const { headers } = request;
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an empty string must collapse to null, which ?? would not do
     const socketIp = request.ip?.trim() || null;
 
     if (mode === 'vercel') {
         const vercel = headers.get('x-vercel-forwarded-for');
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an empty header value must fall through to socketIp, which ?? would not do
         const ip = vercel?.split(',')[0]?.trim() || socketIp;
         return ip ? `ip:${ip}` : anonKey(headers);
     }

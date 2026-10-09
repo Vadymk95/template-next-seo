@@ -23,9 +23,7 @@ describe('Footer', () => {
         renderWithProviders(<Footer />);
 
         for (const link of screen.getAllByRole('link')) {
-            expect(link.className, `${link.textContent ?? '?'} lost its touch row`).toContain(
-                'min-h-11'
-            );
+            expect(link.className, `${link.textContent} lost its touch row`).toContain('min-h-11');
             expect(link.className).toContain('inline-flex');
         }
     });

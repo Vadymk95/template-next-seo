@@ -4,7 +4,7 @@
 // Delete only after the forked project actively uses its own constants and no longer needs the pattern example.
 // See .cursor/brain/SKELETONS.md → "Template scaffolding".
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export const ROUTES = {
     HOME: '/',

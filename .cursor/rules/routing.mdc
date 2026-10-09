@@ -59,13 +59,14 @@ import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
 
-type Props = {
+interface Props {
     params: Promise<{ locale: string; id: string }>;
-};
+}
 
 const BlogPost = async ({ params }: Props): Promise<ReactElement> => {
     const { locale: rawLocale, id } = await params;
     const locale = requireLocale(rawLocale); // notFound() on unknown locale
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
     setRequestLocale(locale); // BEFORE any client descendant
     // ...
 };
@@ -73,6 +74,9 @@ const BlogPost = async ({ params }: Props): Promise<ReactElement> => {
 export default BlogPost;
 ```
 
+- **The `no-deprecated` disable stays in the recipe** — next-intl marks `setRequestLocale` `@deprecated`
+  (migrate to `next/root-params`), the call is still mandatory here, and the reason after `--` is required
+  (`@eslint-community/eslint-comments/require-description`); copy the line with the call
 - **Dynamic segments** work as usual, nested under the locale:
   `app/[locale]/<segment>/[id]/page.tsx` → `/en/<segment>/:id`; catch-all `[...slug]`,
   optional catch-all `[[...slug]]`
@@ -139,7 +143,13 @@ export const Navigation = (): ReactElement => {
         <nav>
             {/* renders /en/example-form */}
             <Link href="/example-form">Example form</Link>
-            <button onClick={() => router.push('/')}>Home</button>
+            <button
+                onClick={() => {
+                    router.push('/');
+                }}
+            >
+                Home
+            </button>
         </nav>
     );
 };

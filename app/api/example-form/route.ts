@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return originDenied;
     }
     try {
-        const body = await request.json();
+        const body: unknown = await request.json();
 
         // Validate request body
         if (!body || typeof body !== 'object') {
