@@ -100,7 +100,8 @@ npm install
 # Install git hooks once (lifecycle scripts are disabled via .npmrc)
 npm run prepare
 
-# Create .env.local only if your project needs environment variables
+# Create .env.local: the production build requires NEXT_PUBLIC_APP_URL, and the example sets it
+cp .env.example .env.local
 
 # Run development server
 npm run dev
@@ -420,7 +421,7 @@ Next.js does **not** apply `title.template` to the segment that defines it — o
 
 ### Security Headers
 
-- **Static** (all routes): HSTS (production), X-Frame-Options, Referrer-Policy, Permissions-Policy, Reporting-Endpoints, COOP, CORP, baseline CSP — `next.config.ts` `headers()`
+- **Static** (all routes): HSTS (production), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Reporting-Endpoints, COOP, CORP, baseline CSP — `next.config.ts` `headers()`
 - **Dynamic CSP** (matched routes only): nonce + `strict-dynamic` for `script-src` — `proxy.ts`
 
 ## 📊 Performance Metrics
