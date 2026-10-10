@@ -14,6 +14,8 @@ missed (a missed brand string in `<title>` or the dev banner is the usual slip):
 - `app/layout.tsx` — `title.default`, `title.template`, `keywords`, `authors`, `creator`
 - `messages/<locale>.json` — `home.title` / `home.description`, and `meta.root.*`
   (`titleDefault`, `titleTemplate`, `description`, `siteName`) + `meta.home.description`
+- `app/[locale]/opengraph-image.tsx` — the social preview card (a plain site-name card); the
+  one in `example-form/` re-exports it, so restyle the card once or give each page its own
 - `shared/ui/common/Footer` — copyright line
 - `scripts/startup.js` — dev-banner display name
 - `e2e/*.spec.ts` — expected document titles
@@ -138,7 +140,8 @@ app/                    # Next.js App Router (routing layer)
   │   └── example-form.ts
   ├── [locale]/         # Locale segment (next-intl SSR)
   │   ├── layout.tsx   # setRequestLocale + NextIntlClientProvider (Header/Footer)
-  │   ├── page.tsx     # Home; localized generateMetadata + alternates.languages
+  │   ├── page.tsx     # Home; localized generateMetadata (buildPageMetadata)
+  │   ├── opengraph-image.tsx # Social preview card (og:image / twitter:image)
   │   ├── error.tsx    # Locale error boundary
   │   ├── not-found.tsx # Locale-scoped 404
   │   └── example-form/
@@ -247,10 +250,11 @@ npm run test:e2e:headed  # Playwright with a visible browser
 npm run test:e2e:install # one-time Chromium install for Playwright
 npm run smoke:dev        # Turbopack dev smoke on its own (e2e/dev/, port 3003)
 npm run audit:gate       # fail-closed audit with a self-expiring allowlist
+npm run lock:age         # a changed lockfile version younger than the .npmrc cooldown fails; allowances: scripts/lock-age-allowlist.json
 
 # The chain the push and CI run (not desk tools)
-npm run verify:enterprise  # preflight → format → typecheck → lint → coverage → build → size → e2e
-npm run verify:ci          # verify + audit:gate: phase-1 pre-push and the CI validate job
+npm run verify:enterprise  # preflight (hooks, version holds, engines floor, gate env) → format → typecheck → lint → coverage → build → size → e2e
+npm run verify:ci          # verify + audit:gate + lock:age: phase-1 pre-push and the CI validate job
 npm run verify:full        # verify:ci + smoke:dev: predicts the whole CI pipeline
 npm run bench:verify       # time each stage of the verify chain
 ```
@@ -360,19 +364,20 @@ messages/
 
 app/[locale]/
   layout.tsx        # setRequestLocale + NextIntlClientProvider
-  page.tsx          # localized generateMetadata + alternates.languages
+  page.tsx          # localized generateMetadata (buildPageMetadata: alternates.languages, openGraph, twitter)
 ```
 
 ### Usage — Server Components
 
 ```typescript
 // app/[locale]/page.tsx
-import { getTranslations } from 'next-intl/server';
+import { requireLocale } from '@/i18n/request-locale';
+import { buildPageMetadata } from '@/shared/lib/pageMetadata';
 
 export const generateMetadata = async ({ params }) => {
     const { locale } = await params;
-    const t = await getTranslations({ locale, namespace: 'meta.home' });
-    return { title: t('title'), description: t('description') };
+    // title, description, canonical, hreflang, openGraph and twitter from `meta.home`
+    return buildPageMetadata({ locale: requireLocale(locale), page: 'home', path: '' });
 };
 ```
 
@@ -410,6 +415,10 @@ export async function exampleAction() {
 ### Caveat — title.template cascade
 
 Next.js does **not** apply `title.template` to the segment that defines it — only to descendants. The brand chrome (`title.default` + `title.template`) lives in root `app/layout.tsx`; `app/[locale]/layout.tsx` sets only `description` / `openGraph` / `twitter`. Do not move the template into `[locale]/layout.tsx` — the home page title will lose the suffix.
+
+### Caveat — a page's `openGraph` replaces the layout's
+
+Next.js merges metadata one key deep: a page that sets `openGraph` (or `twitter`) replaces the layout's whole object, not its fields. A page that states only a `title` therefore shares the home page's `og:url`, and an `opengraph-image` file in the layout's segment does not reach it. `buildPageMetadata` (`shared/lib/pageMetadata.ts`) states the full object for each page, and a page that uses it needs an `opengraph-image.tsx` beside its `page.tsx` (a guard test in `shared/lib/pageMetadata.test.ts` fails without one). Add a page: a `meta.<page>` block in `messages/<locale>.json`, the helper call, and the one-line image re-export.
 
 ## 🔒 Security Features
 
@@ -526,7 +535,7 @@ Key optimizations in `next.config.ts`:
 ## 🚦 CI/CD
 
 GitHub Actions (`.github/workflows/ci.yml`, Node 24.x, `npm ci --ignore-scripts`): `validate` is a
-single `npm run verify:ci` step (the audit gate plus the whole offline gate — one step on purpose, so the
+single `npm run verify:ci` step (the audit gate, the lock-age check and the whole offline gate — one step on purpose, so the
 workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks, CodeQL and a zizmor audit of the workflows on push, PR and a
 weekly cron; the zizmor job (`Workflow audit (zizmor)`) is a required check in `.github/ruleset.json` and
 fails on findings of medium severity or above. Reproduce it locally with `uvx zizmor@1.30.1 .github/workflows`:
@@ -645,6 +654,8 @@ Not inherited, and each one is a switch in your own repository's settings:
 gh api --method POST repos/OWNER/REPO/rulesets --input .github/ruleset.json
 gh api repos/OWNER/REPO/rules/branches/master   # or main - whatever your default branch is
 ```
+
+**A private fork on GitHub Free cannot post the ruleset:** the API answers 403 ("Upgrade to GitHub Pro or make this repository public"), so the required checks stay a convention you keep, not a boundary GitHub enforces, until the repository is public or the plan is paid. The file also requires `CodeQL (JavaScript / TypeScript) (javascript-typescript)`, which a private repository without code scanning cannot produce (`.github/workflows/security.yml` header): delete the `codeql` job AND that entry in `.github/ruleset.json` together, in one commit. `npm run docs:check` fails on a required check no workflow produces, so removing only the job is caught.
 
 The order matters, and this one costs least: enable Actions, open one pull request and let every check report its name at least once, then post the ruleset. A required check that has never reported is Pending forever, so posting it first blocks every pull request with no error message anywhere - which is why the pull request comes first. The file targets `~DEFAULT_BRANCH` rather than a branch name, so it survives a rename; the check names inside it are the ones these workflows actually produce, so if you rename a CI job, update this file in the same commit.
 

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
-import { routing } from '@/i18n/routing';
+import { buildPageMetadata } from '@/shared/lib/pageMetadata';
 
 import { StartPage } from './StartPage';
 
@@ -16,20 +16,7 @@ interface HomePageProps {
 
 export const generateMetadata = async ({ params }: HomePageProps): Promise<Metadata> => {
     const { locale: rawLocale } = await params;
-    const locale = requireLocale(rawLocale);
-    const t = await getTranslations({ locale, namespace: 'meta.home' });
-    const languages = Object.fromEntries(routing.locales.map((l) => [l, `/${l}`])) as Record<
-        string,
-        string
-    >;
-    return {
-        title: t('title'),
-        description: t('description'),
-        alternates: {
-            canonical: `/${locale}`,
-            languages
-        }
-    };
+    return buildPageMetadata({ locale: requireLocale(rawLocale), page: 'home', path: '' });
 };
 
 const HomePage = async ({ params }: HomePageProps): Promise<ReactElement> => {

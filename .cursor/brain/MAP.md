@@ -4,10 +4,11 @@
 
 | Route / file                    | Notes                                                              |
 | ------------------------------- | ------------------------------------------------------------------ |
-| `app/layout.tsx`                | Root layout: fonts, `<head>` preconnects, `WebVitalsReporter`, `Providers`, static `title.default` + `title.template` (cascades to descendants); no Header/Footer here |
+| `app/layout.tsx`                | Root layout: fonts (self-hosted by `next/font`, so no connection hints), `WebVitalsReporter`, `Providers`, static `title.default` + `title.template` (cascades to descendants); no Header/Footer here |
 | `app/[locale]/layout.tsx`       | Locale segment: `generateStaticParams` from `routing.locales`, `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets locale-specific `description` / `openGraph` / `twitter` only (title inherits from root) |
-| `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` emits `alternates.languages` per routing locale |
+| `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` calls `buildPageMetadata` (title, description, canonical, `alternates.languages`, `openGraph`, `twitter`) |
 | `app/[locale]/StartPage.tsx`    | The start page, a server component: what is inside, how work flows, the agent commands, where to read, first steps — the seed a fork replaces with its first real route |
+| `app/[locale]/opengraph-image.tsx` | Social preview card (`ImageResponse`, 1200x630 PNG): site name and description; template placeholder, restyled on fork |
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
 | `app/[locale]/not-found.tsx`    | Locale-scoped 404                                                  |
 | `app/[locale]/error.tsx`        | Locale error boundary                                              |
@@ -16,7 +17,7 @@
 | `app/sitemap.ts`                | Dynamic sitemap                                                    |
 | `app/robots.ts`                 | robots.txt                                                         |
 | `app/providers.tsx`             | Client providers (analytics init on load / requestIdleCallback; i18n moved to `NextIntlClientProvider` in `[locale]/layout`) |
-| `app/[locale]/example-form/`    | Example feature page + client shell; localized `generateMetadata` with `alternates.languages` |
+| `app/[locale]/example-form/`    | Example feature page + client shell; `generateMetadata` calls `buildPageMetadata`; `opengraph-image.tsx` re-exports the site card (a page's own `openGraph` hides the layout's image) |
 | `i18n/routing.ts`               | `defineRouting({ locales: ['en'], defaultLocale: 'en' })` — single source for locales |
 | `i18n/request.ts`               | `getRequestConfig` — validates locale, loads `messages/<locale>.json` |
 | `i18n/navigation.ts`            | `createNavigation(routing)` — `Link`, `redirect`, `usePathname`, `useRouter` bound to locales |
@@ -32,7 +33,7 @@
 
 ## Shared
 
-- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "External data is parsed at the boundary with Zod"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; the former i18n folder under `shared/lib/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
+- **`shared/lib/`**: `env` (public Zod), `logger`, `cspHeader` (static + nonce builders), `middlewareRequest`, `rateLimit` (Node `server-only`; see `DECISIONS`), `rateLimitCore` (Edge/tests), optional `upstashRateLimit`, `requireSameOrigin` (Origin check for mutating API routes), `pageMetadata` (`buildPageMetadata`: one page's full `Metadata`; see `DECISIONS` "Each page states its own social preview"), `api/safeFetch` (Zod boundary fetch; see `DECISIONS` "External data is parsed at the boundary with Zod"), `utils`, `utils-store/createSelectors`, `test-utils`. (i18n helpers live under `i18n/` at repo root; the former i18n folder under `shared/lib/` and the `web-vitals` wrapper were removed — Web Vitals go through `next/web-vitals` in `app/WebVitalsReporter.tsx`.)
 - **`shared/ui/`**: Button, Input, layout chrome, ErrorBoundary, `WithSuspense`.
 - **`shared/constants/`**: cross-cutting definitions.
 

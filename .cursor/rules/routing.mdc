@@ -85,22 +85,22 @@ export default BlogPost;
 
 ## Metadata and SEO
 
-- **Use `generateMetadata`** with `getTranslations({ locale, namespace })` for localized metadata
+- **Use `generateMetadata`** with `buildPageMetadata` (`shared/lib/pageMetadata.ts`): it reads `meta.<page>` from the messages and returns the title, description, canonical, `alternates.languages`, `openGraph` and `twitter`
 - **Every localized route builds `alternates.languages`** from `routing.locales`; `app/sitemap.ts` mirrors them as `<xhtml:link>` hreflang entries
+- **A page states its own `openGraph` and `twitter` in full.** Next merges metadata one key deep, so a page's `openGraph` replaces the layout's whole object: a page that sets only a `title` shares the home page's `og:url` and loses its image. The helper does this for you; keep using it for every new page
+- **A page that uses the helper has an `opengraph-image.tsx` beside its `page.tsx`.** The image file is attached to the segment that holds it, and the layout's does not reach a page whose `openGraph` replaced the layout's. A guard test (`shared/lib/pageMetadata.test.ts`) fails when it is missing; the one-line shape is in `app/[locale]/example-form/opengraph-image.tsx`
 
 ```typescript
 // app/[locale]/page.tsx
 export const generateMetadata = async ({ params }: HomePageProps): Promise<Metadata> => {
-    const { locale: rawLocale } = await params;
-    const locale = requireLocale(rawLocale);
-    const t = await getTranslations({ locale, namespace: 'meta.home' });
-    const languages = Object.fromEntries(routing.locales.map((l) => [l, `/${l}`]));
-    return {
-        title: t('title'),
-        description: t('description'),
-        alternates: { canonical: `/${locale}`, languages }
-    };
+    const { locale } = await params;
+    return buildPageMetadata({ locale: requireLocale(locale), page: 'home', path: '' });
 };
+```
+
+```typescript
+// app/[locale]/example-form/opengraph-image.tsx — reuses the site card; write your own to differ
+export { default, size, contentType } from '@/app/[locale]/opengraph-image';
 ```
 
 ### title.template cascade (do not move)
@@ -115,7 +115,7 @@ titles.
 
 | Layout                    | Responsibilities                                                                                                                                                                            |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/layout.tsx` (root)   | `<html>`/`<body>`, fonts, preconnects, `WebVitalsReporter`, `Providers`, `metadataBase`, `title.default` + `title.template`. **No Header/Footer, no i18n.**                                  |
+| `app/layout.tsx` (root)   | `<html>`/`<body>`, fonts, `WebVitalsReporter`, `Providers`, `metadataBase`, `title.default` + `title.template`. **No Header/Footer, no i18n.**                                  |
 | `app/[locale]/layout.tsx` | `generateStaticParams` from `routing.locales`, `requireLocale` + `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wrapping `Header` / `main` / `Footer`; locale `description` / `openGraph` / `twitter`. |
 
 The layout chrome (Header/Footer) MUST stay inside `NextIntlClientProvider` —

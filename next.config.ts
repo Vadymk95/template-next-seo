@@ -8,6 +8,17 @@ import createNextIntlPlugin from 'next-intl/plugin';
 import { API_PATHS, CSP_REPORTING_ENDPOINT_NAME } from './shared/constants';
 import { buildStaticContentSecurityPolicy } from './shared/lib/cspHeader';
 
+/*
+ * The vendor groups below are `enforce: true`, so they take EVERY module under their `node_modules`
+ * path, whatever its type. `next/font` generates its @font-face sheet from inside `node_modules/next`
+ * (module type `css/mini-extract`), so `nextVendor` pulled that stylesheet into the `next-vendor` chunk
+ * group. The App Router then listed the .css file among the root main files and emitted
+ * `<script src="/_next/static/css/<hash>.css" async>` beside its `<link rel="stylesheet">`; under
+ * `X-Content-Type-Options: nosniff` the browser refuses to run `text/css` and logs an error on every page.
+ * Restricting the groups to JavaScript module types keeps the vendor split and leaves CSS to Next.
+ */
+const JAVASCRIPT_MODULES = /^javascript\//;
+
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const __rootDir = path.dirname(fileURLToPath(import.meta.url));
@@ -117,6 +128,7 @@ const nextConfig: NextConfig = {
                         reactVendor: {
                             name: 'react-vendor',
                             test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 40,
                             reuseExistingChunk: true,
                             enforce: true
@@ -124,6 +136,7 @@ const nextConfig: NextConfig = {
                         nextVendor: {
                             name: 'next-vendor',
                             test: /[\\/]node_modules[\\/]next[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 35,
                             reuseExistingChunk: true,
                             enforce: true
@@ -131,6 +144,7 @@ const nextConfig: NextConfig = {
                         zustandVendor: {
                             name: 'zustand-vendor',
                             test: /[\\/]node_modules[\\/]zustand[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 30,
                             reuseExistingChunk: true,
                             enforce: true
@@ -138,6 +152,7 @@ const nextConfig: NextConfig = {
                         uiVendor: {
                             name: 'ui-vendor',
                             test: /[\\/]node_modules[\\/](@radix-ui|lucide-react|class-variance-authority|clsx|tailwind-merge)[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 20,
                             reuseExistingChunk: true,
                             enforce: true
@@ -145,6 +160,7 @@ const nextConfig: NextConfig = {
                         i18nVendor: {
                             name: 'i18n-vendor',
                             test: /[\\/]node_modules[\\/]next-intl[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 20,
                             reuseExistingChunk: true,
                             enforce: true
@@ -152,6 +168,7 @@ const nextConfig: NextConfig = {
                         formVendor: {
                             name: 'form-vendor',
                             test: /[\\/]node_modules[\\/](react-hook-form|@hookform[\\/]resolvers|zod)[\\/]/,
+                            type: JAVASCRIPT_MODULES,
                             priority: 15,
                             reuseExistingChunk: true,
                             enforce: true

@@ -15,7 +15,7 @@
 // resolves, which stalls this file for the full XHR timeout.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const ENV_KEYS = ['CI', 'PLAYWRIGHT_PROD_SERVER'];
+const ENV_KEYS = ['CI', 'PLAYWRIGHT_PROD_SERVER', 'PORT', 'PLAYWRIGHT_BASE_URL'];
 const originalEnv = {};
 
 beforeEach(() => {
@@ -60,6 +60,32 @@ describe('playwright.config.ts maxFailures', () => {
     it('stays uncapped on the desk run against next dev (neither flag set)', async () => {
         const config = await importGateConfig();
         expect(config.maxFailures).toBeUndefined();
+    });
+});
+
+describe('playwright.config.ts baseURL', () => {
+    // The server the config starts (`next start`) listens on `PORT`, so a run moved with `PORT=3100`
+    // alone brought the server up on 3100 while the tests still visited 3000 (another lane's server,
+    // or nothing). The URL has to follow the port without a second variable.
+    it('is localhost:3000 when neither PORT nor PLAYWRIGHT_BASE_URL is set', async () => {
+        const config = await importGateConfig();
+        expect(config.use.baseURL).toBe('http://localhost:3000');
+        expect(config.webServer.url).toBe('http://localhost:3000');
+    });
+
+    it('follows PORT when PLAYWRIGHT_BASE_URL is unset', async () => {
+        process.env.PORT = '3100';
+        const config = await importGateConfig();
+        expect(config.use.baseURL).toBe('http://localhost:3100');
+        expect(config.webServer.url).toBe('http://localhost:3100');
+    });
+
+    it('lets PLAYWRIGHT_BASE_URL win over PORT', async () => {
+        process.env.PORT = '3100';
+        process.env.PLAYWRIGHT_BASE_URL = 'http://localhost:3200';
+        const config = await importGateConfig();
+        expect(config.use.baseURL).toBe('http://localhost:3200');
+        expect(config.webServer.url).toBe('http://localhost:3200');
     });
 });
 

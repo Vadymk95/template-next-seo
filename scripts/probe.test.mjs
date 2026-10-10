@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
     hasRenderedContent,
+    launchProbeBrowser,
     measureInPage,
     parseProbeArgs,
     slugForPath,
@@ -181,5 +182,22 @@ describe('measureInPage', () => {
         );
         expect(measurement.controls).toBe(0);
         expect(measurement.headings).toBe(2);
+    });
+});
+
+describe('launchProbeBrowser', () => {
+    /* Playwright's headless Chromium starts with `--hide-scrollbars`, so a scrolling page measured
+       under the default launch has no scrollbar at all. Measured on this repository's Chromium (390 px
+       viewport, tall page, no `scrollbar-gutter`): 0 px with the default launch, 15 px once the flag is
+       dropped. A desktop visitor on Windows or Linux has that 15 px. */
+    it('launches Chromium without the flag that hides classic scrollbars', async () => {
+        const launch = vi.fn(async () => 'browser');
+        const browser = await launchProbeBrowser({ launch });
+
+        expect(browser).toBe('browser');
+        expect(launch).toHaveBeenCalledTimes(1);
+        expect(launch.mock.calls[0][0]).toMatchObject({
+            ignoreDefaultArgs: ['--hide-scrollbars']
+        });
     });
 });

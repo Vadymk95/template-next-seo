@@ -17,7 +17,7 @@ one place, everything else points. This file holds the mechanics and the phase t
   oxlint/format/tsc. Nothing to run by hand.
 - **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below.
 - The full chains (`verify`/`verify:enterprise` = offline gate incl. build, the size budget and prod e2e;
-  `verify:ci` = + audit; `verify:full` = + Turbopack smoke) belong to the push hook and CI — they
+  `verify:ci` = + audit + lock age; `verify:full` = + Turbopack smoke) belong to the push hook and CI — they
   are not desk tools and are never run by hand.
 
 ### After a red push: re-run only what failed
@@ -50,7 +50,7 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 
 | Check | Runs at phase 0 (scaffold) | Added when (the trigger) |
 | --- | --- | --- |
-| audit, hooks-check, format, tsc, lint, coverage | yes — every push, ~10s | day one |
+| audit, lock-age, hooks-check, version holds, engines floor, format, tsc, lint, coverage | yes — every push, ~10s | day one |
 | production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
 | first-load JS budget (`size:check`, right after the build) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "First-load JS budget" |
 | prod-mode e2e | no | same flip — a prod boundary now exists |
@@ -58,6 +58,8 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 | coverage thresholds | already on (suite ships with real tests) | — |
 | cross-browser geometry job | CI-only (`CROSS_BROWSER=1`) | unchanged by phases |
 | mutation score (weekly CI) | unchanged by phases | — |
+
+The phase-1 push builds in production, so it needs a non-localhost `NEXT_PUBLIC_APP_URL`. The `.invalid` placeholder in `.env.example` keeps the gate green but bakes a fake origin, so a build you deploy needs the real one; the first deploy to a host that assigns its address only then needs two builds (`EXTENSIONS.md`, Phase 7 "Build once per environment").
 
 Measured here (`.gate-trace.log`, 2026-08-30 → 2026-09-11, 17 `verify:push` rows): a phase-0 push 9.9-12.7 s
 on seven runs, 20.7 and 33.7 s on two 2026-09-07 runs; the full chain (`GATE_PHASE=full`, or phase 1)
@@ -82,7 +84,8 @@ CAN fail is mutation-proving's job, not the tracer's.
 
 `e2e:one` and `verify:measure` route through `scripts/run-on-free-port.mjs`, which probes up from
 the base port and exports `PORT` + `PLAYWRIGHT_BASE_URL`; Playwright tears down the server it
-started. The push gate's preflight takes `--kill-port` (SIGTERM, re-probe, refuse if it will not
+started. `playwright.config.ts` derives its base URL from `PORT`, so a hand run moved with `PORT=3100`
+alone is consistent; `PLAYWRIGHT_BASE_URL`, when set, wins. The push gate's preflight takes `--kill-port` (SIGTERM, re-probe, refuse if it will not
 die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
 
 ---
@@ -104,7 +107,7 @@ die). Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
   the dev-only content-stress fixture.
 - **A geometry invariant, a wrap guard, or anything about how text lays out** — measure with
   `CROSS_BROWSER=1 npm run smoke:dev`; the CI cross-browser job is what gates it.
-- **Added or bumped a dependency** — `npm run audit:gate` (it is the one network check, and cheap).
+- **Added or bumped a dependency** — `npm run audit:gate` and `npm run lock:age` (the network checks, and cheap; the new version must be older than `min-release-age` or carry an allowance).
 
 ---
 

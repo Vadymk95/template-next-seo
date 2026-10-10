@@ -130,7 +130,7 @@ if (!(await portIsFree(port))) {
     if (!cleared) {
         problems.push(
             `Port ${String(port)} is busy, and the production e2e wants it.\n` +
-                `      Another lane's server? Move this run: PORT=3100 PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run verify:ci\n` +
+                `      Another lane's server? Move this run: PORT=3100 npm run verify:ci\n` +
                 (shouldKillPort
                     ? `      --kill-port could not clear it — look: lsof -nP -iTCP:${String(port)} -sTCP:LISTEN`
                     : `      The push gate clears its own port (--kill-port); by hand: lsof -ti tcp:${String(port)} -sTCP:LISTEN | xargs kill`)

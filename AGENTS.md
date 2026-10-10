@@ -4,7 +4,7 @@ Operating contract for any AI agent editing this repo; read it in full before th
 
 ## Stack
 
-SEO-first Next.js App Router **template, not a shipped product** (§ Danger zones): next-intl SSR under `[locale]`, FSD layers, a static + nonce CSP split, Upstash-ready rate limiting, a forkable scaffold. Node ≥ 24; the default `build` is `next build --webpack`. The installed Next ships its own docs in `node_modules/next/dist/docs/`: read the relevant guide before Next-specific code (`agentRules: false` keeps `next dev` from writing a copy of this pointer into this file).
+SEO-first Next.js App Router **template, not a shipped product** (§ Danger zones): next-intl SSR under `[locale]`, FSD layers, a static + nonce CSP split, Upstash-ready rate limiting, a forkable scaffold. Node ≥ 24.15 (the lockfile's floor, held by `scripts/check-engines-floor.mjs`); the default `build` is `next build --webpack`. The installed Next ships its own docs in `node_modules/next/dist/docs/`: read the relevant guide before Next-specific code (`agentRules: false` keeps `next dev` from writing a copy of this pointer into this file).
 
 ## Invariants (do not violate)
 
@@ -35,7 +35,7 @@ npm run fix                 # oxlint --fix → eslint --fix → prettier --write
 npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
 ```
 
-Every other script, one line each: `README.md` § Commands. After cloning run `npm run prepare` once (`.npmrc` disables lifecycle scripts, so husky does not install itself; `min-release-age=3` is a dependency cooldown in DAYS, so an urgent new package needs `--min-release-age=0`) and copy `.env.example` (`scripts/check-build-env.mjs` names the fix when the production build lacks `NEXT_PUBLIC_APP_URL`).
+Every other script, one line each: `README.md` § Commands. After cloning run `npm run prepare` once (`.npmrc` disables lifecycle scripts, so husky does not install itself; `min-release-age=3` is a dependency cooldown in DAYS, so an urgent new package needs `--min-release-age=0`; the lockfile obeys it too: `npm run lock:age` (in `verify:ci`) fails a changed `name@version` younger than the cooldown unless `scripts/lock-age-allowlist.json` lists it with a reason and an expiry) and copy `.env.example` (`scripts/check-build-env.mjs` names the fix when the production build lacks `NEXT_PUBLIC_APP_URL`).
 
 <!-- shared-harness:begin -->
 <!-- This block is byte-identical in all four templates (template-1, template-spa-pwa, template-next-seo, template-rn). Change it in every template in the same commit, or not at all. Stack-specific facts (which stages `verify` runs, ports, what is skipped and why, timings) live OUTSIDE this block: in the command table above and in `.cursor/brain/VERIFICATION.md`. -->
@@ -57,14 +57,15 @@ that file disagree, the file wins and the prose is fixed in the same commit.
   look) or the probe, where the repo has them. Legal at any time, in any lane, never a violation.
   Measuring is not verifying: it runs no lint, no types, no tests.
 - **Commit** - the pre-commit hook owns it: staged autofix, the TDD sibling gate, then the repo-wide cheap
-  checks. Nothing to run by hand; on refusal the hook prints the remedy.
+  checks. Nothing to run by hand; on refusal the hook prints the remedy. The commit-msg hook (commitlint)
+  also rejects any body or footer line over 100 characters (the header cap is 96): wrap the body.
 - **Push** - the pre-push hook runs the gate ONCE, never shortened by what the diff touched. Where the
   repo has heavy stages (build, size, e2e), the push script is phase-aware: phase 0 (scaffold, before the
   first deploy) runs the offline checks and loudly SKIPS the heavy stages; phase 1 (from the first deploy)
   runs the full `verify:ci`. A skipped stage is printed, never silent; flip the phase in one commit at the
   first deploy. A repo whose gate has no heavy stage runs the full `verify:ci` at push and records in
   `gate-tiers.json` that a phase switch would gate nothing.
-- **CI** - phase-blind: always the full `verify:ci` (`audit:gate` + `verify`), plus what only CI can do
+- **CI** - phase-blind: always the full `verify:ci` (`audit:gate` + `lock:age` + `verify`), plus what only CI can do
   (the security workflow, the scheduled mutation job, a mandatory dev-smoke job where the repo has one).
 
 **Prohibitions, stated as such.** An implementer or a reviewer NEVER runs `verify`, `verify:ci`,
@@ -94,7 +95,7 @@ that outgrew it, so that number moves on a measurement and a `DECISIONS.md` line
 
 **`verify` is a strict superset of the offline checks CI runs**, so a green `verify` predicts a green CI.
 Keeping that true is a rule: a new check goes into the script, never only into the workflow file.
-`audit:gate` sits in `verify:ci` rather than `verify` because it needs the network, so an offline agent can
+`audit:gate` and `lock:age` sit in `verify:ci` rather than `verify` because they need the network, so an offline agent can
 still run the whole offline gate. `bench:verify` derives its step list from the `verify` script; a
 hand-written second list has already drifted once.
 

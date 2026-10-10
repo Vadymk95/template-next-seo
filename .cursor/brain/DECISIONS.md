@@ -4,6 +4,9 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| The Node floor is computed from the lockfile, not written by hand | 2026-10 | in force |
+| Each page states its own social preview, with its own image file | 2026-10 | in force |
+| Vendor `splitChunks` groups take JavaScript modules only | 2026-10 | in force |
 | Dependencies: newest compatible, a hold only for a measured incompatibility | 2026-10 | in force |
 | `agentRules: false` keeps `next dev` out of `AGENTS.md` | 2026-10 | in force |
 | Footer year is read once at module load | 2026-10 | in force |
@@ -41,6 +44,54 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## The Node floor is computed from the lockfile, not written by hand
+
+2026-10 · in force · guard `scripts/check-engines-floor.mjs` · evidence: `package.json` `engines.node`, `.nvmrc`
+
+- **Context:** `.npmrc` sets `engine-strict=true`, so `npm ci` rejects a Node outside any installed package's
+  `engines.node`. `package.json` said `>=24.0.0` while `jsdom` needs `^24.15.0` and `@babel/core` `>=24.11.0`: a
+  Node 24.0 to 24.10 passed the declaration and failed the install. The floor moves with every bump.
+- **Decision:** `engines.node` and `.nvmrc` sit at the lowest version of the major that every locked
+  `engines.node` admits (24.15.0 at the time of writing). The check computes it and runs in `verify`, beside
+  `check-version-holds`. A platform package no version of the major can install (`@img/sharp-win32-ia32`) is skipped.
+- **Consequences:** a dependency bump that raises the floor turns the push red until both files move with it;
+  `@types/node` stays on the same major.
+- **Status:** in force.
+
+## Each page states its own social preview, with its own image file
+
+2026-10 · in force · guards `shared/lib/pageMetadata.test.ts`, `e2e/smoke.spec.ts` · evidence: commit `abe873f` in Vadymk95/frontend-help-site (the site built from this template, which found every page previewing as Home), `shared/lib/pageMetadata.ts`
+
+- **Context:** Next merges metadata one key deep, so a page's `openGraph` replaces the layout's whole object
+  (generate-metadata reference). The template's pages set only `title`, `description` and `alternates`, so every page
+  shared the home page's `og:title`, `og:description` and `og:url`, and the site shipped no `og:image` at all: a link
+  to `/en/example-form` previewed as the home page, with no picture.
+- **Decision:** `buildPageMetadata` (`shared/lib/pageMetadata.ts`) reads `meta.<page>` and returns the title,
+  description, canonical, `alternates.languages`, `openGraph` and `twitter` of one page; every `generateMetadata`
+  calls it. The picture is the `opengraph-image` file convention, a plain site-name card at `app/[locale]/` and a
+  one-line re-export beside each page that uses the helper (a file is attached to the segment that holds it, and does
+  not pass through a page's replaced `openGraph`).
+- **Consequences:** a new page adds a `meta.<page>` block, the helper call and the image file; the unit guard fails
+  a helper page without one, and the prod-mode smoke spec fails a page whose `og:title` or `og:url` repeats another
+  page's or whose `og:image` is missing or not `image/png`. Fork rename list: restyle the card.
+- **Status:** in force.
+
+## Vendor `splitChunks` groups take JavaScript modules only
+
+2026-10 · in force · guards `next.config.test.ts`, `e2e/smoke.spec.ts` · evidence: commit `9051f98` in Vadymk95/frontend-help-site (the site built from this template, which measured the root cause), `next.config.ts`
+
+- **Context:** the vendor groups are `enforce: true`, so each takes every module under its `node_modules` path,
+  whatever the type. `nextVendor` took next/font's generated sheet (`css/mini-extract`), the App Router listed that
+  `.css` among the root main files and emitted `<script src="/_next/static/css/<hash>.css" async>` beside the
+  `<link rel="stylesheet">`. Under `X-Content-Type-Options: nosniff` Chrome refuses `text/css` as a script and logs an
+  error on every page; nothing in the gate looked at the console.
+- **Decision:** every enforced vendor group carries `type: /^javascript\//` (`JAVASCRIPT_MODULES`), so CSS stays with
+  Next. A new vendor group copies it.
+- **Consequences:** `next.config.test.ts` fails an enforced group that accepts `css/mini-extract`; the prod-mode
+  smoke spec fails on any console error, uncaught error or `<script src>` ending in `.css`. Both were shown red
+  on the previous config first.
+- **Status:** in force.
 
 ## Dependencies: newest compatible, a hold only for a measured incompatibility
 
@@ -397,7 +448,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 - **Context:** `verify:enterprise` ran `npm test` without `--coverage`, so the thresholds in `vitest.config.ts`
   were unenforceable locally while CI enforced them; CI also ran an audit that existed nowhere locally.
-- **Decision:** `verify` holds every offline check; `verify:ci` adds `audit:gate` (network) and predicts the
+- **Decision:** `verify` holds every offline check; `verify:ci` adds `audit:gate` and `lock:age` (network) and predicts the
   `validate` job; `verify:full` adds `smoke:dev`. Which moment runs which is in the tier law, not here.
   `smoke:dev` stays out of the push: a cold Turbopack boot costs 10-30 s, so it is its own mandatory parallel CI
   job. `playwright.config.ts` keeps `testIgnore: 'dev/**'`, or the production project runs the Turbopack smoke
