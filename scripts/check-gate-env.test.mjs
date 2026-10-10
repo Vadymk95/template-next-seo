@@ -3,17 +3,20 @@ import { connect, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Resolved from the repo root, not from `import.meta.url`: vitest serves this module over its own
 // transform URL, so the file-URL form throws ERR_INVALID_URL_SCHEME rather than finding the script.
 const SCRIPT = resolve(process.cwd(), 'scripts/check-gate-env.mjs');
 const APP_URL = 'https://template-next-seo.invalid';
 
+/* `stdio` pipes stderr: without it execFileSync echoes the child's stderr into the parent, so a green
+   run printed "Gate preflight failed" blocks from the cases that expect a refusal. */
 const runPreflight = (env, cwd = process.cwd(), extraArgs = []) => {
     try {
         const output = execFileSync('node', [SCRIPT, ...extraArgs], {
             encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'pipe'],
             cwd,
             /* A clean environment, so the developer's own shell cannot make this pass or fail. */
             env: {
@@ -72,8 +75,37 @@ describe('gate preflight', () => {
 
         expect(busy.code).toBe(1);
         expect(busy.output).toContain('Port 3179 is busy');
-        expect(busy.output).toContain('PORT=3100');
         expect(free.code).toBe(0);
+    });
+
+    /* The hint names ONE variable: `playwright.config.ts` follows `PORT` for its base URL, so a second
+       one to keep in agreement is a way to point the tests at a different server than the one started. */
+    it('hints a moved run with PORT alone', async () => {
+        held = await listenOn(3179);
+        const busy = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+
+        expect(busy.output).toContain('PORT=3100 npm run verify:ci');
+        expect(busy.output).not.toContain('PLAYWRIGHT_BASE_URL');
+    });
+
+    /* A refusal is a PASSING case here. Node's execFileSync copies the child's stderr onto its own
+       process.stderr unless `stdio` is given, which once printed "Gate preflight failed" blocks
+       inside green runs and taught readers to filter the gate's output. */
+    it('keeps the stderr of an expected refusal off this process', async () => {
+        held = await listenOn(3179);
+        const spy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+        let verdict;
+        let echoed;
+        try {
+            verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+            // Read before the restore: restoring a spy also clears what it recorded.
+            echoed = [...spy.mock.calls];
+        } finally {
+            spy.mockRestore();
+        }
+        expect(verdict.code).toBe(1);
+        expect(verdict.output).toContain('Port 3179 is busy');
+        expect(echoed).toEqual([]);
     });
 
     it('without --kill-port a busy port only REFUSES — manual runs never kill anything', async () => {

@@ -4,6 +4,8 @@
 
 - **Risk:** `next build` without **`--webpack`** uses Turbopack; custom webpack config is ignored or can error.
 - **Rule:** Use **`npm run build`** (webpack). Do not assume Turbopack parity for chunk names or analyzer.
+- **Risk:** an `enforce: true` vendor `cacheGroup` without a `type` takes CSS modules too (next/font's sheet), and the page ships `<script src="….css">` that the browser refuses under `nosniff`.
+- **Rule:** every enforced group keeps `type: JAVASCRIPT_MODULES`; guarded by `next.config.test.ts` and the console check in `e2e/smoke.spec.ts`.
 
 ## Server vs Client Components
 

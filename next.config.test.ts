@@ -29,6 +29,48 @@ const EXPECTED_HEADERS: [string, string][] = [
     ['Cross-Origin-Resource-Policy', 'same-origin']
 ];
 
+interface CacheGroup {
+    enforce?: boolean;
+    type?: RegExp;
+}
+
+/* The client production pass is the only one that carries the custom `splitChunks`. */
+const loadClientCacheGroups = (): Record<string, CacheGroup> => {
+    const { webpack } = nextConfig;
+    if (!webpack) {
+        throw new Error('next.config.ts defines no webpack()');
+    }
+    const config = webpack(
+        {
+            context: process.cwd(),
+            resolve: { alias: {} },
+            optimization: { splitChunks: { cacheGroups: {} } }
+        },
+        { isServer: false, dev: false } as Parameters<typeof webpack>[1]
+    ) as { optimization: { splitChunks: { cacheGroups: Record<string, CacheGroup | false> } } };
+    return Object.fromEntries(
+        Object.entries(config.optimization.splitChunks.cacheGroups).filter(
+            (entry): entry is [string, CacheGroup] => entry[1] !== false
+        )
+    );
+};
+
+describe('next.config webpack splitChunks', () => {
+    it('keeps every enforced vendor group to JavaScript modules', () => {
+        const enforced = Object.entries(loadClientCacheGroups()).filter(
+            ([, group]) => group.enforce === true
+        );
+
+        expect(enforced.length).toBeGreaterThan(0);
+        for (const [name, group] of enforced) {
+            // An enforced group takes every module under its path, a stylesheet included: next/font's
+            // generated sheet then lands in a JS chunk and is emitted as `<script src="....css">`.
+            expect(group.type?.test('javascript/auto'), `${name} accepts JavaScript`).toBe(true);
+            expect(group.type?.test('css/mini-extract'), `${name} refuses CSS`).toBe(false);
+        }
+    });
+});
+
 describe('next.config agentRules', () => {
     it('keeps `next dev` from writing its managed block into AGENTS.md', () => {
         expect(nextConfig.agentRules).toBe(false);

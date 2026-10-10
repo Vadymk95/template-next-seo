@@ -8,7 +8,7 @@ import { ROUTES } from './sitemap';
 const LOCALE_DIR = path.join(import.meta.dirname, '[locale]');
 
 /** `[id]`-style folders are dynamic segments — a sitemap can't enumerate them statically, so
- * they're excluded here the same way the brief excludes them from the check. */
+ * they're excluded from the comparison here. */
 const isDynamicSegment = (name: string): boolean => name.startsWith('[') && name.endsWith(']');
 
 /** Every `page.tsx` under `dir`, as the route path it serves (relative to `app/[locale]`,

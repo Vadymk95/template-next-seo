@@ -47,19 +47,6 @@ export const metadata: Metadata = {
 const RootLayout = ({ children }: Readonly<{ children: React.ReactNode }>): ReactElement => {
     return (
         <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
-            <head>
-                <link
-                    rel="preconnect"
-                    href="https://www.googletagmanager.com"
-                    crossOrigin="anonymous"
-                />
-                <link
-                    rel="preconnect"
-                    href="https://fonts.googleapis.com"
-                    crossOrigin="anonymous"
-                />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            </head>
             <body>
                 <WebVitalsReporter />
                 <Providers>{children}</Providers>

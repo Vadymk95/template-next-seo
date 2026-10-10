@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
-import { routing } from '@/i18n/routing';
+import { buildPageMetadata } from '@/shared/lib/pageMetadata';
 
 import { ExampleFormPageClient } from './ExampleFormPageClient';
 
@@ -16,20 +16,11 @@ interface ExampleFormPageProps {
 
 export const generateMetadata = async ({ params }: ExampleFormPageProps): Promise<Metadata> => {
     const { locale: rawLocale } = await params;
-    const locale = requireLocale(rawLocale);
-    const t = await getTranslations({ locale, namespace: 'meta.exampleForm' });
-    const languages = Object.fromEntries(
-        routing.locales.map((l) => [l, `/${l}/example-form`])
-    ) as Record<string, string>;
-
-    return {
-        title: t('title'),
-        description: t('description'),
-        alternates: {
-            canonical: `/${locale}/example-form`,
-            languages
-        }
-    };
+    return buildPageMetadata({
+        locale: requireLocale(rawLocale),
+        page: 'exampleForm',
+        path: '/example-form'
+    });
 };
 
 const ExampleFormPage = async ({ params }: ExampleFormPageProps): Promise<ReactElement> => {

@@ -107,6 +107,20 @@ export const waitForContent = async (readMeasurement, { attempts = 20, delayMs =
     return { measurement, rendered: hasRenderedContent(measurement) };
 };
 
+/**
+ * Playwright starts headless Chromium with `--hide-scrollbars`, so the default launch measures a
+ * scrolling page as if scrollbars did not exist (measured on this repository's Chromium, 390 px
+ * viewport: 0 px with the default launch, 15 px once the flag is dropped). A visitor on Windows or
+ * Linux has that 15 px classic scrollbar, and a layout that needs those pixels passes a default-launch
+ * probe and breaks on their screen. `scrollbar-gutter: stable` (see `app/globals.css`) reserves the
+ * gutter on its own, so the page shows no difference while it holds; the launch matters for whatever
+ * the gutter does not cover, such as an inner scroll container or a `100vw` element. A Mac with
+ * overlay scrollbars sees the default. The e2e guards keep Playwright's defaults and assert the CSS
+ * that decides the gutter instead.
+ */
+export const launchProbeBrowser = (chromium) =>
+    chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+
 const run = async () => {
     const { path, widths, useDev } = parseProbeArgs(process.argv.slice(2));
 
@@ -132,7 +146,7 @@ const run = async () => {
     );
 
     const baseUrl = `http://localhost:${String(port)}`;
-    const browser = await chromium.launch();
+    const browser = await launchProbeBrowser(chromium);
     const rows = [];
     try {
         await waitForServer(async () => {

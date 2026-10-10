@@ -55,6 +55,17 @@ describe('example form page entry', () => {
         expect(metadata.alternates?.languages).toEqual({ en: '/en/example-form' });
     });
 
+    it('states its own social preview instead of inheriting the site-wide one', async () => {
+        const metadata = await generateMetadata({ params });
+
+        expect(metadata.openGraph).toMatchObject({
+            title: messages.meta.exampleForm.title,
+            description: messages.meta.exampleForm.description,
+            url: '/en/example-form'
+        });
+        expect(metadata.twitter).toMatchObject({ title: messages.meta.exampleForm.title });
+    });
+
     it('renders the title, the description and the form as the body', async () => {
         renderWithProviders(await ExampleFormPage({ params }));
 

@@ -8,7 +8,7 @@
         "**/globals.css"
     ],
     "engines": {
-        "node": ">=24.0.0"
+        "node": ">=24.15.0"
     },
     "browserslist": {
         "production": [
@@ -50,7 +50,7 @@
         "test:e2e:headed": "playwright test --headed",
         "test:e2e:install": "playwright install --with-deps chromium",
         "verify:enterprise": "node scripts/gate-trace.mjs verify:enterprise -- npm run verify:enterprise:inner",
-        "verify:enterprise:inner": "node scripts/check-hooks.mjs && node scripts/check-version-holds.mjs && node scripts/check-gate-env.mjs --kill-port && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage && npm run build && npm run size:check && node scripts/ensure-playwright.mjs && npm run test:e2e:prod",
+        "verify:enterprise:inner": "node scripts/check-hooks.mjs && node scripts/check-version-holds.mjs && node scripts/check-engines-floor.mjs && node scripts/check-gate-env.mjs --kill-port && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage && npm run build && npm run size:check && node scripts/ensure-playwright.mjs && npm run test:e2e:prod",
         "verify": "npm run verify:enterprise",
         "verify:iter": "node scripts/gate-trace.mjs verify:iter -- npm run verify:iter:inner",
         "verify:iter:inner": "npm run lint:oxlint && npm run typecheck && vitest run --changed --passWithNoTests",
@@ -61,13 +61,14 @@
         "typecheck": "tsc --noEmit",
         "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix --cache --cache-location .eslintcache && prettier --write .",
         "audit:gate": "node scripts/audit-gate.mjs",
+        "lock:age": "node scripts/check-lock-age.mjs",
         "verify:ci": "node scripts/gate-trace.mjs verify:ci -- npm run verify:ci:inner",
-        "verify:ci:inner": "npm run audit:gate && npm run verify",
+        "verify:ci:inner": "npm run audit:gate && npm run lock:age && npm run verify",
         "verify:push": "node scripts/gate-trace.mjs verify:push -- node scripts/verify-push.mjs",
         "verify:measure": "node scripts/gate-trace.mjs verify:measure -- node scripts/verify-measure.mjs",
         "e2e:one": "node scripts/gate-trace.mjs e2e:one -- node scripts/run-on-free-port.mjs npx --no-install playwright test",
-        "verify:scaffold": "node scripts/check-hooks.mjs && node scripts/check-version-holds.mjs && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage",
-        "verify:scaffold:push": "npm run audit:gate && npm run verify:scaffold",
+        "verify:scaffold": "node scripts/check-hooks.mjs && node scripts/check-version-holds.mjs && node scripts/check-engines-floor.mjs && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage",
+        "verify:scaffold:push": "npm run audit:gate && npm run lock:age && npm run verify:scaffold",
         "smoke:dev": "NEXT_DIST_DIR=.next-dev playwright test --config playwright.dev.config.ts",
         "verify:full": "node scripts/gate-trace.mjs verify:full -- npm run verify:full:inner",
         "verify:full:inner": "npm run verify:ci && npm run smoke:dev",

@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 import { isCrossBrowserEnabled, LAYOUT_SPEC_PATTERN } from './e2e/support/cross-browser';
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
+// The server below (`next start` / `next dev`) listens on `PORT`, so the URL follows it: moving a run
+// with `PORT=3100` alone must not leave the tests visiting 3000. `PLAYWRIGHT_BASE_URL` still wins.
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${process.env.PORT ?? '3000'}`;
 const isCI = Boolean(process.env.CI);
 // Server mode and runner sizing are two unrelated concerns and carry separate
 // flags. PLAYWRIGHT_PROD_SERVER picks `next start` over `next dev` (the gate's

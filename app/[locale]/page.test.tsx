@@ -36,6 +36,17 @@ describe('home page entry', () => {
         expect(metadata.alternates?.languages).toEqual({ en: '/en' });
     });
 
+    it('states its own social preview instead of inheriting the site-wide one', async () => {
+        const metadata = await generateMetadata({ params });
+
+        expect(metadata.openGraph).toMatchObject({
+            title: messages.meta.home.title,
+            description: messages.meta.home.description,
+            url: '/en'
+        });
+        expect(metadata.twitter).toMatchObject({ title: messages.meta.home.title });
+    });
+
     it('renders the start page as the body', async () => {
         renderWithProviders(await HomePage({ params }));
 
