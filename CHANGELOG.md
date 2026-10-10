@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.2.1](https://github.com/Vadymk95/template-next-seo/compare/v1.2.0...v1.2.1) (2026-10-10)
+
+
+### Bug fixes
+
+* **build:** no CSS chunk loaded as a script; lock-age, Node floor, per-page OG ([#104](https://github.com/Vadymk95/template-next-seo/issues/104)) ([93c1059](https://github.com/Vadymk95/template-next-seo/commit/93c105954d56cb7a432cc08ded52d6e74d4c8201))
+* **ci:** audit workflows with zizmor, fail CI on flaky tests, scan pages with axe ([#97](https://github.com/Vadymk95/template-next-seo/issues/97)) ([ec503f4](https://github.com/Vadymk95/template-next-seo/commit/ec503f440fb86183a10892531a7a07bb3ca20abe))
+* **docs:** docs-check refuses agent-memory imports in CLAUDE.md and AGENTS.md ([#99](https://github.com/Vadymk95/template-next-seo/issues/99)) ([c783f82](https://github.com/Vadymk95/template-next-seo/commit/c783f82fd492eb609a9b5144efc85a0dd4a54415))
+* **gate:** docs:check flags CI steps that bypass the gate and ruleset drift ([#93](https://github.com/Vadymk95/template-next-seo/issues/93)) ([380e6c1](https://github.com/Vadymk95/template-next-seo/commit/380e6c15e7a7f1d839d5800b2ca4b27748de8b5f))
+* **lint:** type-aware rules and no [@ts-ignore](https://github.com/ts-ignore); suppressions need a reason ([#101](https://github.com/Vadymk95/template-next-seo/issues/101)) ([e82a0a1](https://github.com/Vadymk95/template-next-seo/commit/e82a0a138d0ccac367670bfbbb404e54a7a1fb1e))
+* **security:** send X-Content-Type-Options; quick start sets the build env ([#103](https://github.com/Vadymk95/template-next-seo/issues/103)) ([0f55faa](https://github.com/Vadymk95/template-next-seo/commit/0f55faa1cb560e69fc617481a8327086a49ebf36))
+* **seo:** live a11y and Next lint rules, first-load JS budget, header and CSP tests ([#96](https://github.com/Vadymk95/template-next-seo/issues/96)) ([656ccd3](https://github.com/Vadymk95/template-next-seo/commit/656ccd318419d0b2218e6b76593ced6ca37095cc))
+* **seo:** sitemap covers every page, warn on first-hop rate limiting, scrollbar guard ([#95](https://github.com/Vadymk95/template-next-seo/issues/95)) ([ab50035](https://github.com/Vadymk95/template-next-seo/commit/ab50035ae8709e4c843f476e1200f5a42de5e241))
+
+
+### Maintenance
+
+* **deps:** newest compatible versions, next 16.4; stop next dev writing AGENTS.md ([#100](https://github.com/Vadymk95/template-next-seo/issues/100)) ([c6488ed](https://github.com/Vadymk95/template-next-seo/commit/c6488edc41a4db8fff2e4aaa5bafbc0454d5a7fb))
+
+
+### Documentation
+
+* **brain:** integration recipes; doc pointers no longer @-import the brain ([#98](https://github.com/Vadymk95/template-next-seo/issues/98)) ([5c77299](https://github.com/Vadymk95/template-next-seo/commit/5c77299edcf82349b09a1cdd22d706be3df6285a))
+* **harness:** slim agent docs, enforce version holds, resolve section pointers ([#102](https://github.com/Vadymk95/template-next-seo/issues/102)) ([f4b317f](https://github.com/Vadymk95/template-next-seo/commit/f4b317f692c4cd0d3af2f22a3cc5ba795cb249e3))
+
 ## [1.2.0](https://github.com/Vadymk95/template-next-seo/compare/v1.1.3...v1.2.0) (2026-10-02)
 
 
