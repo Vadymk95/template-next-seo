@@ -1,9 +1,10 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { connect, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Resolved from the repo root, not from `import.meta.url`: vitest serves this module over its own
 // transform URL, so the file-URL form throws ERR_INVALID_URL_SCHEME rather than finding the script.
@@ -11,10 +12,11 @@ const SCRIPT = resolve(process.cwd(), 'scripts/check-gate-env.mjs');
 const APP_URL = 'https://template-next-seo.invalid';
 
 /* `stdio` pipes stderr: without it execFileSync echoes the child's stderr into the parent, so a green
-   run printed "Gate preflight failed" blocks from the cases that expect a refusal. */
+   run printed "Gate preflight failed" blocks from the cases that expect a refusal.
+   `process.execPath`, not `node`: a case may hand the child a PATH that holds no binaries at all. */
 const runPreflight = (env, cwd = process.cwd(), extraArgs = []) => {
     try {
-        const output = execFileSync('node', [SCRIPT, ...extraArgs], {
+        const output = execFileSync(process.execPath, [SCRIPT, ...extraArgs], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
             cwd,
@@ -42,6 +44,17 @@ const listenOn = async (port) =>
             resolvePromise(server);
         });
     });
+
+/* `lsof` is a capability, not a given: a stock Debian image has none. Probed ONCE per file; the case
+   that kills a real stray needs it and is skipped with the reason printed, never run into a failure
+   or skipped silently. The missing-lsof refusal below is proven with an empty PATH on every host. */
+const lsofProblem = spawnSync('lsof', ['-v'], { stdio: 'ignore' }).error?.code ?? null;
+if (lsofProblem !== null) {
+    console.warn(
+        `check-gate-env.test: SKIPPING the stray-listener kill case, lsof is not runnable on this host (${lsofProblem}); install it (apt-get install lsof) to run it.`
+    );
+}
+const itWithLsof = it.skipIf(lsofProblem !== null);
 
 let held = null;
 
@@ -116,7 +129,7 @@ describe('gate preflight', () => {
         expect(verdict.output).toContain('--kill-port');
     });
 
-    it('--kill-port clears a stray listener and proceeds, naming the pid it killed', async () => {
+    itWithLsof('--kill-port clears a stray listener and names the pid it killed', async () => {
         /* The holder is a SEPARATE child process, never the suite's own server: the gate kills
            the port's owner, and killing the suite would prove the wrong thing the hard way. */
         const { spawn } = await import('node:child_process');
@@ -182,6 +195,50 @@ describe('gate preflight', () => {
         );
         expect(verdict.code).toBe(0);
         expect(verdict.output).not.toContain('Cleared');
+    });
+
+    /* `lsof` finds the pids to kill and nothing else. Every case below hands the child a PATH that
+       holds no binary, so it runs the same on a host that has lsof and on one that does not. */
+    describe('on a host without lsof', () => {
+        let emptyBin;
+        let withoutLsof;
+
+        beforeEach(() => {
+            emptyBin = mkdtempSync(join(tmpdir(), 'gate-env-no-lsof-'));
+            withoutLsof = { NEXT_PUBLIC_APP_URL: APP_URL, PATH: emptyBin };
+        });
+
+        afterEach(() => {
+            rmSync(emptyBin, { recursive: true, force: true });
+        });
+
+        it('still sees a taken port: detection never shells out', async () => {
+            held = await listenOn(3179);
+            const verdict = runPreflight({ ...withoutLsof, PORT: '3179' });
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('Port 3179 is busy');
+        });
+
+        it('--kill-port fails loud: the port, the cause and the install line', async () => {
+            held = await listenOn(3179);
+            const verdict = runPreflight({ ...withoutLsof, PORT: '3179' }, process.cwd(), [
+                '--kill-port'
+            ]);
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('Port 3179 is busy');
+            expect(verdict.output).toContain('ENOENT');
+            expect(verdict.output).toContain('apt-get install lsof');
+            expect(verdict.output).not.toContain('could not clear it');
+            expect(verdict.output).not.toContain('Cleared');
+        });
+
+        it('--kill-port on a FREE port needs no lsof and stays silent', () => {
+            const verdict = runPreflight({ ...withoutLsof, PORT: '3182' }, process.cwd(), [
+                '--kill-port'
+            ]);
+            expect(verdict.code).toBe(0);
+            expect(verdict.output).not.toContain('lsof');
+        });
     });
 
     it('reports BOTH problems at once rather than one per run', async () => {

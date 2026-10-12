@@ -4,7 +4,7 @@ Operating contract for any AI agent editing this repo; read it in full before th
 
 ## Stack
 
-SEO-first Next.js App Router **template, not a shipped product** (§ Danger zones): next-intl SSR under `[locale]`, FSD layers, a static + nonce CSP split, Upstash-ready rate limiting, a forkable scaffold. Node ≥ 24.15 (the lockfile's floor, held by `scripts/check-engines-floor.mjs`); the default `build` is `next build --webpack`. The installed Next ships its own docs in `node_modules/next/dist/docs/`: read the relevant guide before Next-specific code (`agentRules: false` keeps `next dev` from writing a copy of this pointer into this file).
+SEO-first Next.js App Router **template, not a shipped product** (§ Danger zones): next-intl SSR under `[locale]`, FSD layers, a static + nonce CSP split, Upstash-ready rate limiting, a forkable scaffold. Node ≥ 24.15 (the lockfile's floor, held by `scripts/check-engines-floor.mjs`) and npm ≥ 11.10 (the first npm that reads `min-release-age`; `engine-strict` refuses an older one); the default `build` is `next build --webpack`. The installed Next ships its own docs in `node_modules/next/dist/docs/`: read the relevant guide before Next-specific code (`agentRules: false` keeps `next dev` from writing a copy of this pointer into this file).
 
 ## Invariants (do not violate)
 
@@ -23,14 +23,14 @@ SEO-first Next.js App Router **template, not a shipped product** (§ Danger zone
 Slash commands in `.claude/commands/` (shims in `.cursor/commands/`): `/onboard` orient and VERIFY the brain against the code · `/feat` reuse check → scope → plan → test-first → gate · `/test` corner cases at integration seams · `/review` leaks, security, bug hunt · `/docs` bring this file and the brain back in line with the code.
 
 ```bash
-npm run verify:iter         # ITERATE: oxlint → tsc → vitest --changed (seconds; run per change)
+npm run verify:iter         # ITERATE: test markers → oxlint → tsc → vitest --changed (seconds; run per change)
 npm run verify:measure      # MEASURE: build + look; `-- e2e/<f>.spec.ts` for one prod-mode spec
 npm run e2e:one -- <spec>   # one Playwright spec on a FREE port, through the tracer
 npm run test:one -- <file>  # one unit test file, through the tracer (not around it)
 npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
-npm run docs:check          # mechanical doc drift (pre-commit when docs are staged; weekly CI adds --weekly)
+npm run docs:check          # mechanical doc drift (pre-commit when docs are staged; weekly CI adds --weekly; not in verify)
 npm run fix                 # oxlint --fix → eslint --fix → prettier --write, repo-wide
 npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
 ```
@@ -109,8 +109,7 @@ scripts take the next free port. Only the push gate clears its own port.
 
 ### Lanes - who runs what
 
-- **Main agent, inline.** Iterate and measure while working; the push runs the chain. Never the full gate
-  by hand.
+- **Main agent, inline.** Iterate and measure while working; the push runs the chain, never a hand-run.
 - **Implementer subagent.** Works in a hand-made `git worktree` OUTSIDE the repo directory, on its own
   port, with `node_modules` symlinked from the main checkout. Iterate and measure only; the gate never
   runs from a worktree (the tracer records it as a finding). The lead removes the worktree, checks the
@@ -124,7 +123,8 @@ scripts take the next free port. Only the push gate clears its own port.
   `.github/copilot-instructions.md`, which points here for the gate.
 - **Review, any lane.** The diff plus `verify:iter`, never a re-run of the gate. Findings are correctness,
   test strength, security, readability; style belongs to the linters. A non-author human approves; an
-  agent's own green is not an approval.
+  agent's own green is not an approval. A gate or suppression change stays red until a reviewer adds the
+  `gate-change` label, never the author (`scripts/check-gate-integrity.mjs` lists the change).
 - **Two tools, one file.** Claude Code reads `CLAUDE.md` -> `AGENTS.md` -> the brain files this guide
   points at (read on demand; nothing beyond `AGENTS.md` is `@`-imported); Cursor reads `AGENTS.md` plus
   every `alwaysApply: true` rule; Copilot reads `.github/copilot-instructions.md`. `AGENTS.md` is the only
