@@ -1,0 +1,28 @@
+{
+    "paths": [
+        "scripts/**",
+        "scripts/gate-files.json",
+        ".husky/**",
+        ".github/**",
+        ".claude/**",
+        ".cursor/rules/**",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".editorconfig",
+        ".npmrc",
+        ".nvmrc",
+        ".oxlintrc.json",
+        ".prettierignore",
+        ".prettierrc.json",
+        "commitlint.config.mjs",
+        "e2e/support/**",
+        "eslint.config.js",
+        "playwright.config.ts",
+        "playwright.dev.config.ts",
+        "shared/lib/test-utils/setup.ts",
+        "stryker.config.json",
+        "tsconfig*.json",
+        "vitest.config.ts"
+    ],
+    "packageKeys": ["overrides"]
+}

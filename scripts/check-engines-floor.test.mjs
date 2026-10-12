@@ -8,7 +8,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { checkEnginesFloor, requiredFloor, run } from './check-engines-floor.mjs';
+import {
+    checkEnginesFloor,
+    checkLockRootEngines,
+    requiredFloor,
+    run
+} from './check-engines-floor.mjs';
 
 const { describe, it } = globalThis.describe ? globalThis : await import('node:test');
 
@@ -34,6 +39,12 @@ const REAL_LOCK = lockWith({
     'node_modules/vitest': needs('^20.0.0 || ^22.0.0 || >=24.0.0'),
     'node_modules/execa': needs('^18.19.0 || >=20.5.0'),
     'node_modules/postcss': needs('^10 || ^12 || >=14')
+});
+
+// The lockfile copy whose root entry carries the manifest's engines, as `npm install` writes it.
+const lockFor = (manifest, lock = REAL_LOCK) => ({
+    ...lock,
+    packages: { ...lock.packages, '': { name: 'app', engines: manifest.engines } }
 });
 
 /* ------------------------------------------------------------------------ requiredFloor */
@@ -261,6 +272,69 @@ describe('checkEnginesFloor', () => {
     });
 });
 
+/* ------------------------------------------------------------------------ lock root */
+
+describe('checkLockRootEngines', () => {
+    const manifestOf = (engines) => ({ name: 'app', engines });
+    const lockRoot = (engines) => ({ packages: { '': { name: 'app', engines } } });
+
+    it('passes when the lockfile root carries the same engines as package.json', () => {
+        const manifest = manifestOf({ node: '>=24.15.0', npm: '>=11.10.0' });
+        const lock = lockRoot({ node: '>=24.15.0', npm: '>=11.10.0' });
+        assert.deepEqual(checkLockRootEngines({ manifest, lock }), []);
+    });
+
+    it('does not care in which order the keys are written', () => {
+        const manifest = manifestOf({ node: '>=24.15.0', npm: '>=11.10.0' });
+        const lock = lockRoot({ npm: '>=11.10.0', node: '>=24.15.0' });
+        assert.deepEqual(checkLockRootEngines({ manifest, lock }), []);
+    });
+
+    it('fails a lockfile root whose node range differs, and prints both sides', () => {
+        const manifest = manifestOf({ node: '>=24.15.0' });
+        const lock = lockRoot({ node: '>=24.0.0' });
+        const findings = checkLockRootEngines({ manifest, lock });
+        assert.equal(findings.length, 1);
+        assert.match(findings[0], /^package-lock\.json packages\[""\]\.engines is /);
+        assert.match(findings[0], /is \{"node":">=24\.0\.0"\} but package\.json engines is/);
+        assert.match(findings[0], /package\.json engines is \{"node":">=24\.15\.0"\}/);
+    });
+
+    it('fails a lockfile root that lacks an engine package.json declares', () => {
+        const manifest = manifestOf({ node: '>=24.15.0', npm: '>=11.10.0' });
+        const lock = lockRoot({ node: '>=24.15.0' });
+        const findings = checkLockRootEngines({ manifest, lock });
+        assert.equal(findings.length, 1);
+        assert.match(findings[0], /"npm":">=11\.10\.0"/);
+    });
+
+    it('fails a lockfile root that holds an engine package.json no longer declares', () => {
+        const manifest = manifestOf({ node: '>=24.15.0' });
+        const lock = lockRoot({ node: '>=24.15.0', npm: '>=10.0.0' });
+        assert.equal(checkLockRootEngines({ manifest, lock }).length, 1);
+    });
+
+    it('treats a lockfile root with no engines like an empty object', () => {
+        assert.deepEqual(
+            checkLockRootEngines({ manifest: { name: 'app' }, lock: lockRoot(undefined) }),
+            []
+        );
+        assert.equal(
+            checkLockRootEngines({ manifest: manifestWith('>=24.15.0'), lock: lockRoot(undefined) })
+                .length,
+            1
+        );
+    });
+
+    it('fails a lockfile with no root entry, because there is nothing to compare', () => {
+        const manifest = manifestWith('>=24.15.0');
+        const findings = checkLockRootEngines({ manifest, lock: { packages: {} } });
+        assert.equal(findings.length, 1);
+        assert.match(findings[0], /no root entry/);
+        assert.equal(checkLockRootEngines({ manifest, lock: {} }).length, 1);
+    });
+});
+
 /* ------------------------------------------------------------------------ run and CLI */
 
 const tmpRoot = (files) => {
@@ -276,7 +350,7 @@ describe('run', () => {
     it('reads package.json, package-lock.json and .nvmrc from the root', () => {
         const root = tmpRoot({
             'package.json': JSON.stringify(manifestWith('>=24.0.0')),
-            'package-lock.json': JSON.stringify(REAL_LOCK),
+            'package-lock.json': JSON.stringify(lockFor(manifestWith('>=24.0.0'))),
             '.nvmrc': '24\n'
         });
         try {
@@ -316,7 +390,7 @@ describe('command line', () => {
     it('exits 0 and names the floor when the declaration holds', () => {
         const result = cli({
             'package.json': JSON.stringify(manifestWith('>=24.15.0')),
-            'package-lock.json': JSON.stringify(REAL_LOCK),
+            'package-lock.json': JSON.stringify(lockFor(manifestWith('>=24.15.0'))),
             '.nvmrc': '24.15.0\n'
         });
 
@@ -327,10 +401,21 @@ describe('command line', () => {
     it('exits 1 and prints the finding when engines.node is below the floor', () => {
         const result = cli({
             'package.json': JSON.stringify(manifestWith('>=24.0.0')),
-            'package-lock.json': JSON.stringify(REAL_LOCK)
+            'package-lock.json': JSON.stringify(lockFor(manifestWith('>=24.0.0')))
         });
 
         assert.equal(result.status, 1);
         assert.match(result.stdout, /✖ engines\.node ">=24\.0\.0"/);
+    });
+
+    it('exits 1 when the lockfile root engines differ from package.json', () => {
+        const result = cli({
+            'package.json': JSON.stringify(manifestWith('>=24.15.0')),
+            'package-lock.json': JSON.stringify(lockFor(manifestWith('>=24.0.0'))),
+            '.nvmrc': '24.15.0\n'
+        });
+
+        assert.equal(result.status, 1);
+        assert.match(result.stdout, /✖ package-lock\.json packages\[""\]\.engines is/);
     });
 });

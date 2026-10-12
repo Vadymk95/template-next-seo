@@ -10,6 +10,9 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
+        // The runner default is `!CI`: a committed `.only` would pass every local run and shrink the
+        // suite silently, then fail only after the push. Off everywhere, so the failure is local.
+        allowOnly: false,
         // Only the browser SPECS are excluded, not all of `e2e/`: the pure predicates under
         // `e2e/support/` are unit-tested here, which is why the two runners split on the
         // extension (`.spec.ts` = Playwright, `.test.ts` = Vitest) and both configs carry the

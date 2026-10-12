@@ -55,8 +55,13 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Decision:** `engines.node` and `.nvmrc` sit at the lowest version of the major that every locked
   `engines.node` admits (24.15.0 at the time of writing). The check computes it and runs in `verify`, beside
   `check-version-holds`. A platform package no version of the major can install (`@img/sharp-win32-ia32`) is skipped.
+  `engines.npm` is `>=11.10.0`, the first npm that reads `min-release-age` (npm/cli CHANGELOG, 11.10.0, 2026-02-11);
+  the floor Node bundles npm 11.12.1. Measured in `node:24.15.0-bookworm` with npm 11.9.0: without `engines.npm` the
+  install exits 0, warns `Unknown project config "min-release-age"` and rewrites the lockfile; with it `npm install`
+  and `npm ci` stop on `EBADENGINE` under `engine-strict`, so the check needs no npm leg of its own.
 - **Consequences:** a dependency bump that raises the floor turns the push red until both files move with it;
-  `@types/node` stays on the same major.
+  `@types/node` stays on the same major. The check also fails when the lockfile's root `engines` differs from
+  `package.json`: the next `npm install` rewrites it and leaves a dirty lockfile that `npm ci` never shows.
 - **Status:** in force.
 
 ## Each page states its own social preview, with its own image file

@@ -95,6 +95,8 @@ Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 
 ## 📦 Quick Start
 
+Prerequisites: Node 24.15.0 or newer (`.nvmrc`), npm 11.10 or newer (`engine-strict` refuses an older one), and `lsof` on the `PATH`: the push gate's preflight uses it to clear its own port (macOS ships it; Debian/Ubuntu: `sudo apt-get install lsof`).
+
 ```bash
 # Install dependencies
 npm install
@@ -253,8 +255,8 @@ npm run audit:gate       # fail-closed audit with a self-expiring allowlist
 npm run lock:age         # a changed lockfile version younger than the .npmrc cooldown fails; allowances: scripts/lock-age-allowlist.json
 
 # The chain the push and CI run (not desk tools)
-npm run verify:enterprise  # preflight (hooks, version holds, engines floor, gate env) → format → typecheck → lint → coverage → build → size → e2e
-npm run verify:ci          # verify + audit:gate + lock:age: phase-1 pre-push and the CI validate job
+npm run verify:enterprise  # preflight (hooks, version holds, engines floor, test markers, test siblings over the whole branch, gate env) → format → typecheck → lint → coverage → build → size → e2e
+npm run verify:ci          # audit:gate + lock:age + verify: phase-1 pre-push and the CI validate job
 npm run verify:full        # verify:ci + smoke:dev: predicts the whole CI pipeline
 npm run bench:verify       # time each stage of the verify chain
 ```
@@ -547,7 +549,8 @@ online or offline. `mutation.yml` is the weekly StrykerJS strength gate. What ru
 
 ### Pre-commit Hooks (Husky)
 
-- **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate, then repo-wide
+- **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate (a staged source file
+  needs a test sibling that is tracked or staged in the same index), then repo-wide
   `lint:oxlint`, `format:check` and `typecheck` (the remedy on refusal: `npm run fix && git add -u`)
 - **commit-msg:** commitlint (`type(scope): subject`, max 96 chars)
 - **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined
@@ -647,6 +650,7 @@ Not inherited, and each one is a switch in your own repository's settings:
 - **Rulesets and branch protection**, including every required status check. Until you add one, your default branch accepts any push, and the pull-request discipline this repository documents is a habit rather than a rule.
 - **Actions permissions.** A fork starts with workflows disabled; GitHub asks you to enable them once, in the Actions tab. Until you do, the CI described here never runs, and a green screen means nobody looked.
 - **Secret scanning and push protection**, **CodeQL**, and **Dependabot alerts.** The Dependabot CONFIG file travels; the alerts it feeds are a setting.
+- **The `gate-change` label and code owners.** The `gate-integrity` check (`.github/workflows/gate-integrity.yml`) lists every pull request that changes a path named in `scripts/gate-files.json` (the gate scripts and their tests, the hooks, workflows, rule files, lint, type, test and e2e configs, `AGENTS.md`), a gate key of `package.json` (`scripts`, `engines`, `lint-staged`, `overrides`), or adds a suppression, and fails until a reviewer who has read the list adds the label `gate-change`. A gate config that imports a helper (a setup or fixtures file) needs that helper listed too: `scripts/gate-config-coverage.test.mjs` fails until the manifest names it. Labels do not travel with a fork, so create it once: `gh label create gate-change --description "A reviewer has read the gate changes in this pull request"`. CI runs the pull request's own copy of the script, so a change to the script can vouch for itself: the boundary is the required `gate-integrity` check plus a human read, and the label is a request for that read, never the author's to add. A team fork also adds a `CODEOWNERS` file that names its maintainers on `scripts/gate-files.json` and on every path it lists (the template ships none, because the owners are yours) and sets `require_code_owner_review` in its ruleset. After adding or removing the label, let the run that the `labeled` event starts finish: re-running an old run replays the labels it began with.
 
 `.github/ruleset.json` is the protection this repository runs, written down so you can reproduce it with one command instead of clicking through a form:
 

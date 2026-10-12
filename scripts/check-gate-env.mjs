@@ -12,6 +12,11 @@
  *
  * The env leg delegates to check-build-env.mjs — the one place that loads `.env*` the way
  * `next build` does (@next/env). A second reader here would be a second opinion waiting to drift.
+ *
+ * Detection never needs a tool: a port is busy when something answers on a loopback or the bind
+ * fails. `lsof` is used for one thing only, finding the pids to kill under `--kill-port`, and a host
+ * without it (a stock Debian image has none; macOS ships it) is told so, with the port and the
+ * install line, instead of being told the port "could not be cleared".
  */
 import { spawnSync } from 'node:child_process';
 import { connect, createServer } from 'node:net';
@@ -34,24 +39,41 @@ const sleep = (ms) =>
         setTimeout(resolvePromise, ms);
     });
 
+/**
+ * The pids listening on `port`, or the reason `lsof` could not look. "Nobody listens" and "cannot
+ * look" are different answers: a spawn that never ran (ENOENT) must not read as an empty port.
+ */
 const listeningPids = (port) => {
     const result = spawnSync('lsof', ['-ti', `tcp:${String(port)}`, '-sTCP:LISTEN'], {
         encoding: 'utf8'
     });
-    if (result.status !== 0 || !result.stdout) {
-        return [];
+    if (result.error) {
+        return { pids: [], lookupError: result.error };
     }
-    return result.stdout
+    if (result.status !== 0 || !result.stdout) {
+        return { pids: [] };
+    }
+    const pids = result.stdout
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => /^\d+$/.test(line))
         .map(Number)
         .filter((pid) => pid !== process.pid);
+    return { pids };
 };
+
+/** What to tell a host where `lsof` cannot run: the port, the cause, the install line. */
+const lsofUnavailableHint = (port, lookupError) =>
+    `--kill-port needs lsof to find what holds port ${String(port)}, and lsof cannot run here (${String(lookupError.code ?? lookupError.message)}).\n` +
+    `      Install it (Debian/Ubuntu: apt-get install lsof; macOS ships it) and run again, or free port ${String(port)} by hand.`;
 
 const CONNECT_TIMEOUT_MS = 300;
 
-/** Something answers here: the port is taken for anyone who dials it by name. */
+/**
+ * Something answers here: the port is taken for anyone who dials it by name. Any connect error
+ * (ECONNREFUSED, or EADDRNOTAVAIL on a host with no `::1`, such as a container whose loopback has
+ * IPv6 disabled) means nobody answers on that family; it is never thrown.
+ */
 const someoneAnswers = async (host, port) =>
     new Promise((resolve) => {
         const socket = connect({ host, port });
@@ -108,8 +130,11 @@ if (buildEnv.status !== 0) {
 const port = Number(process.env.PORT ?? 3000);
 if (!(await portIsFree(port))) {
     let cleared = false;
+    let lookupError = null;
     if (shouldKillPort) {
-        const pids = listeningPids(port);
+        const lookup = listeningPids(port);
+        const { pids } = lookup;
+        lookupError = lookup.lookupError ?? null;
         for (const pid of pids) {
             try {
                 process.kill(pid, 'SIGTERM');
@@ -131,9 +156,11 @@ if (!(await portIsFree(port))) {
         problems.push(
             `Port ${String(port)} is busy, and the production e2e wants it.\n` +
                 `      Another lane's server? Move this run: PORT=3100 npm run verify:ci\n` +
-                (shouldKillPort
-                    ? `      --kill-port could not clear it — look: lsof -nP -iTCP:${String(port)} -sTCP:LISTEN`
-                    : `      The push gate clears its own port (--kill-port); by hand: lsof -ti tcp:${String(port)} -sTCP:LISTEN | xargs kill`)
+                (lookupError
+                    ? `      ${lsofUnavailableHint(port, lookupError)}`
+                    : shouldKillPort
+                      ? `      --kill-port could not clear it — look: lsof -nP -iTCP:${String(port)} -sTCP:LISTEN`
+                      : `      The push gate clears its own port (--kill-port); by hand: lsof -ti tcp:${String(port)} -sTCP:LISTEN | xargs kill`)
         );
     }
 }

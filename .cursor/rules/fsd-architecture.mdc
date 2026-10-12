@@ -119,7 +119,7 @@ export type { ExampleFormData } from './model/types';
 **Before commit:**
 
 ```bash
-npm run verify:iter   # oxlint → tsc (incremental) → vitest --changed (seconds)
+npm run verify:iter   # test markers → oxlint → tsc (incremental) → vitest --changed (seconds)
 ```
 
 The pre-commit hook enforces the commit moment; the full chain belongs to the push. The tier law
