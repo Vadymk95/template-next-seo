@@ -31,6 +31,6 @@ After every change run `agent-pipeline.mdc` § 4.1 (the iteration tier) and fix 
 
 ## Git Commits and Pushes
 
-- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment (staged autofix → TDD sibling gate → repo-wide oxlint/format/tsc); the pre-push hook owns the push moment, phase-aware. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is `AGENTS.md` § Commands (exact) › _The tier law_, and it is not restated here. `npm run lint`, `npm run format:check` and `npm test` are drill-downs on a specific failure, none replace the tiers.
+- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment (its steps: `.husky/pre-commit`); the pre-push hook owns the push moment, phase-aware. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is `AGENTS.md` § Commands (exact) › _The tier law_, and it is not restated here. `npm run lint`, `npm test` and the other single scripts are drill-downs on a specific failure, none replace the tiers.
 - **Message**: conventional `type(scope): subject` (scope optional), header ≤ 96 characters, rules in `commitlint.config.mjs`. Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`, `build`, `ci`.
 - **Before pushing**: all checks pass, `git status` and `git diff` reviewed, and the message follows commitlint.

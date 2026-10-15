@@ -79,7 +79,7 @@ npm run e2e:one -- e2e/<touched>.spec.ts
 
 Exit code **without a pipe**; the rest of the checklist: `.cursor/rules/agent-pipeline.mdc` § 4.1a. If
 the change touched routing, i18n, `proxy.ts` or `next.config.ts`, SAY SO in the report — the push gate
-(phase 1) and CI cover the build/e2e/smoke surface; flag it, do not run it.
+(phase 1) and CI cover the built-app surface; flag it, do not run it.
 
 If the gate fails, fix the cause. Do not lower a severity, add an `eslint-disable`, move a threshold, or
 extend an ignore list to get green.

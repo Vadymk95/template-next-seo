@@ -13,9 +13,10 @@ fi
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://template-next-seo.invalid}"
 
 # verify:push is PHASE-AWARE (scripts/verify-push.mjs reads scripts/gate-tiers.json):
-# phase 0 (scaffold, pre-deploy) runs audit + hooks + format + tsc + lint + coverage and
-# loudly SKIPS build/e2e — no prod boundary exists yet to guard; phase 1 (deployed)
-# runs the full verify:ci chain. Pushing implies network, so the audit gate runs in both.
+# phase 0 (scaffold, pre-deploy) runs verify:scaffold:push and loudly SKIPS the stages that need a
+# build — no prod boundary exists yet to guard; phase 1 (deployed)
+# runs the full verify:ci chain. Pushing implies network, so the network-bound checks run in both.
+# The stages of each chain are listed in scripts/gate-tiers.json (checks.<name>.chain).
 # GATE_PHASE=full forces the full chain (how gate machinery itself gets pushed).
 echo "→ verify:push (phase-aware gate — see scripts/gate-tiers.json)"
 npm run verify:push || {
