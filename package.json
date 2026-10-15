@@ -63,6 +63,7 @@
         "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix --cache --cache-location .eslintcache && prettier --write .",
         "audit:gate": "node scripts/audit-gate.mjs",
         "lock:age": "node scripts/check-lock-age.mjs",
+        "gate:integrity": "node scripts/check-gate-integrity.mjs --base origin/master",
         "verify:ci": "node scripts/gate-trace.mjs verify:ci -- npm run verify:ci:inner",
         "verify:ci:inner": "npm run audit:gate && npm run lock:age && npm run verify",
         "verify:push": "node scripts/gate-trace.mjs verify:push -- node scripts/verify-push.mjs",

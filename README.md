@@ -120,8 +120,8 @@ npm start
 ### Build & lint notes (Next 16)
 
 - **`npm run build`** runs **`next build --webpack`** because `next.config.ts` customizes **webpack** `splitChunks` (vendor caching for React, Next, Zustand, i18n, forms, UI). Use **`npm run build:turbo`** only if you accept Turbopack defaults without those splits.
-- **`npm run lint`** runs **ESLint** directly (`eslint . --max-warnings 0`). The **`next lint`** subcommand is not available on this Next major version.
-- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) is the offline gate; its stage order is the `verify:enterprise:inner` script in `package.json` (see also § Commands in this README). Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
+- **`npm run lint`** calls the linters directly. The **`next lint`** subcommand is not available on this Next major version.
+- **Enterprise verification**: **`npm run verify:enterprise`** (alias `npm run verify`) is the offline gate; its stages, in order, are in `scripts/gate-tiers.json` (`checks.<name>.chain`; see also § Commands in this README). Husky **pre-push** runs the phase-aware push gate (`npm run verify:push`); CI always runs the full chain. The gate law (what runs at which moment, what is forbidden by hand): `AGENTS.md` § Commands (exact) › _The tier law_. Phases and stage timings: `.cursor/brain/VERIFICATION.md`. **`npm run bench:verify`** prints per-step durations. First-time browsers: `npm run test:e2e:install`.
 - **Mutation testing**: **`npm run test:mutation`** (StrykerJS) measures test strength — whether the suite would catch a wrong implementation, not just execute the code. Runs as a weekly `mutation.yml` CI job with a measured floor (`thresholds.break` in `stryker.config.json`), deliberately outside `verify` because a full run costs minutes.
 
 ### Security (production)
@@ -237,7 +237,8 @@ npm run start            # Serve the production build (after npm run build)
 npm run size:check       # first-load JS budget over an existing build (scripts/bundle-budget.json)
 
 # Checks: drill-downs on a specific failure, none of them is a moment
-npm run lint             # oxlint → ESLint
+npm run lint             # the lint pass over the repo, warnings denied
+npm run lint:oxlint      # the Oxc pass alone
 npm run typecheck        # tsc --noEmit (`type-check` is an alias)
 npm run format           # Prettier write
 npm run format:check     # Prettier check
@@ -253,11 +254,12 @@ npm run test:e2e:install # one-time Chromium install for Playwright
 npm run smoke:dev        # Turbopack dev smoke on its own (e2e/dev/, port 3003)
 npm run audit:gate       # fail-closed audit with a self-expiring allowlist
 npm run lock:age         # a changed lockfile version younger than the .npmrc cooldown fails; allowances: scripts/lock-age-allowlist.json
+npm run gate:integrity   # lists the gate files and suppressions this branch changes vs origin/master (CI: PR base)
 
 # The chain the push and CI run (not desk tools)
-npm run verify:enterprise  # preflight (hooks, version holds, engines floor, test markers, test siblings over the whole branch, gate env) → format → typecheck → lint → coverage → build → size → e2e
-npm run verify:ci          # audit:gate + lock:age + verify: phase-1 pre-push and the CI validate job
-npm run verify:full        # verify:ci + smoke:dev: predicts the whole CI pipeline
+npm run verify:enterprise  # the offline gate: every check CI runs except the network-bound ones (stages: scripts/gate-tiers.json)
+npm run verify:ci          # the CI gate: phase-1 pre-push and the CI validate job
+npm run verify:full        # predicts the whole CI pipeline, the dev-smoke job included
 npm run bench:verify       # time each stage of the verify chain
 ```
 
@@ -537,8 +539,8 @@ Key optimizations in `next.config.ts`:
 ## 🚦 CI/CD
 
 GitHub Actions (`.github/workflows/ci.yml`, Node 24.x, `npm ci --ignore-scripts`): `validate` is a
-single `npm run verify:ci` step (the audit gate, the lock-age check and the whole offline gate — one step on purpose, so the
-workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks, CodeQL and a zizmor audit of the workflows on push, PR and a
+single `npm run verify:ci` step (the whole CI chain — one step on purpose, so the
+workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks, CodeQL and zizmor over the workflows on push, PR and a
 weekly cron; the zizmor job (`Workflow audit (zizmor)`) is a required check in `.github/ruleset.json` and
 fails on findings of medium severity or above. Reproduce it locally with `uvx zizmor@1.30.1 .github/workflows`:
 it is pinned to the version CI runs and reads the same `.github/zizmor.yml`, so it gives the CI verdict
@@ -550,8 +552,8 @@ online or offline. `mutation.yml` is the weekly StrykerJS strength gate. What ru
 ### Pre-commit Hooks (Husky)
 
 - **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate (a staged source file
-  needs a test sibling that is tracked or staged in the same index), then repo-wide
-  `lint:oxlint`, `format:check` and `typecheck` (the remedy on refusal: `npm run fix && git add -u`)
+  needs a test sibling that is tracked or staged in the same index), then the repo-wide
+  cheap checks (listed in `.husky/pre-commit`; the remedy on refusal: `npm run fix && git add -u`)
 - **commit-msg:** commitlint (`type(scope): subject`, max 96 chars)
 - **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined
   once in `AGENTS.md` § Commands (exact) › _The tier law_
@@ -620,7 +622,7 @@ Quick commands:
 
 ```bash
 npm run clean         # nuke .next (last-resort)
-npm run dev:clean     # clean + dev in one step
+npm run dev:clean     # wipe .next, then start the dev server
 ```
 
 ## Known trade-offs

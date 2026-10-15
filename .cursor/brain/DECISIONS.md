@@ -14,7 +14,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Runtime axe scan inside the existing page specs | 2026-10 | in force |
 | Playwright `failOnFlakyTests` in CI | 2026-10 | in force |
 | zizmor audits the workflows in `security.yml` | 2026-10 | in force |
-| First-load JS budget: `size:check`, right after `build`, full phase only | 2026-10 | in force |
+| First-load JS budget: `size:check`, full phase only | 2026-10 | in force |
 | Every GitHub Action is SHA-pinned; workflow tokens default to read-only | 2026-10 | in force |
 | Guards born of the 2026-10 audits | 2026-10 | in force |
 | Playwright `maxFailures: 10` on the gate run and in CI | 2026-10 | in force |
@@ -30,7 +30,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Cross-engine coverage is opt-in and scoped | 2026-08 | in force |
 | Complexity ratchet: thresholds above the measured ceiling, production code only | 2026-08 | in force |
 | Mutation testing is a weekly strength gate, outside `verify` | 2026-08 | in force |
-| The gate ladder: `verify` is a subset of `verify:ci`, which is a subset of `verify:full` | 2026-07 | in force |
+| The gate ladder: each tier is a superset of the one below | 2026-07 | in force |
+| The gate chain has one readable home | 2026-10 | in force |
 | Advisory exceptions are data; an allowance is the last resort | 2026-07 | in force |
 | The gate runs from a clean clone: `check-build-env` | 2026-07 | in force |
 | ESLint 10, with `$eslint` overrides and a literal `settings.react.version` | 2026-07 | in force |
@@ -117,7 +118,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `next.config.ts:34`
 
-- **Context:** Next 16.4 `next dev` writes a managed `nextjs-agent-rules` block into `AGENTS.md` whenever it
+- **Context:** The Next 16.4 dev server writes a managed `nextjs-agent-rules` block into `AGENTS.md` whenever it
   detects a coding agent and the block is missing. `AGENTS.md` is this repo's own law and must not drift under a
   dev server (measured: 10 added lines on 16.3.8 with the default, byte-identical with `false`).
 - **Decision:** `agentRules: false` in `next.config.ts`. The one useful line of that block, where the
@@ -195,7 +196,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
   - A new required check goes into the live ruleset only after the job has reported once.
 - **Status:** in force. The `auditor` and `pedantic` personas are outside the default persona and not addressed.
 
-## First-load JS budget: `size:check`, right after `build`, full phase only
+## First-load JS budget: `size:check`, full phase only
 
 2026-10 · in force · guard `scripts/check-bundle-budget.mjs` · evidence: PR #96, `scripts/bundle-budget.json`
 
@@ -393,7 +394,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
   Excluding it from coverage.` and exits 0, so the percentage describes a smaller set. `check-coverage.mjs` refuses
   on that marker, proven both ways. It is marker-based on purpose: a file-count baseline in a template records the
   count of an empty scaffold.
-- **`bench:verify` drifted** from the gate it claimed to mirror (no `check-hooks`, no `ensure-playwright`). Its step
+- **`bench:verify` drifted** from the gate it claimed to mirror (it lacked `check-hooks` and the Playwright browser step). Its step
   list is now derived from the `verify` script and throws on a segment it cannot parse: a second list claiming the
   gate's scope always drifts narrower.
 - **`npx` needs `--no-install`** in `ensure-playwright.mjs`: with an incomplete `node_modules` it fetches the newest
@@ -447,21 +448,52 @@ Why things are the way they are, one entry per decision. History lives in `git l
   an override floor with a major cap, not an allowlist entry. Why vitest is held: its own entry above.
 - **Status:** in force.
 
-## The gate ladder: `verify` is a subset of `verify:ci`, which is a subset of `verify:full`
+## The gate ladder: each tier is a superset of the one below
 
 2026-07 · in force · guard `scripts/gate-tiers.json`, `bench:verify` · evidence: `AGENTS.md` § The tier law
 
 - **Context:** `verify:enterprise` ran `npm test` without `--coverage`, so the thresholds in `vitest.config.ts`
   were unenforceable locally while CI enforced them; CI also ran an audit that existed nowhere locally.
-- **Decision:** `verify` holds every offline check; `verify:ci` adds `audit:gate` and `lock:age` (network) and predicts the
-  `validate` job; `verify:full` adds `smoke:dev`. Which moment runs which is in the tier law, not here.
+- **Decision:** three tiers, each a superset of the one below: the offline gate; the CI gate, which predicts the
+  `validate` job; and a full tier that also predicts the dev-smoke job. Which moment runs which is in the tier law, not here.
   `smoke:dev` stays out of the push: a cold Turbopack boot costs 10-30 s, so it is its own mandatory parallel CI
   job. `playwright.config.ts` keeps `testIgnore: 'dev/**'`, or the production project runs the Turbopack smoke
   against `next start`, where it can pass and make the coverage an illusion.
-- **Consequences:** `verify` is slower (coverage instead of a bare pass). Pre-commit is repo-scoped (TDD sibling
-  gate, repo-wide oxlint and format check) because lint-staged restores unstaged hunks after fixing.
+- **Consequences:** the offline gate is slower (coverage instead of a bare pass). Pre-commit is repo-scoped (TDD sibling
+  gate, the repo-wide cheap checks) because lint-staged restores unstaged hunks after fixing.
 - **Status:** in force. Revisit when a PR goes red on `dev-smoke` twice in one month: then move `smoke:dev`
   into `verify:ci`.
+
+## The gate chain has one readable home
+
+2026-10 · in force · guard `scripts/docs-check.mjs` · evidence: `scripts/docs-check.test.mjs`, `scripts/gate-tiers.json`
+
+- **Context:** the stage order was retold by hand in 31 places, unchecked: a comment dropped a stage.
+- **Decision:** `checks.<name>.chain` is derived from the script and `docs:check` fails on any difference
+  (deleting the view left pointers without a page). Elsewhere a file names a script and its purpose and points
+  at the view. A line outside it also fails when it names 3 or more distinct stages, or composes a script
+  whatever the count (a count of 3 never saw a pair): two of its parts (`a then b`, `x = a && b`) at most 2
+  words apart, or the script and one part (`x runs a`) at most 4, in one sentence. Names come from the repo
+  (multi-step scripts, their steps, `docs.stageWords`). The script is read by its own name, never by a word
+  filed under it, and must be strong; of two parts, one must be, unless `&&` or an arrow joins them. Strong:
+  in code or after `npm run`; spelled with a separator; a stage word no script or step spells (`eslint`, also
+  a step, stays ordinary until it is in code); adjacent names are one unit, strong when any is. Read: docs
+  (fences, tables, this file), workflow names and comments, `.husky/*` comments, `gate-tiers.json` prose.
+- **Consequences:** a false positive costs a reword, never an allowance; the windows and
+  `RETELLING_MIN_STAGES` move only on a measurement (places of the old tree caught, lines flagged on the
+  rewritten tree):
+
+| rule                                                 | caught of 31 | flagged |
+| ---------------------------------------------------- | ------------ | ------- |
+| 3+ stages (before)                                   | 24           | 0       |
+| 2+ stages                                            | 28           | 45      |
+| two stages and a connector (`&&`, `->`, `+`, `then`) | 15           | 5       |
+| shipped                                              | 29           | 30      |
+
+- **Status:** in force. Of the 30, 21 state what a script is made of; 9 are ordinary (lists, prohibitions,
+  history). Not caught: the pre-commit hook's steps (no script), one command and its flags, a spread beyond
+  the windows in words, lines or sentences, two bare words with no mark, script comments, code, issue
+  templates, app copy, a one-name statement in a `gate-tiers.json` description (read without its key).
 
 ## Advisory exceptions are data; an allowance is the last resort
 
@@ -667,5 +699,5 @@ Why things are the way they are, one entry per decision. History lives in `git l
   `tailwindcss-animate`.
 - **Parent lockfile.** Under a parent folder with another lockfile Next can pick the wrong workspace root, so
   `next.config.ts` sets `outputFileTracingRoot` and `turbopack.root` to the package directory.
-- **Lint.** Next 16 removed `next lint`; `npm run lint` is `lint:oxlint` then `eslint . --max-warnings 0`.
+- **Lint.** Next 16 removed `next lint`, so `npm run lint` calls the linters directly.
 - **Status:** in force.

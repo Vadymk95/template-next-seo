@@ -33,8 +33,8 @@ jobs:
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
-                  # Depth 2: lock:age (inside verify:ci) compares the lockfile with HEAD~1 and the
-                  # test-sibling range check (inside verify) falls back to HEAD~1 as its base in CI; a
+                  # Depth 2: the lock-age check compares the lockfile with HEAD~1 and the
+                  # test-sibling range check falls back to HEAD~1 as its base in CI; a
                   # private fork's persist-credentials: false means neither can fetch the parent itself.
                   fetch-depth: 2
                   persist-credentials: false
@@ -91,7 +91,7 @@ jobs:
             # a strict superset of every check this job used to list separately.
             # Adding a check HERE instead of to the script is what makes a green
             # local gate stop predicting a green CI.
-            - name: Verify (audit gate, lock age, format, types, lint, coverage, build, size, e2e)
+            - name: Verify (the CI gate chain, stages in scripts/gate-tiers.json)
               run: npm run verify:ci
               env:
                   ANALYZE: 'false'

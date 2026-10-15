@@ -119,9 +119,9 @@ export type { ExampleFormData } from './model/types';
 **Before commit:**
 
 ```bash
-npm run verify:iter   # test markers → oxlint → tsc (incremental) → vitest --changed (seconds)
+npm run verify:iter   # per change: the seconds-long check
 ```
 
 The pre-commit hook enforces the commit moment; the full chain belongs to the push. The tier law
-lives in `AGENTS.md`, Invariants #3 — not restated here. `npm run lint` / `npm run format:check` /
-`npm test` remain useful as drill-downs on a specific failure.
+lives in `AGENTS.md`, Invariants #3 — not restated here. `npm run lint`, `npm test` and the other single scripts
+remain useful as drill-downs on a specific failure.

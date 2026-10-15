@@ -1,23 +1,23 @@
 # Verification — when to run what (agents & humans)
 
 **Goal:** match checks to the MOMENT. The tier law itself lives in `AGENTS.md`, Invariants #3 —
-one place, everything else points. This file holds the mechanics and the phase table.
+one place, everything else points. This file holds the mechanics and the phase table. The stages each
+gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeated here.
 
 ## The moments and their commands
 
-- **Iterate — `npm run verify:iter`**: the test-marker check → `lint:oxlint` → `typecheck` (incremental) →
-  `vitest run --changed --passWithNoTests`. Seconds; run after every change. Two deliberate
+- **Iterate — `npm run verify:iter`**: the cheap static checks (the type check is incremental), then only the tests reachable from the
+  uncommitted diff (stages: `scripts/gate-tiers.json`). Seconds; run after every change. Two deliberate
   properties: while `package.json` or a vitest config is dirty, `--changed` runs the FULL suite
   (force-rerun triggers); and `--changed` follows the import graph only, so cross-cutting suites
   surface at the push chain, not during iteration. One touched spec: `npm run e2e:one -- <spec>`.
 - **Measure — `npm run verify:measure [-- <spec>]`**: build + look (optionally one prod-mode spec
   on a free port). Legal at ANY moment, unlimited runs — a measurement is work, not a violation.
   It deliberately runs no lint/types/tests: measuring is not verifying.
-- **Commit — the pre-commit hook**: staged autofix → TDD sibling gate → repo-wide
-  oxlint/format/tsc. Nothing to run by hand.
+- **Commit — the pre-commit hook**: staged autofix, the TDD sibling gate, then the repo-wide
+  cheap checks (the list is `.husky/pre-commit`). Nothing to run by hand.
 - **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below.
-- The full chains (`verify`/`verify:enterprise` = offline gate incl. build, the size budget and prod e2e;
-  `verify:ci` = audit + lock age + `verify` (the test-sibling range check already sits inside `verify`); `verify:full` = `verify:ci` + Turbopack smoke) belong to the push hook and CI — they
+- The full chains (the offline gate, the CI gate and the full tier) belong to the push hook and CI — they
   are not desk tools and are never run by hand.
 
 ### After a red push: re-run only what failed
@@ -59,9 +59,9 @@ pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
 
 | Check | Runs at phase 0 (scaffold) | Added when (the trigger) |
 | --- | --- | --- |
-| audit, lock-age, hooks-check, version holds, engines floor, test markers, test siblings (range), format, tsc, lint, coverage | yes — every push, ~10s | day one |
+| the phase-0 push gate (`verify:scaffold:push`) | yes — every push, ~10s | day one |
 | production build in the gate | no | the FIRST DEPLOY: flip `"phase": 1` in its own commit |
-| first-load JS budget (`size:check`, right after the build) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "First-load JS budget" |
+| first-load JS budget (`size:check`) | no — it reads the build | same flip; limits and how to move them: `DECISIONS.md` § "First-load JS budget" |
 | prod-mode e2e | no | same flip — a prod boundary now exists |
 | Turbopack smoke (`smoke:dev`) | CI-only (`dev-smoke` job); never inside `verify:ci` | unchanged by phases |
 | coverage thresholds | already on (suite ships with real tests) | — |
@@ -102,13 +102,13 @@ die). `--kill-port` finds the holder of the port through `lsof`, so `lsof` must 
 ## Minimal check by task type
 
 - **Docs only** — `npm run format:check`
-- **Docs, rules, commands, brain, tier data** (`*.md`, `*.mdc`, `scripts/gate-tiers.json`) — `npm run docs:check` (the pre-commit hook runs it when such files are staged; `--weekly`, the scheduled Docs workflow's flag, runs the same checks so a quarantine that expires while nobody pushes still turns it red; it also refuses a focused test, an unconditional way to switch a test off (`.skip`, `.fixme`, an expected failure such as `.fails` or `.failing`, a constant `.skipIf(true)`) without `quarantine until YYYY-MM-DD` + reason (the date at most 30 days out and red ON the date itself; `docs:check` does not run inside `verify` here, `scripts/check-test-markers.mjs` carries the same marker and quarantine rules there), and an agent-memory import: an `@` pointer in `CLAUDE.md` or `AGENTS.md` that names a file, which Claude Code would load into every session; write it as a backticked path instead)
+- **Docs, rules, commands, brain, tier data** (`*.md`, `*.mdc`, `scripts/gate-tiers.json`) — `npm run docs:check` (the pre-commit hook runs it when such files are staged; `--weekly`, the scheduled Docs workflow's flag, runs the same checks so a quarantine that expires while nobody pushes still turns it red; it also refuses a focused test, an unconditional way to switch a test off (`.skip`, `.fixme`, an expected failure such as `.fails` or `.failing`, a constant `.skipIf(true)`) without `quarantine until YYYY-MM-DD` + reason (the date at most 30 days out and red ON the date itself; `docs:check` does not run inside `verify` here, `scripts/check-test-markers.mjs` carries the same marker and quarantine rules there), a gate chain view in `scripts/gate-tiers.json` that differs from `package.json`, a hand-written retelling or composition of the chain (a line naming three or more of its stages, or two parts of one script), and an agent-memory import: an `@` pointer in `CLAUDE.md` or `AGENTS.md` that names a file, which Claude Code would load into every session; write it as a backticked path instead)
 - **Proposing a new browser spec** — the suite is counted in invariants, not screens (`AGENTS.md` § The tier law); `npm run docs:check` reports the suite against the ceiling in `scripts/gate-tiers.json` § suites
 - **TS/TSX / tests** — `npm run verify:iter`
 - **i18n copy only** (VALUE edits in `messages/<locale>/*.json`, no key changes) — `npm run format:check`.
   A key add/rename is a TS/TSX-class change: the typed messages make `verify:iter` catch it.
 - **Routing, i18n INFRA (`i18n/*.ts`, the locale set), `proxy.ts`, `next.config.ts`** —
-  `npm run verify:iter`, and SAY SO in the hand-over: the build/e2e/smoke surface belongs to the push
+  `npm run verify:iter`, and SAY SO in the hand-over: the built-app surface belongs to the push
   chain and CI, not to a hand-run.
 - **A shared UI primitive, the chrome (`Header`/`Footer`), or `app/globals.css`** — content-bearing
   work has to be MEASURED against content it has not seen (jsdom has no layout), so this is the
