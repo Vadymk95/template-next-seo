@@ -6,7 +6,8 @@ gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeate
 
 ## The moments and their commands
 
-- **Iterate — `npm run verify:iter`**: the cheap static checks (the type check is incremental), then only the tests reachable from the
+- **Iterate — `npm run verify:iter`**: the hooks check first (a clone without git hooks fails here, not at a push that runs no gate),
+  the cheap static checks (the type check is incremental), then only the tests reachable from the
   uncommitted diff (stages: `scripts/gate-tiers.json`). Seconds; run after every change. Two deliberate
   properties: while `package.json` or a vitest config is dirty, `--changed` runs the FULL suite
   (force-rerun triggers); and `--changed` follows the import graph only, so cross-cutting suites

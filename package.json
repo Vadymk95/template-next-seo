@@ -54,7 +54,7 @@
         "verify:enterprise:inner": "node scripts/check-hooks.mjs && node scripts/check-version-holds.mjs && node scripts/check-engines-floor.mjs && node scripts/check-test-markers.mjs && node scripts/check-test-siblings.mjs --range && node scripts/docs-check.mjs && node scripts/check-gate-env.mjs --kill-port && npm run format:check && npm run typecheck && npm run lint && npm run test:coverage && npm run build && npm run size:check && node scripts/ensure-playwright.mjs && npm run test:e2e:prod",
         "verify": "npm run verify:enterprise",
         "verify:iter": "node scripts/gate-trace.mjs verify:iter -- npm run verify:iter:inner",
-        "verify:iter:inner": "node scripts/check-test-markers.mjs && npm run lint:oxlint && npm run typecheck && vitest run --changed --passWithNoTests",
+        "verify:iter:inner": "node scripts/check-hooks.mjs && node scripts/check-test-markers.mjs && npm run lint:oxlint && npm run typecheck && vitest run --changed --passWithNoTests",
         "trace:report": "node scripts/trace-report.mjs",
         "bench:verify": "node scripts/bench-verify.mjs",
         "prepare": "husky",
