@@ -50,6 +50,17 @@ describe('parseVerifySteps', () => {
         expect(labels).toContain('check-version-holds');
     });
 
+    it('keeps docs-check in verify and verify:scaffold, so doc drift that skipped the commit hook turns the push red', () => {
+        const manifest = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
+
+        for (const name of ['verify', 'verify:scaffold']) {
+            const labels = parseVerifySteps(resolveScript(manifest.scripts, name)).map(
+                (step) => step.label
+            );
+            expect(labels, name).toContain('docs-check');
+        }
+    });
+
     it('keeps the sibling-test range check inside verify and verify:scaffold, never only in the network tier', () => {
         // The raw script, not the parsed steps: the benchmark keeps only a step's file, never its flags.
         const manifest = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
