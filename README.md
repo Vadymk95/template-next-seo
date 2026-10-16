@@ -558,6 +558,10 @@ online or offline. `mutation.yml` is the weekly StrykerJS strength gate. What ru
 - **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined
   once in `AGENTS.md` § Commands (exact) › _The tier law_
 
+The hooks exist only after `npm run prepare` (lifecycle scripts are disabled via `.npmrc`). `check-hooks` is the first
+step of `verify:iter` and of `verify`: on a clone without hooks they stop with "Git hooks are not installed", so a push
+cannot go out with no gate and no output.
+
 ### Commit Format
 
 Follow conventional commits:
