@@ -30,7 +30,7 @@ npm run test:one -- <file>  # one unit test file, through the tracer (not around
 npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
-npm run docs:check          # mechanical doc drift, the gate chain view and any retelling or composition of it included (pre-commit when docs are staged; weekly CI adds --weekly; not in verify)
+npm run docs:check          # mechanical doc drift, the gate chain view and any retelling or composition of it included (pre-commit when docs are staged and inside verify; weekly CI adds --weekly)
 npm run fix                 # the one remedy: repo-wide autofix, then format
 npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
 ```

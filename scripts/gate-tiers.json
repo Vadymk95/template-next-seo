@@ -15,7 +15,7 @@
         "verify:enterprise": {
             "class": "code",
             "description": "the offline gate: every check CI runs except the network-bound ones",
-            "chain": "check-hooks -> check-version-holds -> check-engines-floor -> check-test-markers -> check-test-siblings --range -> check-gate-env --kill-port -> format:check -> typecheck -> lint -> test:coverage -> build -> size:check -> ensure-playwright -> test:e2e:prod"
+            "chain": "check-hooks -> check-version-holds -> check-engines-floor -> check-test-markers -> check-test-siblings --range -> docs-check -> check-gate-env --kill-port -> format:check -> typecheck -> lint -> test:coverage -> build -> size:check -> ensure-playwright -> test:e2e:prod"
         },
         "verify:ci": {
             "class": "code",
@@ -34,7 +34,7 @@
         "verify:scaffold": {
             "class": "code",
             "description": "phase-0 offline gate: verify:enterprise without the stages that need a build",
-            "chain": "check-hooks -> check-version-holds -> check-engines-floor -> check-test-markers -> check-test-siblings --range -> format:check -> typecheck -> lint -> test:coverage"
+            "chain": "check-hooks -> check-version-holds -> check-engines-floor -> check-test-markers -> check-test-siblings --range -> docs-check -> format:check -> typecheck -> lint -> test:coverage"
         },
         "verify:scaffold:push": {
             "class": "code",

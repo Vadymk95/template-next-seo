@@ -5,10 +5,10 @@
  * A focused test (`.only`) shrinks the suite for every later run, and an unconditional `.skip` with
  * no dated reason hides a failing test. docs-check owns the rule (see checkQuarantine there: the
  * date is the first RED day, UTC, and may be at most 30 days out), but docs-check is a docs-class
- * check: the pre-commit hook runs it only when docs are staged, so a bare `.only` or `.skip` passed
- * every local layer and the verify chain, and only the weekly docs workflow said anything, after
- * the merge. This leg reads the test files alone, offline, in well under a second, and sits in the
- * chains next to the other file-level checks. It adds no rule: it calls the docs-check function.
+ * check: the pre-commit hook runs it only when docs are staged and verify:iter does not run it, so
+ * a bare `.only` or `.skip` passed the iterate check. This leg reads the test files alone, offline,
+ * in well under a second, and sits in the chains, verify:iter included, next to the other
+ * file-level checks. It adds no rule: it calls the docs-check function.
  *
  * Usage: node scripts/check-test-markers.mjs [--root <dir>]
  */

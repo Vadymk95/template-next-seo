@@ -493,7 +493,9 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Status:** in force. Of the 30, 21 state what a script is made of; 9 are ordinary (lists, prohibitions,
   history). Not caught: the pre-commit hook's steps (no script), one command and its flags, a spread beyond
   the windows in words, lines or sentences, two bare words with no mark, script comments, code, issue
-  templates, app copy, a one-name statement in a `gate-tiers.json` description (read without its key).
+  templates, app copy, a one-name statement in a `gate-tiers.json` description (read without its key), a
+  one-name alias statement in prose (a line saying one script is an alias of another). `docs:check` runs
+  inside `verify` here too, because it ran only at pre-commit and weekly.
 
 ## Advisory exceptions are data; an allowance is the last resort
 
