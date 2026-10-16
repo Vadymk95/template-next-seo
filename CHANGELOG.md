@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/Vadymk95/template-next-seo/compare/v1.2.1...v1.2.2) (2026-10-16)
+
+
+### Bug fixes
+
+* **gate:** verify:iter checks git hooks first, so a hookless clone cannot push ungated ([#111](https://github.com/Vadymk95/template-next-seo/issues/111)) ([7d65243](https://github.com/Vadymk95/template-next-seo/commit/7d65243eed6bcc6a1371e0551f08da8bcfa8f6a7))
+
 ## [1.2.1](https://github.com/Vadymk95/template-next-seo/compare/v1.2.0...v1.2.1) (2026-10-16)
 
 
