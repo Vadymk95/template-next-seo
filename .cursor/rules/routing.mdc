@@ -9,7 +9,7 @@ alwaysApply: false
 - **File-based routing** - files in `app/` directory automatically become routes
 - **Document routes live under `app/[locale]/*`** - next-intl SSR with `localePrefix: 'always'` (`i18n/routing.ts`); the next-intl middleware composed in `proxy.ts` redirects/rewrites unprefixed document requests to the locale-prefixed URL
 - **Server Components by default** - all pages are Server Components unless marked with 'use client'
-- **Non-document surfaces stay OUTSIDE `[locale]`**: `app/api/**` route handlers, `app/actions/` Server Actions, `app/sitemap.ts`, `app/robots.ts`, `app/dev/ui` (404 in production via `proxy.ts`)
+- **Non-document surfaces stay OUTSIDE `[locale]`**: `app/api/**` route handlers, `app/actions/<action>.ts` Server Actions, `app/sitemap.ts`, `app/robots.ts`, `app/dev/ui` (404 in production via `proxy.ts`)
 
 ## Route Structure (real map)
 
@@ -88,7 +88,7 @@ export default BlogPost;
 - **Use `generateMetadata`** with `buildPageMetadata` (`shared/lib/pageMetadata.ts`): it reads `meta.<page>` from the messages and returns the title, description, canonical, `alternates.languages`, `openGraph` and `twitter`
 - **Every localized route builds `alternates.languages`** from `routing.locales`; `app/sitemap.ts` mirrors them as `<xhtml:link>` hreflang entries
 - **A page states its own `openGraph` and `twitter` in full.** Next merges metadata one key deep, so a page's `openGraph` replaces the layout's whole object: a page that sets only a `title` shares the home page's `og:url` and loses its image. The helper does this for you; keep using it for every new page
-- **A page that uses the helper has an `opengraph-image.tsx` beside its `page.tsx`.** The image file is attached to the segment that holds it, and the layout's does not reach a page whose `openGraph` replaced the layout's. A guard test (`shared/lib/pageMetadata.test.ts`) fails when it is missing; the one-line shape is in `app/[locale]/example-form/opengraph-image.tsx`
+- **A page that uses the helper has an `opengraph-image.tsx` beside its `page.tsx`.** The image file is attached to the segment that holds it, and the layout's does not reach a page whose `openGraph` replaced the layout's. A guard test (`shared/lib/pageMetadata.test.ts`) fails when it is missing; the one-line shape is a re-export of the site card in `app/[locale]/opengraph-image.tsx`
 
 ```typescript
 // app/[locale]/page.tsx

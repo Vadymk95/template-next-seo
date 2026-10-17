@@ -25,6 +25,11 @@ missed (a missed brand string in `<title>` or the dev banner is the usual slip):
 - `NEXT_PUBLIC_APP_URL` — set to your real origin (drives `metadataBase`, sitemap, `hreflang`)
 - `LICENSE` — MIT is fine for an open project; for a **proprietary/commercial** app
   remove `LICENSE` and set `package.json` `"license": "UNLICENSED"` (repo is already `private`)
+- Private repository only, `.github/workflows/security.yml` and `.github/ruleset.json` — code scanning is free
+  on a public repository; a private one needs a GitHub Code Security license (a GitHub Team or GitHub
+  Enterprise plan), and without it the `codeql` job fails with "Code scanning is not enabled for this
+  repository". Get the license, or delete the `codeql` job and its required check in one commit. Sources and
+  the exact check name: [CI/CD](#-cicd)
 
 Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 (layout + messages) and `Next.js SEO Template` (README + banner).
@@ -547,6 +552,20 @@ it is pinned to the version CI runs and reads the same `.github/zizmor.yml`, so 
 online or offline. `mutation.yml` is the weekly StrykerJS strength gate. What runs at which moment locally:
 `AGENTS.md` § Commands (exact) › _The tier law_.
 
+**CodeQL works on a public repository, or on a private one with a license.** `security.yml` runs `codeql` on
+every pull request and `.github/ruleset.json` requires its check,
+`CodeQL (JavaScript / TypeScript) (javascript-typescript)`. On a **public** repository code scanning is free:
+"Some of these features, such as code scanning and secret scanning, are enabled for public repositories by default"
+([About GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security)).
+A **private** repository needs a GitHub Code Security license ("If you want to use code scanning on private
+repositories, you need a GitHub Code Security license",
+[About code scanning](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning)),
+and only a GitHub Team or GitHub Enterprise plan can buy one ("You must be on a GitHub Team or GitHub
+Enterprise plan in order to purchase GitHub Code Security", first link). Without it the job fails with
+"Code scanning is not enabled for this repository", and a required check that can never pass teaches people
+to ignore red. A private fork therefore either gets the license, or deletes the `codeql` job and that
+required check from `.github/ruleset.json` in the same commit. This template is public and keeps both.
+
 ## 📝 Code Quality
 
 ### Pre-commit Hooks (Husky)
@@ -665,7 +684,7 @@ gh api --method POST repos/OWNER/REPO/rulesets --input .github/ruleset.json
 gh api repos/OWNER/REPO/rules/branches/master   # or main - whatever your default branch is
 ```
 
-**A private fork on GitHub Free cannot post the ruleset:** the API answers 403 ("Upgrade to GitHub Pro or make this repository public"), so the required checks stay a convention you keep, not a boundary GitHub enforces, until the repository is public or the plan is paid. The file also requires `CodeQL (JavaScript / TypeScript) (javascript-typescript)`, which a private repository without code scanning cannot produce (`.github/workflows/security.yml` header): delete the `codeql` job AND that entry in `.github/ruleset.json` together, in one commit. `npm run docs:check` fails on a required check no workflow produces, so removing only the job is caught.
+**A private fork on GitHub Free cannot post the ruleset:** the API answers 403 ("Upgrade to GitHub Pro or make this repository public"), so the required checks stay a convention you keep, not a boundary GitHub enforces, until the repository is public or the plan is paid. The file also requires `CodeQL (JavaScript / TypeScript) (javascript-typescript)`, which a private repository without a GitHub Code Security license cannot produce ([why](#-cicd)): delete the `codeql` job AND that entry in `.github/ruleset.json` together, in one commit. `npm run docs:check` fails on a required check no workflow produces, so removing only the job is caught.
 
 The order matters, and this one costs least: enable Actions, open one pull request and let every check report its name at least once, then post the ruleset. A required check that has never reported is Pending forever, so posting it first blocks every pull request with no error message anywhere - which is why the pull request comes first. The file targets `~DEFAULT_BRANCH` rather than a branch name, so it survives a rename; the check names inside it are the ones these workflows actually produce, so if you rename a CI job, update this file in the same commit.
 

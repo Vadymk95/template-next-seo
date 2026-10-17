@@ -401,7 +401,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
   Playwright and installs browsers for a version this repo does not pin.
 - **Test budgets follow what the test does:** the `verify-push` CLI cases boot node, npm and node, took seconds
   under a busy worker pool, and timed out at vitest's 5 s default. The describe block carries a 20 s budget
-  (`scripts/verify-push.test.mjs:113`). A `skip` was rejected: those cases prove phase routing and exit-code
+  (`scripts/verify-push.test.mjs:119`). A `skip` was rejected: those cases prove phase routing and exit-code
   passthrough, the thing a silent pass would hide.
 - **Status:** in force.
 

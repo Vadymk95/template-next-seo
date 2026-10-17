@@ -26,8 +26,8 @@ parallel one.
   any component that calls `useTranslations`.
 - `shared/lib/test-utils/setup.ts` — jest-dom matchers and RTL cleanup, already wired through
   `setupFiles` in `vitest.config.ts`.
-- Server Actions and anything else on `getTranslations`: mock `next-intl/server` with the
-  messages-indexed resolver in `app/actions/example-form.test.ts` — it resolves `namespace.key`
+- Server Actions and anything else on `getTranslations`: mock `next-intl/server` with a
+  messages-indexed resolver (the example Server Action's test has one) — it resolves `namespace.key`
   against the real `messages/en.json` and falls back to the key, so assertions pin real copy.
 - Route handlers and `proxy.ts` need no provider: build the `Request` by hand and mock the boundary
   modules (`@/shared/lib/logger`, `@/shared/lib/upstashRateLimit`, `next-intl/middleware`);
