@@ -29,7 +29,7 @@ finding.
 - Design tokens, never raw hex, in `shared/ui/**` and `features/**`. Tokens live in `app/globals.css`
   under `@theme inline`.
 - One-way FSD imports: `shared` may not import `app`/`features`/`entities`; `entities` may not import
-  `app`/`features`; `features` may only reach into `app/actions`.
+  `app`/`features`; `features` may only reach into the Server Actions (`app/actions/<action>.ts`).
 - `@/` alias only. Parent-relative imports (`../..`) are blocked.
 - Explicit in/out contracts: a `FunctionComponent<Props>` annotation or an explicit return type.
   Interface callbacks use property style (`onSelect: (id: string) => void`), not method style.

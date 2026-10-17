@@ -34,7 +34,7 @@ import { existsSync } from 'node:fs';
 // Deliberately NOT exempt: `page.tsx`, `route.ts` and everything under
 // `app/actions/`. In this repo a page is a real component (40-100 lines, not a
 // thin re-export), and route handlers and server actions carry the boundary logic
-// — `app/api/csp-report/route.test.ts` and `app/actions/example-form.test.ts`
+// — `app/api/csp-report/route.test.ts` and the example Server Action's test
 // already set that precedent. Note that `vitest.config.ts` excludes `app/` from
 // COVERAGE, which is a threshold decision, not a claim that app code is untestable.
 //
