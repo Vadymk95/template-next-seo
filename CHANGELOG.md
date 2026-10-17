@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/Vadymk95/template-next-seo/compare/v1.2.2...v1.2.3) (2026-10-17)
+
+
+### Bug fixes
+
+* **gate:** self-tests keep expected failures quiet; gate files cite no sample code ([#113](https://github.com/Vadymk95/template-next-seo/issues/113)) ([2fb53e5](https://github.com/Vadymk95/template-next-seo/commit/2fb53e5106de02e0f772a475f76c98994f0e817a))
+
 ## [1.2.2](https://github.com/Vadymk95/template-next-seo/compare/v1.2.1...v1.2.2) (2026-10-16)
 
 
