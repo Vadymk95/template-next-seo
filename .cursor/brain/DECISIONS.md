@@ -112,7 +112,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Consequences:** a lockfile or manifest outside a held range, a hold without its Dependabot ignore, or a hold on
   an absent package fails `verify`. A hold is lifted by the event named in its `lift` field, in one commit with
   its Dependabot ignore.
-- **Status:** in force. The audit allowance for `braces` lives in `scripts/audit-allowlist.json`, which expires on its own.
+- **Status:** in force. `scripts/audit-allowlist.json` is empty since GitHub withdrew the `braces` advisory on
+  2026-10-23; a new allowance goes there with its reason and expiry.
 
 ## `agentRules: false` keeps `next dev` out of `AGENTS.md`
 
