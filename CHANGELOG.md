@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/Vadymk95/template-next-seo/compare/v1.2.3...v1.2.4) (2026-10-23)
+
+
+### Bug fixes
+
+* **deps:** bump next to 16.4.3 for three critical advisories ([#117](https://github.com/Vadymk95/template-next-seo/issues/117)) ([a38170d](https://github.com/Vadymk95/template-next-seo/commit/a38170d4e827cb1fc6c80b8d71dce218db5d4d53))
+
 ## [1.2.3](https://github.com/Vadymk95/template-next-seo/compare/v1.2.2...v1.2.3) (2026-10-17)
 
 
