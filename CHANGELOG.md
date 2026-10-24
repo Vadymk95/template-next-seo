@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/Vadymk95/template-next-seo/compare/v1.2.4...v1.2.5) (2026-10-24)
+
+
+### Bug fixes
+
+* **deps:** bump zod and the undici floor for two high advisories ([#120](https://github.com/Vadymk95/template-next-seo/issues/120)) ([6bb1b57](https://github.com/Vadymk95/template-next-seo/commit/6bb1b57a53def20976f6c0cc37137dc0f91bddb6))
+
 ## [1.2.4](https://github.com/Vadymk95/template-next-seo/compare/v1.2.3...v1.2.4) (2026-10-23)
 
 
