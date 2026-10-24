@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/Vadymk95/template-next-seo/compare/v1.2.5...v1.2.6) (2026-10-24)
+
+
+### Documentation
+
+* name the Actions switch a fork needs for release pull requests ([#123](https://github.com/Vadymk95/template-next-seo/issues/123)) ([0a98d05](https://github.com/Vadymk95/template-next-seo/commit/0a98d05a76e62335db7c5ad4e6e6c42c74135bfc))
+
 ## [1.2.5](https://github.com/Vadymk95/template-next-seo/compare/v1.2.4...v1.2.5) (2026-10-24)
 
 
