@@ -1,5 +1,22 @@
+import path from 'node:path';
+
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+
+// Characters picomatch reads as pattern syntax: in a literal path each one has to be escaped.
+const GLOB_SYNTAX = /[\\()[\]{}!+@*?|]/g;
+
+// The files that make `vitest run --changed` run the WHOLE suite instead of the tests the import graph
+// reaches: the manifest and the runner's own config, neither of which is part of that graph. The
+// runner's defaults (`**/package.json/**`, `**/{vitest,vite}.config.*/**`) end in `/**`, so the config
+// pattern matches a directory of that name and never the file, and a `**` does not cross a
+// dot-directory, so a checkout under `.worktrees/` matched nothing. A literal path anchored at the
+// checkout matches from wherever it lives; the only wildcard is the config file's extension.
+export const forceRerunTriggersFor = (root: string): string[] => {
+    const anchor = root.split(path.sep).join('/').replace(GLOB_SYNTAX, '\\$&');
+
+    return [`${anchor}/package.json`, `${anchor}/{vitest,vite}.config.*`];
+};
 
 export default defineConfig({
     plugins: [
@@ -31,6 +48,8 @@ export default defineConfig({
             '**/.claude/worktrees/**'
         ],
         setupFiles: ['./shared/lib/test-utils/setup.ts'],
+        // The runner adds `setupFiles` to this list itself, so the setup file is covered as well.
+        forceRerunTriggers: forceRerunTriggersFor(import.meta.dirname),
         coverage: {
             provider: 'v8',
             reporter: ['text', 'json'],

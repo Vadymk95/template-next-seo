@@ -46,7 +46,7 @@
 ## `proxy` composition (next-intl + nonce CSP + rate limit)
 
 - **Risk:** `proxy.ts` now composes **next-intl middleware** (locale redirect/rewrite for document routes) with the existing **nonce CSP + rate limit + `/dev` gate** (scoped to `/api/*` and `/dev/*`). Matcher is intentionally broad — `'/api/:path*'`, `'/dev/:path*'`, and `'/((?!_next|_vercel|api|dev|.*\\..*).*)'` — so every locale-prefixed document route passes through next-intl. Reordering branches, dropping either matcher entry, or moving rate-limit below the branch silently breaks security (CSP, throttling) or SEO (locale redirects, `hreflang`).
-- **Server Actions:** `enforceApiRateLimit` gates on `isApi || isServerAction` (the `next-action` header); with the widened matcher this finally covers actions posted to `/[locale]/*` (latent since inception). The rate-limit LOGIC is byte-for-byte unchanged — only its coverage expanded.
+- **Server Actions:** `enforceApiRateLimit` gates on `isApi || isServerAction`. `isServerAction` follows Next's own rule (`getServerActionRequestMetadata`): a POST with a `next-action` header, or with content type exactly `application/x-www-form-urlencoded` or starting `multipart/form-data` (a form posted without script sends no header). With the widened matcher this covers actions posted to `/[locale]/*` (latent since inception). `proxy.test.ts` compares it with Next's function, so a Next upgrade that changes the rule turns the test red.
 - **Mitigation:** treat `proxy.ts` + `next.config.ts` header edits as a security review. Keep static CSP in `next.config.ts` (document routes) and nonce CSP in `proxy.ts` (`/api`, `/dev`) in sync. Never add a branch *before* rate limit. Keep next-intl the terminal fallback for everything non-`/api` / non-`/dev`.
 
 ## Template scaffolding (do not strip as "unused")
@@ -56,7 +56,7 @@ This repo is a template, not a shipped product. Several files, deps, and config 
 - **`lucide-react`** — default icon set; pre-wired in `next.config.ts` (`experimental.optimizePackageImports` + webpack `uiVendor` `splitChunks` regex) and exercised in `features/example-form/ui/ExampleForm.tsx` (pending/idle submit icons). Removing it breaks the "how to add icons" example and forces the next MVP to re-pick and re-wire an icon lib.
 - **`shared/constants/index.ts`** — FSD pattern showcase (`ROUTES`, `API_BASE_URL`). Kept so MVPs have a ready place for cross-feature literals. Do not delete as "no consumers".
 - **`features/example-form/**`** — canonical FSD feature skeleton: `model/schema.ts` (Zod), `model/types.ts` (`z.infer`), `ui/ExampleForm.tsx` (RHF + shadcn + next-intl hooks + icons), `/[locale]/example-form` route. The full triad stays until the MVP ships real features.
-- **Web Vitals pipeline** — `app/WebVitalsReporter.tsx` + `app/api/vitals/route.ts` kept minimal on purpose (log-only sink). Expand to analytics when the MVP picks a vendor; do not collapse further.
+- **Web Vitals pipeline** — `app/WebVitalsReporter.tsx` + `app/api/vitals/route.ts` kept minimal on purpose (log-only sink). Expand to analytics when the MVP picks a vendor; do not collapse further. The route logs only `name`, `value`, `delta`, `rating` and `navigationType`, each validated; other keys are dropped and a bad body logs `{ invalid: true }`. Keep that allowlist when you add a vendor.
 
 **Rule:** when in doubt, search for `Template scaffolding` inline comments — every protected site is marked. Only strip after the caller confirms "this is now my MVP, not the template".
 

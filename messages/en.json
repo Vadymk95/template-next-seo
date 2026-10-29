@@ -92,7 +92,7 @@
             "title": "How work flows",
             "iterate": {
                 "title": "Iterate",
-                "text": "Per change, seconds: oxlint, tsc and the changed tests. One spec through the tracer when the change has one."
+                "text": "Per change, seconds: oxlint, tsc, ESLint on the changed files and the changed tests. One spec through the tracer when the change has one."
             },
             "commit": {
                 "title": "Commit",

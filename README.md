@@ -62,7 +62,7 @@ Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 ### Security
 
 - ✅ **Edge proxy** (`proxy.ts`) - stricter CSP + rate limits for `/api/*` and `/dev/*`
-- ✅ **Rate limiting** - 100 requests/minute for API routes
+- ✅ **Rate limiting** - 100 requests/minute for API routes and Server Actions
 - ✅ **Security headers** - static set in `next.config.ts`, CSP override on API/dev via `proxy.ts`
 - ✅ **Input validation** - Zod schemas for forms and API routes
 
@@ -244,7 +244,7 @@ npm run size:check       # first-load JS budget over an existing build (scripts/
 # Checks: drill-downs on a specific failure, none of them is a moment
 npm run lint             # the lint pass over the repo, warnings denied
 npm run lint:oxlint      # the Oxc pass alone
-npm run typecheck        # tsc --noEmit (`type-check` is an alias)
+npm run typecheck        # the type check; drops stale generated route types first (`type-check` is an alias)
 npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm test                 # unit tests (the gate uses test:coverage)

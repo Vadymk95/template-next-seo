@@ -7,11 +7,33 @@ gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeate
 ## The moments and their commands
 
 - **Iterate — `npm run verify:iter`**: the hooks check first (a clone without git hooks fails here, not at a push that runs no gate),
-  the cheap static checks (the type check is incremental), then only the tests reachable from the
-  uncommitted diff (stages: `scripts/gate-tiers.json`). Seconds; run after every change. Two deliberate
-  properties: while `package.json` or a vitest config is dirty, `--changed` runs the FULL suite
-  (force-rerun triggers); and `--changed` follows the import graph only, so cross-cutting suites
-  surface at the push chain, not during iteration. One touched spec: `npm run e2e:one -- <spec>`.
+  the cheap static checks (the type check is incremental, and it first drops generated route types that name a
+  deleted route), then ESLint, type-aware, on the files the working tree changed against HEAD (tracked changes and
+  untracked files, deleted ones left out; `scripts/lint-changed.mjs`), then only the tests reachable from the
+  uncommitted diff, then the layer-scope test by name (stages: `scripts/gate-tiers.json`). Seconds; run after
+  every change. Deliberate properties:
+    - while `package.json` or a vitest config is dirty, `--changed` runs the FULL suite. The force-rerun triggers
+      are literal paths anchored at the repository root (`forceRerunTriggersFor` in `vitest.config.ts`): the
+      runner's defaults match a directory of that name, never the file, and a `**` stops at a dot-directory
+      such as `.worktrees/`, so a checkout there ran 0 of 64 test files. That edit alone costs the whole suite
+      (~18 s), over the 15 s iterate budget by design;
+    - `--changed` follows the import graph only, so cross-cutting suites surface at the push chain, not during
+      iteration. The one exception is `scripts/mutation-scope.test.mjs`: it reads config files as text, nothing
+      imports it, so the chain runs it by name (0.85 s alone) and a new top-level layer fails here, not at the push;
+    - the ESLint cache follows the Tailwind stylesheet. Both Tailwind rule families open `app/globals.css`
+      themselves and the cache keys on the file and the resolved config only, so `eslint.config.js` puts a
+      fingerprint of that stylesheet, the local files it `@import`s and the installed version of each package
+      it imports (`tailwindcss`, `tw-animate-css`; read from the nearest `node_modules` above the importing
+      file) into `settings` for `**/*.tsx` (`scripts/css-fingerprint.mjs`). A stylesheet edit or a package
+      upgrade re-lints those files and nothing else, so there is no `.eslintcache` to delete by hand. The
+      package's files are not hashed: a patched copy with the same version is not seen;
+    - generated route types that name a deleted or renamed route are dropped before `tsc` (a file that
+      imports a module that is gone; the declaration files `next-env.d.ts` imports stay), because Next
+      rewrites them only while `next dev` or a build runs;
+    - `.cursor/` is ignored by both linters: it is tracked for rules and templates, and an agent's scratch
+      script there would otherwise red the chain.
+
+  One touched spec: `npm run e2e:one -- <spec>`.
 - **Measure — `npm run verify:measure [-- <spec>]`**: build + look (optionally one prod-mode spec
   on a free port). Legal at ANY moment, unlimited runs — a measurement is work, not a violation.
   It deliberately runs no lint/types/tests: measuring is not verifying.
@@ -74,9 +96,14 @@ The phase-1 push builds in production, so it needs a non-localhost `NEXT_PUBLIC_
 Measured here (`.gate-trace.log`, 2026-08-30 → 2026-09-11, 17 `verify:push` rows): a phase-0 push 9.9-12.7 s
 on seven runs, 20.7 and 33.7 s on two 2026-09-07 runs; the full chain (`GATE_PHASE=full`, or phase 1)
 23.4-30.2 s on 2026-08-30 and 37.7 s on 2026-09-06 — the `push` budget in `gate-tiers.json` is 45 s (the slowest observed full chain plus ~20%; the p90 of
-the 17 rows = 33.7 s, plus ~20 %, rounded to 5 s); `verify:iter` 1.8-2.4 s on a docs-only change, 28.5 s once
-on a mixed change that ran the full suite; `verify:measure` 12.0 s (18.7 s on a failing run); the mutation run
-2m28s (`mutation.yml`).
+the 17 rows = 33.7 s, plus ~20 %, rounded to 5 s); `verify:measure` 12.0 s (18.7 s on a failing run); the
+mutation run 2m28s (`mutation.yml`).
+
+`verify:iter` with the ESLint leg and the layer-scope test (2026-10-29, 12 cores shared with other work at a load
+of 8 to 11, five runs per case): a docs-only change 3.1 s (median); one changed component 8.3 s on the first run,
+ESLint cold on that file, and 4.6 s on the re-runs (median of four); ten changed files 9.9 s and 5.4 s; an
+unchanged tree 2.7 s (three runs). With `package.json` dirty the whole suite runs: 17.6 s of test time at a lower
+load, 27.9 s at a load of 18 to 21. The iterate budget is 15 s (`scripts/gate-tiers.json`).
 
 The superset rule and the push/CI split: `AGENTS.md` § the tier law; why: `DECISIONS.md` § "The
 gate ladder".
@@ -97,6 +124,8 @@ the base port and exports `PORT` + `PLAYWRIGHT_BASE_URL`; Playwright tears down 
 started. `playwright.config.ts` derives its base URL from `PORT`, so a hand run moved with `PORT=3100`
 alone is consistent; `PLAYWRIGHT_BASE_URL`, when set, wins. The push gate's preflight takes `--kill-port` (SIGTERM, re-probe, refuse if it will not
 die). `--kill-port` finds the holder of the port through `lsof`, so `lsof` must be installed (macOS ships it; Debian/Ubuntu: `apt-get install lsof`); when it cannot run, the preflight says so and names the install line instead of reading the port as free. Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
+
+`npm run probe` takes its server's port the same way (`findFreePort`: `PORT` or 3000 for `--dev`, 3100 for a build, the next free one when something answers), spawns the server detached in its own process group and signals the whole group on every way out (return, error, SIGINT, SIGTERM, SIGHUP, process exit); it refuses a measurement once its own server has exited, because whatever answers on that port is then somebody else's. The preflight calls a port busy only when two looks 150 ms apart both find it busy: `run-on-free-port` binds every port it walks for a millisecond, and one look cannot tell that from a server. Tests that bind real sockets take their ports from `scripts/quiet-ports.mjs` (10000-19999, one hashed window per checkout, one lane per test file), never from `listen(0)`.
 
 ---
 

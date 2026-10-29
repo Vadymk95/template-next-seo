@@ -48,6 +48,7 @@
     ],
     "ignorePatterns": [
         ".next/**",
+        ".cursor/**",
         "dist/**",
         "node_modules/**",
         "coverage/**",

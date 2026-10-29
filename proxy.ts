@@ -19,9 +19,14 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
 // 16 bytes = 128 bits of entropy, the floor the CSP spec's nonce guidance assumes.
 const NONCE_BYTES = 16;
 
-// A rate-limit key can contain a client IP. Only a prefix goes into a log line —
-// enough to correlate two entries, not enough to be a stored identifier.
-const KEY_HINT_LENGTH = 24;
+// A rate-limit key can hold a client IP, and a log line must never carry one. The log hint is the
+// key's kind (`ip:` or `anon:`) plus the first bytes of a SHA-256 digest of the key. The digest is
+// salted with a random value that stays in memory: a bare hash of an IPv4 address can be reversed
+// by hashing all 2^32 addresses, a salted one cannot without the process. Two entries from one
+// process still carry the same hint for the same client.
+const KEY_HINT_DIGEST_BYTES = 4;
+const HEX_RADIX = 16;
+let keyHintSalt: string | undefined;
 
 function generateNonce(): string {
     const bytes = new Uint8Array(NONCE_BYTES);
@@ -40,9 +45,53 @@ function applyProxyCsp(response: NextResponse, requestNonce: string, isDev: bool
     );
 }
 
+async function describeRateLimitKey(key: string): Promise<string> {
+    // Everything up to and including the first ':'. A key without one yields an empty kind, so no
+    // part of its value can reach the log.
+    const kind = key.slice(0, key.indexOf(':') + 1);
+    keyHintSalt ??= crypto.randomUUID();
+    const digest = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(`${keyHintSalt}${key}`)
+    );
+    const hex = Array.from(new Uint8Array(digest, 0, KEY_HINT_DIGEST_BYTES), (byte) =>
+        byte.toString(HEX_RADIX).padStart(2, '0')
+    ).join('');
+    return `${kind}${hex}`;
+}
+
+// @upstash/redis appends the failed command to its error text, and that command holds the
+// rate-limit key. The key is cut out of a copy, so the cause stays readable and the log carries no
+// client address.
+function withoutKey(error: Error, key: string): Error {
+    const clean = new Error(error.message.replaceAll(key, '[key]'));
+    clean.name = error.name;
+    if (error.stack !== undefined) {
+        clean.stack = error.stack.replaceAll(key, '[key]');
+    }
+    return clean;
+}
+
+// Next runs a POST as a Server Action when it carries `next-action`, and also when it is a form
+// post: the content type is exactly application/x-www-form-urlencoded or starts with
+// multipart/form-data. A form posted without script sends no `next-action` header, so the header
+// alone would leave it unthrottled. This is Next's own rule (getServerActionRequestMetadata in
+// next/dist/server/lib/server-action-request-meta.js); proxy.test.ts compares the two.
+function isServerActionRequest(request: NextRequest): boolean {
+    if (request.method !== 'POST') {
+        return false;
+    }
+    const contentType = request.headers.get('content-type');
+    return (
+        request.headers.has('next-action') ||
+        contentType === 'application/x-www-form-urlencoded' ||
+        (contentType?.startsWith('multipart/form-data') ?? false)
+    );
+}
+
 async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse | null> {
     const isApi = request.nextUrl.pathname.startsWith('/api/');
-    const isServerAction = Boolean(request.headers.get('next-action'));
+    const isServerAction = isServerActionRequest(request);
     if (!isApi && !isServerAction) {
         return null;
     }
@@ -60,8 +109,8 @@ async function enforceApiRateLimit(request: NextRequest): Promise<NextResponse |
         } catch (err) {
             logger.error(
                 '[proxy] Upstash rate limit failed; falling back to in-memory limiter',
-                err instanceof Error ? err : new Error(String(err)),
-                { keyHint: key.slice(0, KEY_HINT_LENGTH) }
+                withoutKey(err instanceof Error ? err : new Error(String(err)), key),
+                { keyHint: await describeRateLimitKey(key) }
             );
         }
     }

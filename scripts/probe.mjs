@@ -18,11 +18,19 @@
  *   npm run probe -- /en --dev                # against the dev server (default: production build)
  *
  * Output: `.probe/<slug>-<width>.png` (gitignored) plus a table on stdout.
+ *
+ * The server it measures is its own: it starts on the first free port from PORT (3000 for `--dev`,
+ * 3100 for the build), never on a port something already answers on, and its whole process group is
+ * stopped on every way out, signals included. A probe that attached to another checkout's server
+ * measured the wrong tree, and one that left `next dev` running made the next probe do the same.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { isEntryPoint } from './is-entry-point.mjs';
+import { findFreePort } from './run-on-free-port.mjs';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = '.probe';
@@ -121,6 +129,102 @@ export const waitForContent = async (readMeasurement, { attempts = 20, delayMs =
 export const launchProbeBrowser = (chromium) =>
     chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
 
+/**
+ * The signals that end the probe without running its `finally` blocks, each with the exit code of a
+ * process ended by it (128 plus the number). SIGHUP is a closed terminal: the detached server is not
+ * in the terminal's session, so it would be the one process left running.
+ */
+export const SIGNAL_EXIT_CODES = Object.freeze({ SIGINT: 130, SIGTERM: 143, SIGHUP: 129 });
+
+/**
+ * Signals the server's whole process group. `npm run dev` starts `next dev`, which starts workers, so
+ * signalling the npm wrapper alone (all `child.kill()` does) leaves them listening on the port. The
+ * group exists because the server is spawned `detached`, and a negative pid addresses it. Where it
+ * cannot be addressed (no such group, or Windows) the wrapper itself is signalled.
+ */
+export const killServerGroup = (
+    server,
+    { kill = (pid, signal) => process.kill(pid, signal), signal = 'SIGTERM' } = {}
+) => {
+    if (server.pid === undefined) {
+        return;
+    }
+    try {
+        kill(-server.pid, signal);
+    } catch {
+        server.kill(signal);
+    }
+};
+
+/**
+ * One look at the server is trusted only while the server THIS probe started is alive. If the port
+ * was taken in the instant between choosing it and binding it, the probe's own server dies of
+ * EADDRINUSE while the other one keeps answering, and measuring that one measures the wrong tree.
+ */
+export const startedServerAnswers = async (server, answers) => {
+    if ((server.exitCode ?? null) !== null) {
+        throw new Error(
+            `probe: the server it started exited with code ${String(server.exitCode)} before it answered, so whatever answers on that port belongs to someone else and nothing was measured. Start it by hand and read its output.`
+        );
+    }
+    if ((server.signalCode ?? null) !== null) {
+        throw new Error(
+            `probe: the server it started was ended by ${String(server.signalCode)} before it answered, so whatever answers on that port belongs to someone else and nothing was measured.`
+        );
+    }
+    return answers();
+};
+
+/**
+ * Starts the server on the first free port from `basePort`, runs `body({ server, port })` and stops
+ * the server's whole process group on every way out: the body returning, the body failing, SIGINT,
+ * SIGTERM, SIGHUP and any other exit of the process. The search, the spawn and the process are
+ * injected, so the cases need no real server.
+ */
+export const withServer = async (
+    {
+        useDev,
+        basePort,
+        environment = process.env,
+        findPort = findFreePort,
+        spawnServer = spawn,
+        proc = process,
+        kill
+    },
+    body
+) => {
+    const port = await findPort(basePort);
+    const server = spawnServer(
+        'npm',
+        ['run', useDev ? 'dev' : 'start', '--', '--port', String(port)],
+        {
+            stdio: 'ignore',
+            shell: false,
+            detached: true,
+            env: { ...environment, PORT: String(port) }
+        }
+    );
+    const stop = () => {
+        killServerGroup(server, { kill });
+    };
+    const onSignal = Object.entries(SIGNAL_EXIT_CODES).map(([signal, code]) => [
+        signal,
+        () => {
+            stop();
+            proc.exit(code);
+        }
+    ]);
+    for (const [signal, handler] of onSignal) proc.once(signal, handler);
+    proc.once('exit', stop);
+    try {
+        return await body({ server, port });
+    } finally {
+        for (const [signal, handler] of onSignal) proc.off(signal, handler);
+        proc.off('exit', stop);
+        stop();
+    }
+};
+
 const run = async () => {
     const { path, widths, useDev } = parseProbeArgs(process.argv.slice(2));
 
@@ -136,46 +240,47 @@ const run = async () => {
     mkdirSync(OUT_DIR, { recursive: true });
 
     const { chromium } = await import('@playwright/test');
-    const port = Number(process.env.PORT ?? (useDev ? 3000 : 3100));
-    const server = spawn(
-        'npm',
-        useDev
-            ? ['run', 'dev', '--', '--port', String(port)]
-            : ['run', 'start', '--', '--port', String(port)],
-        { stdio: 'ignore', shell: false, env: { ...process.env, PORT: String(port) } }
-    );
-
-    const baseUrl = `http://localhost:${String(port)}`;
-    const browser = await launchProbeBrowser(chromium);
+    const basePort = Number(process.env.PORT ?? (useDev ? 3000 : 3100));
     const rows = [];
-    try {
-        await waitForServer(async () => {
-            try {
-                await fetch(baseUrl, { signal: AbortSignal.timeout(2000) });
-                return true;
-            } catch {
-                return false;
-            }
-        });
 
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        await page.goto(`${baseUrl}${path}`, { waitUntil: 'load', timeout: 60_000 });
-
-        for (const width of widths) {
-            await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
-            await page.goto(`${baseUrl}${path}`, { waitUntil: 'load' });
-            const { measurement, rendered } = await waitForContent(() =>
-                page.evaluate(measureInPage)
+    await withServer({ useDev, basePort }, async ({ server, port }) => {
+        if (port !== basePort) {
+            console.log(
+                `probe: port ${String(basePort)} is busy, so the server runs on ${String(port)}.`
             );
-            const file = join(OUT_DIR, `${slugForPath(path)}-${String(width)}.png`);
-            await page.screenshot({ path: file, fullPage: true });
-            rows.push({ width, file, rendered, ...measurement });
         }
-    } finally {
-        await browser.close();
-        server.kill();
-    }
+        const baseUrl = `http://localhost:${String(port)}`;
+        const browser = await launchProbeBrowser(chromium);
+        try {
+            await waitForServer(() =>
+                startedServerAnswers(server, async () => {
+                    try {
+                        await fetch(baseUrl, { signal: AbortSignal.timeout(2000) });
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                })
+            );
+
+            const context = await browser.newContext();
+            const page = await context.newPage();
+            await page.goto(`${baseUrl}${path}`, { waitUntil: 'load', timeout: 60_000 });
+
+            for (const width of widths) {
+                await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+                await page.goto(`${baseUrl}${path}`, { waitUntil: 'load' });
+                const { measurement, rendered } = await waitForContent(() =>
+                    page.evaluate(measureInPage)
+                );
+                const file = join(OUT_DIR, `${slugForPath(path)}-${String(width)}.png`);
+                await page.screenshot({ path: file, fullPage: true });
+                rows.push({ width, file, rendered, ...measurement });
+            }
+        } finally {
+            await browser.close();
+        }
+    });
 
     console.log(`\nProbe of ${path} (${useDev ? 'dev' : 'production'} server)\n`);
     for (const row of rows) {
@@ -195,7 +300,7 @@ const run = async () => {
     console.log(`\n  title: ${rows[0]?.title ?? '(none)'}\n`);
 };
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (isEntryPoint(import.meta.url)) {
     await run();
 }
 

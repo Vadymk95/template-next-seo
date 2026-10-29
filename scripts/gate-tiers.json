@@ -6,7 +6,7 @@
         "verify:iter": {
             "class": "code",
             "description": "iterate: the seconds-long check run per change",
-            "chain": "check-hooks -> check-test-markers -> lint:oxlint -> typecheck -> vitest run --changed --passWithNoTests"
+            "chain": "check-hooks -> check-test-markers -> lint:oxlint -> typecheck -> lint-changed -> vitest run --changed --passWithNoTests -> vitest run scripts/mutation-scope.test.mjs"
         },
         "verify": {
             "class": "code",
@@ -49,6 +49,11 @@
             "class": "code",
             "description": "the lint pass, eslint cached",
             "chain": "lint:oxlint -> eslint . --max-warnings 0 --cache --cache-location .eslintcache"
+        },
+        "typecheck": {
+            "class": "code",
+            "description": "the type check; first it drops generated route type files that name a route which is gone",
+            "chain": "drop-stale-route-types -> tsc --noEmit"
         },
         "test": {
             "class": "code",

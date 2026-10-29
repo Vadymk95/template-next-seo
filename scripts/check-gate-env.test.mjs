@@ -6,10 +6,21 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PORT_RECHECK_MS, isPortBusy } from './check-gate-env.mjs';
+import { quietPort } from './quiet-ports.mjs';
+
 // Resolved from the repo root, not from `import.meta.url`: vitest serves this module over its own
 // transform URL, so the file-URL form throws ERR_INVALID_URL_SCHEME rather than finding the script.
 const SCRIPT = resolve(process.cwd(), 'scripts/check-gate-env.mjs');
 const APP_URL = 'https://template-next-seo.invalid';
+
+/* One port per role, from this checkout's quiet window (scripts/quiet-ports.mjs). Fixed numbers such
+   as 3178 were shared by every checkout that ran this file at the same time, and a `listen(0)` port
+   belongs to the OS's ephemeral range, where parallel tests meet each other's sockets. */
+const PORT_FREE = quietPort('check-gate-env', 0);
+const PORT_BUSY = quietPort('check-gate-env', 1);
+const PORT_HOLDER = quietPort('check-gate-env', 2);
+const PORT_FREE_FOR_KILL = quietPort('check-gate-env', 3);
 
 /* `stdio` pipes stderr: without it execFileSync echoes the child's stderr into the parent, so a green
    run printed "Gate preflight failed" blocks from the cases that expect a refusal.
@@ -63,9 +74,82 @@ afterEach(async () => {
     held = null;
 });
 
+/* A look answers "is this port free?" the way the real one does, so `false` is a busy look. The looks
+   and the gap between them are injected: these cases open no socket and run no timer, and a one-off
+   busy look (a socket another process holds for a millisecond) is exactly what they need to stage. */
+describe('isPortBusy', () => {
+    const lookingAt = (...answers) => {
+        const isFree = vi.fn();
+        for (const answer of answers) isFree.mockResolvedValueOnce(answer);
+        return isFree;
+    };
+    const instantWait = () => vi.fn().mockResolvedValue(undefined);
+
+    it('looks again about 150 ms later', () => {
+        expect(PORT_RECHECK_MS).toBe(150);
+    });
+
+    it('calls a port free after one look when that look finds it free', async () => {
+        const isFree = lookingAt(true);
+        const wait = instantWait();
+
+        expect(await isPortBusy(PORT_FREE, { isFree, wait })).toBe(false);
+        expect(isFree).toHaveBeenCalledTimes(1);
+        expect(wait).not.toHaveBeenCalled();
+    });
+
+    it('does not call a port busy for one busy look: the second look finds it free', async () => {
+        const isFree = lookingAt(false, true);
+        const wait = instantWait();
+
+        expect(await isPortBusy(PORT_FREE, { isFree, wait })).toBe(false);
+        expect(isFree).toHaveBeenCalledTimes(2);
+    });
+
+    it('calls a port busy when two looks, a gap apart, both find it busy', async () => {
+        const isFree = lookingAt(false, false);
+        const wait = instantWait();
+
+        expect(await isPortBusy(PORT_BUSY, { isFree, wait })).toBe(true);
+        expect(isFree).toHaveBeenCalledTimes(2);
+        expect(wait).toHaveBeenCalledExactlyOnceWith(PORT_RECHECK_MS);
+    });
+
+    it('waits between the two looks, never before the first', async () => {
+        const isFree = lookingAt(false, false);
+        const wait = instantWait();
+
+        await isPortBusy(PORT_BUSY, { isFree, wait });
+
+        const [firstLook, secondLook] = isFree.mock.invocationCallOrder;
+        const [gap] = wait.mock.invocationCallOrder;
+        expect(firstLook).toBeLessThan(gap);
+        expect(gap).toBeLessThan(secondLook);
+    });
+
+    it('asks about the same port on both looks', async () => {
+        const isFree = lookingAt(false, false);
+
+        await isPortBusy(PORT_BUSY, { isFree, wait: instantWait() });
+
+        expect(isFree).toHaveBeenNthCalledWith(1, PORT_BUSY);
+        expect(isFree).toHaveBeenNthCalledWith(2, PORT_BUSY);
+    });
+
+    it('sees a port a real socket holds, with the real look', async () => {
+        held = await listenOn(PORT_BUSY);
+
+        expect(await isPortBusy(PORT_BUSY)).toBe(true);
+    });
+
+    it('sees a free port as free, with the real look', async () => {
+        expect(await isPortBusy(PORT_FREE)).toBe(false);
+    });
+});
+
 describe('gate preflight', () => {
     it('passes when the build env is set and the port is free', () => {
-        const verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3178' });
+        const verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_FREE) });
         expect(verdict.code).toBe(0);
     });
 
@@ -73,29 +157,29 @@ describe('gate preflight', () => {
         /* cwd is a directory with no `.env.local`, so @next/env finds nothing — the same state a
            fresh clone is in. The failure it replaces arrived minutes later as a ZodError naming a
            page rather than the variable. */
-        const verdict = runPreflight({ PORT: '3178' }, tmpdir());
+        const verdict = runPreflight({ PORT: String(PORT_FREE) }, tmpdir());
         expect(verdict.code).toBe(1);
         expect(verdict.output).toContain('NEXT_PUBLIC_APP_URL');
         expect(verdict.output).toContain('cp .env.example .env.local');
     });
 
     it('sees a port that is actually taken, on any interface', async () => {
-        held = await listenOn(3179);
+        held = await listenOn(PORT_BUSY);
         /* Probing `127.0.0.1` alone reports a port FREE while a dev server is plainly holding
            it. This asserts the difference: same script, same env, one port held and one not. */
-        const busy = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
-        const free = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3178' });
+        const busy = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_BUSY) });
+        const free = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_FREE) });
 
         expect(busy.code).toBe(1);
-        expect(busy.output).toContain('Port 3179 is busy');
+        expect(busy.output).toContain(`Port ${String(PORT_BUSY)} is busy`);
         expect(free.code).toBe(0);
     });
 
     /* The hint names ONE variable: `playwright.config.ts` follows `PORT` for its base URL, so a second
        one to keep in agreement is a way to point the tests at a different server than the one started. */
     it('hints a moved run with PORT alone', async () => {
-        held = await listenOn(3179);
-        const busy = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+        held = await listenOn(PORT_BUSY);
+        const busy = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_BUSY) });
 
         expect(busy.output).toContain('PORT=3100 npm run verify:ci');
         expect(busy.output).not.toContain('PLAYWRIGHT_BASE_URL');
@@ -105,25 +189,25 @@ describe('gate preflight', () => {
        process.stderr unless `stdio` is given, which once printed "Gate preflight failed" blocks
        inside green runs and taught readers to filter the gate's output. */
     it('keeps the stderr of an expected refusal off this process', async () => {
-        held = await listenOn(3179);
+        held = await listenOn(PORT_BUSY);
         const spy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         let verdict;
         let echoed;
         try {
-            verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+            verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_BUSY) });
             // Read before the restore: restoring a spy also clears what it recorded.
             echoed = [...spy.mock.calls];
         } finally {
             spy.mockRestore();
         }
         expect(verdict.code).toBe(1);
-        expect(verdict.output).toContain('Port 3179 is busy');
+        expect(verdict.output).toContain(`Port ${String(PORT_BUSY)} is busy`);
         expect(echoed).toEqual([]);
     });
 
     it('without --kill-port a busy port only REFUSES — manual runs never kill anything', async () => {
-        held = await listenOn(3179);
-        const verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3179' });
+        held = await listenOn(PORT_BUSY);
+        const verdict = runPreflight({ NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_BUSY) });
         expect(verdict.code).toBe(1);
         /* The holder here is THIS vitest process; surviving the run is the assertion. */
         expect(verdict.output).toContain('--kill-port');
@@ -137,7 +221,7 @@ describe('gate preflight', () => {
             'node',
             [
                 '-e',
-                'require("net").createServer().on("error", () => process.exit(2)).listen(3181, () => {}); setInterval(() => {}, 1000)'
+                `require("net").createServer().on("error", () => process.exit(2)).listen(${String(PORT_HOLDER)}, () => {}); setInterval(() => {}, 1000)`
             ],
             { stdio: 'ignore' }
         );
@@ -149,13 +233,13 @@ describe('gate preflight', () => {
                 if (holder.exitCode !== null) {
                     reject(
                         new Error(
-                            `holder exited with ${String(holder.exitCode)} before listening on 3181`
+                            `holder exited with ${String(holder.exitCode)} before listening on ${String(PORT_HOLDER)}`
                         )
                     );
                     return;
                 }
                 let connected = false;
-                const socket = connect(3181, () => {
+                const socket = connect(PORT_HOLDER, () => {
                     connected = true;
                     socket.destroy();
                     resolvePromise(null);
@@ -170,13 +254,13 @@ describe('gate preflight', () => {
         });
 
         const verdict = runPreflight(
-            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3181' },
+            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_HOLDER) },
             process.cwd(),
             ['--kill-port']
         );
         try {
             expect(verdict.code).toBe(0);
-            expect(verdict.output).toContain('Cleared port 3181');
+            expect(verdict.output).toContain(`Cleared port ${String(PORT_HOLDER)}`);
             expect(verdict.output).toContain(String(holder.pid));
         } finally {
             try {
@@ -189,7 +273,7 @@ describe('gate preflight', () => {
 
     it('--kill-port on a FREE port stays silent and passes', () => {
         const verdict = runPreflight(
-            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: '3182' },
+            { NEXT_PUBLIC_APP_URL: APP_URL, PORT: String(PORT_FREE_FOR_KILL) },
             process.cwd(),
             ['--kill-port']
         );
@@ -213,19 +297,21 @@ describe('gate preflight', () => {
         });
 
         it('still sees a taken port: detection never shells out', async () => {
-            held = await listenOn(3179);
-            const verdict = runPreflight({ ...withoutLsof, PORT: '3179' });
+            held = await listenOn(PORT_BUSY);
+            const verdict = runPreflight({ ...withoutLsof, PORT: String(PORT_BUSY) });
             expect(verdict.code).toBe(1);
-            expect(verdict.output).toContain('Port 3179 is busy');
+            expect(verdict.output).toContain(`Port ${String(PORT_BUSY)} is busy`);
         });
 
         it('--kill-port fails loud: the port, the cause and the install line', async () => {
-            held = await listenOn(3179);
-            const verdict = runPreflight({ ...withoutLsof, PORT: '3179' }, process.cwd(), [
-                '--kill-port'
-            ]);
+            held = await listenOn(PORT_BUSY);
+            const verdict = runPreflight(
+                { ...withoutLsof, PORT: String(PORT_BUSY) },
+                process.cwd(),
+                ['--kill-port']
+            );
             expect(verdict.code).toBe(1);
-            expect(verdict.output).toContain('Port 3179 is busy');
+            expect(verdict.output).toContain(`Port ${String(PORT_BUSY)} is busy`);
             expect(verdict.output).toContain('ENOENT');
             expect(verdict.output).toContain('apt-get install lsof');
             expect(verdict.output).not.toContain('could not clear it');
@@ -233,19 +319,21 @@ describe('gate preflight', () => {
         });
 
         it('--kill-port on a FREE port needs no lsof and stays silent', () => {
-            const verdict = runPreflight({ ...withoutLsof, PORT: '3182' }, process.cwd(), [
-                '--kill-port'
-            ]);
+            const verdict = runPreflight(
+                { ...withoutLsof, PORT: String(PORT_FREE_FOR_KILL) },
+                process.cwd(),
+                ['--kill-port']
+            );
             expect(verdict.code).toBe(0);
             expect(verdict.output).not.toContain('lsof');
         });
     });
 
     it('reports BOTH problems at once rather than one per run', async () => {
-        held = await listenOn(3179);
-        const verdict = runPreflight({ PORT: '3179' }, tmpdir());
+        held = await listenOn(PORT_BUSY);
+        const verdict = runPreflight({ PORT: String(PORT_BUSY) }, tmpdir());
         expect(verdict.code).toBe(1);
         expect(verdict.output).toContain('NEXT_PUBLIC_APP_URL');
-        expect(verdict.output).toContain('Port 3179 is busy');
+        expect(verdict.output).toContain(`Port ${String(PORT_BUSY)} is busy`);
     });
 });

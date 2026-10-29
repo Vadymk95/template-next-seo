@@ -23,6 +23,8 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
+import { isEntryPoint } from './is-entry-point.mjs';
+
 const SKIPPED_AT_SCAFFOLD = ['build', 'size:check', 'test:e2e:prod'];
 
 export const resolvePushPlan = ({ phase, override }) => {
@@ -77,6 +79,6 @@ const main = () => {
     process.exit(result.status ?? 1);
 };
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (isEntryPoint(import.meta.url)) {
     main();
 }

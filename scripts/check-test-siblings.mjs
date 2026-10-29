@@ -25,6 +25,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
+import { isEntryPoint } from './is-entry-point.mjs';
+
 // Exempt: tests themselves, type decls, barrels, declaration-only registries, the
 // shadcn primitives, test utils, and the Next.js special files that are framework
 // glue rather than behaviour — `layout`, `loading`, `error`, `not-found`,
@@ -250,6 +252,6 @@ const main = () => {
 };
 
 // Guarded so importing this module for a test does not shell out to git.
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (isEntryPoint(import.meta.url)) {
     main();
 }
