@@ -36,6 +36,8 @@ import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { brotliCompressSync } from 'node:zlib';
 
+import { isEntryPoint } from './is-entry-point.mjs';
+
 const KB = 1024;
 const DEFAULT_BUDGETS = join(dirname(fileURLToPath(import.meta.url)), 'bundle-budget.json');
 const PAGE_SUFFIX = '/page';
@@ -221,6 +223,6 @@ const main = () => {
 };
 
 // Guarded so importing this module for a test does not measure a build.
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (isEntryPoint(import.meta.url)) {
     main();
 }

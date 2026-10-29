@@ -23,6 +23,8 @@ import { connect, createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isEntryPoint } from './is-entry-point.mjs';
+
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 
 /**
@@ -118,57 +120,86 @@ const portIsFree = async (port) => {
     });
 };
 
-const problems = [];
+/** How long the second look waits. A socket that is open for a moment is gone well inside it. */
+export const PORT_RECHECK_MS = 150;
 
-const buildEnv = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-build-env.mjs')], {
-    encoding: 'utf8'
-});
-if (buildEnv.status !== 0) {
-    problems.push(`${buildEnv.stdout ?? ''}${buildEnv.stderr ?? ''}`.trim());
-}
+/*
+ * Busy only when two looks, PORT_RECHECK_MS apart, both find the port busy. One look cannot tell a
+ * server from a socket another process holds for a millisecond: scripts/run-on-free-port.mjs binds
+ * every port it walks, and macOS hands out `listen(0)` ports in sequence, so a parallel test or lane
+ * can be caught mid-bind. Read as a stray, it fails the gate (or, under --kill-port, makes it
+ * signal a process that is not a stray). A port that is free on the first look is free; the second
+ * look only ever overturns a busy one. `isFree` and `wait` are injected so the cases need no socket.
+ */
+export const isPortBusy = async (
+    port,
+    { isFree = portIsFree, wait = sleep, gapMs = PORT_RECHECK_MS } = {}
+) => {
+    if (await isFree(port)) {
+        return false;
+    }
+    await wait(gapMs);
+    return !(await isFree(port));
+};
 
-const port = Number(process.env.PORT ?? 3000);
-if (!(await portIsFree(port))) {
-    let cleared = false;
-    let lookupError = null;
-    if (shouldKillPort) {
-        const lookup = listeningPids(port);
-        const { pids } = lookup;
-        lookupError = lookup.lookupError ?? null;
-        for (const pid of pids) {
-            try {
-                process.kill(pid, 'SIGTERM');
-            } catch {
-                // Already gone, or not ours to signal — the re-probe below is the verdict.
+const main = async () => {
+    const problems = [];
+
+    const buildEnv = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-build-env.mjs')], {
+        encoding: 'utf8'
+    });
+    if (buildEnv.status !== 0) {
+        problems.push(`${buildEnv.stdout ?? ''}${buildEnv.stderr ?? ''}`.trim());
+    }
+
+    const port = Number(process.env.PORT ?? 3000);
+    if (await isPortBusy(port)) {
+        let cleared = false;
+        let lookupError = null;
+        if (shouldKillPort) {
+            const lookup = listeningPids(port);
+            const { pids } = lookup;
+            lookupError = lookup.lookupError ?? null;
+            for (const pid of pids) {
+                try {
+                    process.kill(pid, 'SIGTERM');
+                } catch {
+                    // Already gone, or not ours to signal — the re-probe below is the verdict.
+                }
+            }
+            if (pids.length > 0) {
+                await sleep(1500);
+                if (!(await isPortBusy(port))) {
+                    cleared = true;
+                    console.log(
+                        `Cleared port ${String(port)}: killed stray listener pid ${pids.join(', ')} (the push gate owns its port; parallel lanes use run-on-free-port instead).`
+                    );
+                }
             }
         }
-        if (pids.length > 0) {
-            await sleep(1500);
-            if (await portIsFree(port)) {
-                cleared = true;
-                console.log(
-                    `Cleared port ${String(port)}: killed stray listener pid ${pids.join(', ')} (the push gate owns its port; parallel lanes use run-on-free-port instead).`
-                );
-            }
+        if (!cleared) {
+            problems.push(
+                `Port ${String(port)} is busy, and the production e2e wants it.\n` +
+                    `      Another lane's server? Move this run: PORT=3100 npm run verify:ci\n` +
+                    (lookupError
+                        ? `      ${lsofUnavailableHint(port, lookupError)}`
+                        : shouldKillPort
+                          ? `      --kill-port could not clear it — look: lsof -nP -iTCP:${String(port)} -sTCP:LISTEN`
+                          : `      The push gate clears its own port (--kill-port); by hand: lsof -ti tcp:${String(port)} -sTCP:LISTEN | xargs kill`)
+            );
         }
     }
-    if (!cleared) {
-        problems.push(
-            `Port ${String(port)} is busy, and the production e2e wants it.\n` +
-                `      Another lane's server? Move this run: PORT=3100 npm run verify:ci\n` +
-                (lookupError
-                    ? `      ${lsofUnavailableHint(port, lookupError)}`
-                    : shouldKillPort
-                      ? `      --kill-port could not clear it — look: lsof -nP -iTCP:${String(port)} -sTCP:LISTEN`
-                      : `      The push gate clears its own port (--kill-port); by hand: lsof -ti tcp:${String(port)} -sTCP:LISTEN | xargs kill`)
-        );
-    }
-}
 
-if (problems.length > 0) {
-    console.error('\nGate preflight failed:\n');
-    for (const problem of problems) {
-        console.error(`  - ${problem}\n`);
+    if (problems.length > 0) {
+        console.error('\nGate preflight failed:\n');
+        for (const problem of problems) {
+            console.error(`  - ${problem}\n`);
+        }
+        process.exit(1);
     }
-    process.exit(1);
+};
+
+// Run only as the entry point, so the cases can import `isPortBusy`.
+if (isEntryPoint(import.meta.url)) {
+    await main();
 }

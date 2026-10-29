@@ -1,14 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
+import { createServer } from 'node:net';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     hasRenderedContent,
+    killServerGroup,
     launchProbeBrowser,
     measureInPage,
     parseProbeArgs,
     slugForPath,
+    startedServerAnswers,
     waitForContent,
-    waitForServer
+    waitForServer,
+    withServer
 } from './probe.mjs';
+import { quietPort } from './quiet-ports.mjs';
 
 describe('parseProbeArgs', () => {
     it('defaults to the root path and the three-width sweep', () => {
@@ -199,5 +206,249 @@ describe('launchProbeBrowser', () => {
         expect(launch.mock.calls[0][0]).toMatchObject({
             ignoreDefaultArgs: ['--hide-scrollbars']
         });
+    });
+});
+
+/* The server the probe starts is `npm run dev`, which starts `next dev`, which starts workers. Three
+   things went wrong with a bare `spawn` and `server.kill()`: the probe took port 3000 whether or not
+   something already answered there and measured THAT server (another checkout's tree); a signal or a
+   failed browser launch skipped the cleanup; and killing the npm wrapper left `next dev` listening.
+   Nothing below starts a real server: the spawn, the port search and the process are injected. */
+describe('withServer', () => {
+    const PID = 4242;
+    const fakeServer = (overrides = {}) => ({
+        pid: PID,
+        exitCode: null,
+        signalCode: null,
+        kill: vi.fn(),
+        ...overrides
+    });
+
+    /* `findPort` is a stub that returns the base port unless the case hands one in; `realSearch`
+       leaves it out, so the case meets the search `withServer` uses by default. */
+    const setup = ({
+        server = fakeServer(),
+        findPort,
+        realSearch = false,
+        useDev = true,
+        basePort = 3000
+    } = {}) => {
+        const spawnServer = vi.fn(() => server);
+        const kill = vi.fn();
+        const proc = Object.assign(new EventEmitter(), { exit: vi.fn() });
+        const options = {
+            useDev,
+            basePort,
+            environment: { KEEP: 'yes', PORT: 'stale' },
+            spawnServer,
+            proc,
+            kill
+        };
+        if (!realSearch) {
+            options.findPort = findPort ?? vi.fn((base) => Promise.resolve(base));
+        }
+        return { server, spawnServer, kill, proc, options };
+    };
+
+    const held = [];
+    afterEach(async () => {
+        for (const server of held.splice(0)) {
+            await new Promise((resolveClose) => server.close(resolveClose));
+        }
+    });
+
+    describe('the server it starts', () => {
+        it('runs the dev server on the chosen port, in its own process group', async () => {
+            const { options, spawnServer } = setup();
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(spawnServer).toHaveBeenCalledExactlyOnceWith(
+                'npm',
+                ['run', 'dev', '--', '--port', '3000'],
+                expect.objectContaining({ detached: true, shell: false, stdio: 'ignore' })
+            );
+            expect(spawnServer.mock.calls[0][2].env).toMatchObject({ KEEP: 'yes', PORT: '3000' });
+        });
+
+        it('runs the production server for a build', async () => {
+            const { options, spawnServer } = setup({ useDev: false, basePort: 3100 });
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(spawnServer.mock.calls[0][1]).toEqual(['run', 'start', '--', '--port', '3100']);
+        });
+
+        it('moves to the port the search returns when the base port is busy', async () => {
+            const findPort = vi.fn(() => Promise.resolve(3007));
+            const { options, spawnServer } = setup({ findPort });
+            let seen;
+
+            await withServer(options, ({ port }) => {
+                seen = port;
+                return Promise.resolve();
+            });
+
+            expect(findPort).toHaveBeenCalledExactlyOnceWith(3000);
+            expect(spawnServer.mock.calls[0][1]).toEqual(['run', 'dev', '--', '--port', '3007']);
+            expect(spawnServer.mock.calls[0][2].env.PORT).toBe('3007');
+            expect(seen).toBe(3007);
+        });
+
+        it('by default steps past a port that a real socket holds', async () => {
+            const base = quietPort('probe');
+            const holder = createServer();
+            held.push(holder);
+            await new Promise((resolveListen) => holder.listen(base, resolveListen));
+            const { options, spawnServer } = setup({ basePort: base, realSearch: true });
+
+            await withServer(options, () => Promise.resolve());
+
+            const port = Number(spawnServer.mock.calls[0][1].at(-1));
+            expect(port).toBeGreaterThan(base);
+            expect(port).toBeLessThanOrEqual(base + 20);
+        });
+
+        it('starts nothing, and hooks nothing, when no port is free', async () => {
+            const findPort = vi.fn(() => Promise.reject(new Error('No free port within 20')));
+            const { options, spawnServer, proc } = setup({ findPort });
+
+            await expect(withServer(options, () => Promise.resolve())).rejects.toThrow(
+                /No free port/
+            );
+
+            expect(spawnServer).not.toHaveBeenCalled();
+            expect(proc.listenerCount('SIGINT')).toBe(0);
+        });
+    });
+
+    describe('stopping it', () => {
+        it('signals the whole group, not the wrapper, when the body succeeds', async () => {
+            const { options, kill } = setup();
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(kill).toHaveBeenCalledExactlyOnceWith(-PID, 'SIGTERM');
+        });
+
+        it('signals the group when the body fails, and lets the failure through', async () => {
+            const { options, kill } = setup();
+
+            await expect(
+                withServer(options, () => Promise.reject(new Error('browser did not launch')))
+            ).rejects.toThrow('browser did not launch');
+
+            expect(kill).toHaveBeenCalledExactlyOnceWith(-PID, 'SIGTERM');
+        });
+
+        /* SIGHUP is a closed terminal: the detached server is not in the terminal's session, so it
+           would be the one process left running. */
+        it.each([
+            ['SIGINT', 130],
+            ['SIGTERM', 143],
+            ['SIGHUP', 129]
+        ])('signals the group on %s and exits with %i', async (signal, code) => {
+            const { options, kill, proc } = setup();
+
+            await withServer(options, () => {
+                proc.emit(signal);
+                return Promise.resolve();
+            });
+
+            expect(kill).toHaveBeenCalledWith(-PID, 'SIGTERM');
+            expect(proc.exit).toHaveBeenCalledExactlyOnceWith(code);
+        });
+
+        it('signals the group on any other way out of the process', async () => {
+            const { options, kill, proc } = setup();
+
+            await withServer(options, () => {
+                proc.emit('exit');
+                return Promise.resolve();
+            });
+
+            expect(kill).toHaveBeenCalledWith(-PID, 'SIGTERM');
+        });
+
+        it('is listening for the signals while the body runs, and only then', async () => {
+            const { options, proc } = setup();
+            const during = {};
+
+            const names = ['SIGINT', 'SIGTERM', 'SIGHUP', 'exit'];
+
+            await withServer(options, () => {
+                for (const name of names) {
+                    during[name] = proc.listenerCount(name);
+                }
+                return Promise.resolve();
+            });
+
+            expect(during).toEqual({ SIGINT: 1, SIGTERM: 1, SIGHUP: 1, exit: 1 });
+            for (const name of names) {
+                expect(proc.listenerCount(name), name).toBe(0);
+            }
+        });
+
+        it('does not signal a second time for a signal that arrives after it stopped', async () => {
+            const { options, kill, proc } = setup();
+
+            await withServer(options, () => Promise.resolve());
+            proc.emit('SIGINT');
+
+            expect(kill).toHaveBeenCalledTimes(1);
+        });
+    });
+});
+
+describe('killServerGroup', () => {
+    it('signals the wrapper itself where the group cannot be addressed', () => {
+        const server = { pid: 4242, kill: vi.fn() };
+        const kill = vi.fn(() => {
+            throw new Error('ESRCH');
+        });
+
+        expect(() => killServerGroup(server, { kill })).not.toThrow();
+        expect(server.kill).toHaveBeenCalledExactlyOnceWith('SIGTERM');
+    });
+
+    it('does nothing for a server that never got a pid', () => {
+        const server = { pid: undefined, kill: vi.fn() };
+        const kill = vi.fn();
+
+        killServerGroup(server, { kill });
+
+        expect(kill).not.toHaveBeenCalled();
+        expect(server.kill).not.toHaveBeenCalled();
+    });
+});
+
+describe('startedServerAnswers', () => {
+    /* If the port was taken in the instant between choosing it and binding it, the probe's own server
+       dies of EADDRINUSE while the OTHER one keeps answering. An answer then counts for nothing. */
+    it('passes the answer through while the server the probe started is alive', async () => {
+        const alive = { exitCode: null, signalCode: null };
+
+        await expect(startedServerAnswers(alive, () => Promise.resolve(true))).resolves.toBe(true);
+        await expect(startedServerAnswers(alive, () => Promise.resolve(false))).resolves.toBe(
+            false
+        );
+    });
+
+    it('refuses to count an answer once the server it started has exited', async () => {
+        const answers = vi.fn(() => Promise.resolve(true));
+
+        await expect(
+            startedServerAnswers({ exitCode: 1, signalCode: null }, answers)
+        ).rejects.toThrow(/exited/);
+        expect(answers).not.toHaveBeenCalled();
+    });
+
+    it('refuses the same way when the server was ended by a signal', async () => {
+        const answers = vi.fn(() => Promise.resolve(true));
+
+        await expect(
+            startedServerAnswers({ exitCode: null, signalCode: 'SIGKILL' }, answers)
+        ).rejects.toThrow(/SIGKILL/);
+        expect(answers).not.toHaveBeenCalled();
     });
 });

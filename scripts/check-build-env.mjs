@@ -23,6 +23,8 @@
 // `SyntaxError: Named export 'loadEnvConfig' not found` at load time.
 import nextEnv from '@next/env';
 
+import { isEntryPoint } from './is-entry-point.mjs';
+
 const { loadEnvConfig } = nextEnv;
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1'];
@@ -80,6 +82,6 @@ const main = () => {
     process.exit(1);
 };
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (isEntryPoint(import.meta.url)) {
     main();
 }
