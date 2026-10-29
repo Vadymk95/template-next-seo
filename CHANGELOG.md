@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.7](https://github.com/Vadymk95/template-next-seo/compare/v1.2.6...v1.2.7) (2026-10-29)
+
+
+### Bug fixes
+
+* **gate:** truthful iterate chain, safe gate scripts, production logs and rate limits ([#126](https://github.com/Vadymk95/template-next-seo/issues/126)) ([4be95a5](https://github.com/Vadymk95/template-next-seo/commit/4be95a59e0c13bc52afe82ab5668d751abe5eddd))
+
 ## [1.2.6](https://github.com/Vadymk95/template-next-seo/compare/v1.2.5...v1.2.6) (2026-10-24)
 
 
