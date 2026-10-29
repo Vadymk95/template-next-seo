@@ -244,7 +244,7 @@ npm run size:check       # first-load JS budget over an existing build (scripts/
 # Checks: drill-downs on a specific failure, none of them is a moment
 npm run lint             # the lint pass over the repo, warnings denied
 npm run lint:oxlint      # the Oxc pass alone
-npm run typecheck        # tsc --noEmit (`type-check` is an alias)
+npm run typecheck        # the type check; drops stale generated route types first (`type-check` is an alias)
 npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm test                 # unit tests (the gate uses test:coverage)

@@ -12,6 +12,11 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+import { cssFingerprint } from './scripts/css-fingerprint.mjs';
+
+/** The stylesheet both Tailwind lint rule families read (their settings and the cache fingerprint below). */
+const TAILWIND_ENTRY = './app/globals.css';
+
 /** Prefer `@/` over parent-relative imports (aligned with template-1). */
 const parentRelativeImportPatternGroup = {
     group: [
@@ -53,6 +58,10 @@ export default defineConfig([
         'public/mockServiceWorker.js',
         'next-env.d.ts',
         'postcss.config.mjs',
+        // `.cursor/` is tracked for the rules and templates, so a throwaway script an agent leaves there
+        // is an untracked file the linters would pick up and red the iterate chain with. Nothing under it
+        // is product code.
+        '.cursor',
         // An agent worktree created under the repository root is a full SECOND CHECKOUT, and every
         // ignore above is root-anchored, so its copies walk straight past them. Same class as the
         // `.stryker-tmp` line - the gate must never lint a copy of the repo - and measured with a
@@ -272,11 +281,26 @@ export default defineConfig([
             ]
         }
     },
+    // Both Tailwind rule families below read the stylesheet on their own, and ESLint's cache keys on the
+    // linted file and the resolved config, never on a file a rule opens itself: after a token or utility
+    // change a cached run replays the verdicts of the old stylesheet (reproduced: a `@utility` added to
+    // `app/globals.css` left the cached run green while a fresh run reported a class-order error).
+    // `settings` is part of that key, so a fingerprint of the stylesheet and the local files it imports
+    // re-lints exactly the files these rules cover. How the hash is built: `scripts/css-fingerprint.mjs`.
+    {
+        files: ['**/*.tsx'],
+        settings: {
+            tailwindCssFingerprint: cssFingerprint({
+                root: import.meta.dirname,
+                entry: TAILWIND_ENTRY
+            })
+        }
+    },
     {
         files: ['**/*.tsx'],
         plugins: { tailwindcss: tailwind },
         settings: {
-            tailwindcss: { cssConfigPath: './app/globals.css' }
+            tailwindcss: { cssConfigPath: TAILWIND_ENTRY }
         },
         rules: {
             'tailwindcss/no-contradicting-classname': 'error',
@@ -388,7 +412,7 @@ export default defineConfig([
     {
         files: ['**/*.tsx'],
         plugins: { 'better-tailwindcss': betterTailwindcss },
-        settings: { 'better-tailwindcss': { entryPoint: './app/globals.css' } },
+        settings: { 'better-tailwindcss': { entryPoint: TAILWIND_ENTRY } },
         rules: {
             'better-tailwindcss/no-deprecated-classes': 'error',
             'better-tailwindcss/enforce-canonical-classes': 'error'

@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types | 2026-10 | in force |
 | The Node floor is computed from the lockfile, not written by hand | 2026-10 | in force |
 | Each page states its own social preview, with its own image file | 2026-10 | in force |
 | Vendor `splitChunks` groups take JavaScript modules only | 2026-10 | in force |
@@ -45,6 +46,33 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types
+
+2026-10 · in force · guards `scripts/vitest-force-rerun.test.mjs`, `scripts/css-fingerprint.test.mjs`, `scripts/lint-config.test.mjs`, `scripts/lint-changed.test.mjs`, `scripts/drop-stale-route-types.test.mjs`, `scripts/iterate-chain.test.mjs`, the chain view checked by `docs:check` · evidence: `.cursor/brain/VERIFICATION.md`, the red-first runs named below
+
+- **Context:** `verify:iter` answered about something other than the change in six ways, each reproduced before the fix.
+  (1) With `package.json` dirty, `vitest run --changed` ran 0 of 64 test files in a checkout under `.worktrees/` (1 with
+  `vitest.config.ts` dirty): the runner's trigger for the config matches only a directory of that name, and a `**` in
+  either never crosses a dot-directory. (2) A `@utility` added to `app/globals.css` left a cached ESLint run green
+  while a fresh run failed on class order: the Tailwind rules read the stylesheet themselves and ESLint's cache keys
+  on the file and the resolved config only. (3) Oxlint has no types, so type-aware findings appeared first at the commit
+  hook. (4) A scratch script under tracked `.cursor/` failed `lint:oxlint`. (5) A deleted route left a generated
+  `validator.ts` importing it: `tsc` failed with TS2307 until a live `next dev` rewrote it. (6) `mutation-scope.test.mjs`
+  reads configs as text, so `--changed` never selects it and a new top-level layer failed only at the push.
+- **Decision:** (1) `forceRerunTriggers` are literal paths anchored at the config's folder, glob syntax escaped. (2) The
+  ESLint config carries a fingerprint of the stylesheet and its local `@import`s in `settings` for `**/*.tsx`; ESLint
+  hashes `settings` into every cache entry, so `lint`, `fix` and the staged pass follow it with no second cache. (3)
+  `lint-changed` lints tracked changes against HEAD plus untracked files with the `lint` flags and the same cache,
+  and skips ignored paths quietly. (4) Both linters ignore `.cursor/`. (5) `typecheck` drops a generated type file only
+  when it imports a module that is gone. (6) The chain runs the scope test by name (0.85 s alone).
+- **Consequences:** a dirty `package.json` or vitest config costs the whole suite (~18 s, over the 15 s iterate budget,
+  on purpose); the rest, five runs at a load of 8 to 11 on 12 cores: 3.1 s docs only, one component 8.3 s the first
+  time and 4.6 s on a re-run, ten files 9.9 s and 5.4 s. Rejected: the stylesheet hash in the cache PATH (`.eslintcache/<hash>`): an
+  existing `.eslintcache` file makes ESLint skip the write silently (measured: exit 0, file unchanged), and `fix`
+  and the staged pass would need a wrapper too. Not covered: a package the stylesheet imports; delete `.eslintcache`
+  after upgrading `tailwindcss`.
+- **Status:** in force.
 
 ## The Node floor is computed from the lockfile, not written by hand
 
