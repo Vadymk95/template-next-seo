@@ -23,17 +23,30 @@
  * 3100 for the build), never on a port something already answers on, and its whole process group is
  * stopped on every way out, signals included. A probe that attached to another checkout's server
  * measured the wrong tree, and one that left `next dev` running made the next probe do the same.
+ * A probe that is killed outright (SIGKILL, a power cut) cannot clean up, so it records the group in
+ * `.probe/server.json`; the next run stops what is left of it, but only once the recorded start time
+ * and command prove that it is the same server (`scripts/server-group.mjs`).
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isEntryPoint } from './is-entry-point.mjs';
 import { findFreePort } from './run-on-free-port.mjs';
+import {
+    clearGroup,
+    groupIsAlive,
+    reapStaleGroup,
+    recordGroup,
+    stopGroup
+} from './server-group.mjs';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = '.probe';
+// Inside the folder the repository already ignores. The screenshots of the last run are cleared by
+// extension (`clearScreenshots`), never by removing the folder, so the record outlives that clearing.
+const GROUP_FILE = join(OUT_DIR, 'server.json');
 const DEFAULT_WIDTHS = [390, 768, 1440];
 const VIEWPORT_HEIGHT = 900;
 
@@ -130,6 +143,20 @@ export const launchProbeBrowser = (chromium) =>
     chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
 
 /**
+ * Removes the screenshots of the last run. The folder also holds the record of the server group a
+ * running, or a killed, probe started, which the next run reads to find a group nobody stopped:
+ * wiping the folder deleted that record unread.
+ */
+export const clearScreenshots = (dir = OUT_DIR) => {
+    mkdirSync(dir, { recursive: true });
+    for (const name of readdirSync(dir)) {
+        if (name.endsWith('.png')) {
+            rmSync(join(dir, name), { force: true });
+        }
+    }
+};
+
+/**
  * The signals that end the probe without running its `finally` blocks, each with the exit code of a
  * process ended by it (128 plus the number). SIGHUP is a closed terminal: the detached server is not
  * in the terminal's session, so it would be the one process left running.
@@ -137,23 +164,28 @@ export const launchProbeBrowser = (chromium) =>
 export const SIGNAL_EXIT_CODES = Object.freeze({ SIGINT: 130, SIGTERM: 143, SIGHUP: 129 });
 
 /**
- * Signals the server's whole process group. `npm run dev` starts `next dev`, which starts workers, so
- * signalling the npm wrapper alone (all `child.kill()` does) leaves them listening on the port. The
- * group exists because the server is spawned `detached`, and a negative pid addresses it. Where it
- * cannot be addressed (no such group, or Windows) the wrapper itself is signalled.
+ * What `stopGroup` reports once the group is no longer there. Any other outcome leaves it in doubt:
+ * `'unreachable'` means it was never signalled and may still hold the port.
  */
-export const killServerGroup = (
-    server,
-    { kill = (pid, signal) => process.kill(pid, signal), signal = 'SIGTERM' } = {}
-) => {
+const GROUP_LEFT = new Set(['terminated', 'killed', 'gone']);
+
+/**
+ * Stops the server's whole process group: SIGTERM, a bounded wait, then SIGKILL (`stopGroup`). `npm
+ * run dev` starts `next dev`, which starts workers, so signalling the npm wrapper alone (all
+ * `child.kill()` does) leaves them listening on the port. The group exists because the server is
+ * spawned `detached`, and a negative pid addresses it. Where it cannot be addressed, or is not there,
+ * the wrapper itself is signalled: that is all a platform without process groups has (Windows reports
+ * a negative pid as no such process).
+ */
+export const killServerGroup = async (server, tools = {}) => {
     if (server.pid === undefined) {
-        return;
+        return 'none';
     }
-    try {
-        kill(-server.pid, signal);
-    } catch {
-        server.kill(signal);
+    const outcome = await stopGroup(server.pid, tools);
+    if (outcome === 'gone' || outcome === 'unreachable') {
+        server.kill('SIGTERM');
     }
+    return outcome;
 };
 
 /**
@@ -178,8 +210,20 @@ export const startedServerAnswers = async (server, answers) => {
 /**
  * Starts the server on the first free port from `basePort`, runs `body({ server, port })` and stops
  * the server's whole process group on every way out: the body returning, the body failing, SIGINT,
- * SIGTERM, SIGHUP and any other exit of the process. The search, the spawn and the process are
- * injected, so the cases need no real server.
+ * SIGTERM, SIGHUP and any other exit of the process.
+ *
+ * It first stops the group an earlier probe left behind if that probe died without cleaning up, and
+ * records its own group in `groupFile` right after the spawn. It removes that record once the group
+ * is known to be gone (`stopGroup` said `'terminated'`, `'killed'` or `'gone'`) and only while the
+ * file still holds this run's own record: a probe started later in the same checkout overwrites it.
+ * A group that could not be signalled (`'unreachable'`) keeps its record, because it may still hold
+ * the port and the next run is the one that can say so. The exit of the process is the one way out
+ * that cannot wait for the stop to finish: the SIGTERM goes out at once, the record stays, and the
+ * next run settles whatever is left.
+ *
+ * The search, the spawn, the process, the log and everything the group record touches (`group`: the
+ * signal, the liveness check, `ps`, the pause and the file) are injected, so the cases need no real
+ * server.
  */
 export const withServer = async (
     {
@@ -189,39 +233,64 @@ export const withServer = async (
         findPort = findFreePort,
         spawnServer = spawn,
         proc = process,
-        kill
+        groupFile = GROUP_FILE,
+        group = {},
+        log = (line) => {
+            console.log(`probe: ${line}`);
+        }
     },
     body
 ) => {
+    await reapStaleGroup({ file: groupFile, log, ...group });
+
     const port = await findPort(basePort);
-    const server = spawnServer(
-        'npm',
-        ['run', useDev ? 'dev' : 'start', '--', '--port', String(port)],
-        {
-            stdio: 'ignore',
-            shell: false,
-            detached: true,
-            env: { ...environment, PORT: String(port) }
-        }
-    );
+    const args = ['run', useDev ? 'dev' : 'start', '--', '--port', String(port)];
+    const server = spawnServer('npm', args, {
+        stdio: 'ignore',
+        shell: false,
+        detached: true,
+        env: { ...environment, PORT: String(port) }
+    });
+
+    let stopping;
     const stop = () => {
-        killServerGroup(server, { kill });
+        stopping ??= (async () => {
+            const outcome = await killServerGroup(server, group);
+            if (GROUP_LEFT.has(outcome)) {
+                clearGroup(groupFile, server.pid, group);
+            }
+        })();
+        return stopping;
+    };
+    // An exit handler cannot wait. The SIGTERM that `stop` sends before its first pause goes out now
+    // (and nothing is sent twice when a stop is already under way); the rest, the pause, the SIGKILL
+    // and the removal of the record, never runs. So the record goes here when the group has already
+    // left, as it usually has when another exit handler ends the process after a Ctrl-C, and stays
+    // when the group is still there, for the next run to settle.
+    const stopAtExit = () => {
+        void stop();
+        if (server.pid !== undefined && !groupIsAlive(server.pid, group.kill)) {
+            clearGroup(groupFile, server.pid, group);
+        }
     };
     const onSignal = Object.entries(SIGNAL_EXIT_CODES).map(([signal, code]) => [
         signal,
-        () => {
-            stop();
+        async () => {
+            await stop();
             proc.exit(code);
         }
     ]);
     for (const [signal, handler] of onSignal) proc.once(signal, handler);
-    proc.once('exit', stop);
+    proc.once('exit', stopAtExit);
     try {
+        if (server.pid !== undefined) {
+            recordGroup(groupFile, { pid: server.pid, port, args }, group);
+        }
         return await body({ server, port });
     } finally {
         for (const [signal, handler] of onSignal) proc.off(signal, handler);
-        proc.off('exit', stop);
-        stop();
+        proc.off('exit', stopAtExit);
+        await stop();
     }
 };
 
@@ -236,8 +305,7 @@ const run = async () => {
         }
     }
 
-    rmSync(OUT_DIR, { recursive: true, force: true });
-    mkdirSync(OUT_DIR, { recursive: true });
+    clearScreenshots();
 
     const { chromium } = await import('@playwright/test');
     const basePort = Number(process.env.PORT ?? (useDev ? 3000 : 3100));
@@ -304,4 +372,4 @@ if (isEntryPoint(import.meta.url)) {
     await run();
 }
 
-export { OUT_DIR, DEFAULT_WIDTHS, SCRIPTS_DIR };
+export { OUT_DIR, GROUP_FILE, DEFAULT_WIDTHS, SCRIPTS_DIR };

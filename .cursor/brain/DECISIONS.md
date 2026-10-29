@@ -5,11 +5,12 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Decision | Date | Status |
 | --- | --- | --- |
 | The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types | 2026-10 | in force |
-| Tailwind scans app code only: `@source not` for tests, docs and tooling | 2026-10 | in force |
+| Tailwind scans only the folders that hold markup: an `@source` allowlist | 2026-10 | in force |
 | The logger writes each level through its own console method | 2026-10 | in force |
 | The rate limiter follows Next's Server Action rule and logs no client address | 2026-10 | in force |
 | The Web Vitals sink logs a validated allowlist, never the posted body | 2026-10 | in force |
 | Gate scripts cannot pass silently or race on ports | 2026-10 | in force |
+| A probe's server group is recorded, so a killed probe cannot leave it running | 2026-10 | in force |
 | The Node floor is computed from the lockfile, not written by hand | 2026-10 | in force |
 | Each page states its own social preview, with its own image file | 2026-10 | in force |
 | Vendor `splitChunks` groups take JavaScript modules only | 2026-10 | in force |
@@ -81,27 +82,35 @@ Why things are the way they are, one entry per decision. History lives in `git l
   package's files are not hashed).
 - **Status:** in force.
 
-## Tailwind scans app code only: `@source not` for tests, docs and tooling
+## Tailwind scans only the folders that hold markup: an `@source` allowlist
 
 2026-10 · in force · guard `app/globals.test.ts` · evidence: `app/globals.css`
 
 - **Context:** Tailwind 4 ships a rule for every class-shaped string in every file git does not ignore, so a class
   quoted in a test, a spec, a script, a root config file, a Markdown page or an agent rule became CSS that no page
   uses. Measured with the production PostCSS pipeline: 20 stray utility rules, 13 `@property` registrations and a
-  forced-colors block; 27,012 B minified (5,723 B gzip) before, 23,920 B (5,338 B) after. A cold compile took about
-  68 ms before and 52 ms after (median of seven fresh processes), so the gain that matters is bytes shipped.
-- **Decision:** eight `@source not` lines in `app/globals.css`: tests and specs, `e2e/`, `scripts/`, root `*.config.*`,
-  Markdown and MDX, `.cursor/`, `.github/`, `.claude/`. The config line is anchored to the root, so a nested
-  `site.config.ts` stays scanned. `messages/*.json` stays scanned; it is app copy. The scanner already skips the
-  gitignored coverage and report folders. `app/globals.test.ts` compiles the real stylesheet with the real PostCSS
-  plugin over a throwaway project and fails when a sentinel class of any excluded kind ships, or when an app folder
-  stops shipping; a control compile proves that each fixture is scanned without the lines. The test imports the
-  stylesheet, so that `vitest run --changed` selects it on a CSS-only edit; Vitest swaps every CSS import, `?raw`
-  included, for an empty module, so the test reads the text with `fs`. Cost: 0.26 s, no Next build.
-- **Consequences:** a fork that renders Markdown or MDX with utility classes in it narrows the Markdown line. Words in
-  `messages/*.json` can still ship a utility: the word "table" ships `.table`. The selection edge relies on two Vitest
-  4.1 internals (the plugin that empties a CSS import, and the walk over a test's transformed imports), so after a
-  Vitest bump `vitest related app/globals.css --run` must still select the test.
+  forced-colors block; 27,012 B minified (5,723 B gzip) before, 23,920 B (5,338 B) after (the earlier measurement; both
+  forms now 23,918 B); a cold compile of about 68 ms before and 52 ms after (median of seven fresh processes). That fix
+  was a deny list of eight `@source not` lines: a folder added later was scanned, strays included, and nothing failed.
+- **Decision:** `@import 'tailwindcss' source(none)` turns the automatic scan off and four `@source` lines name what is
+  read: `app/`, `features/`, `shared/` and `messages/` (app copy, so it stays scanned). One `@source not` line keeps
+  the tests and specs inside them out. A folder with class names that is added later needs one `@source` line; one
+  without needs nothing. Inside a named folder the scanner still skips what git ignores, and `tw-animate-css` still
+  resolves (both checked by compile). Compiled over this repository the two forms give the same bytes (29,185 B, or
+  23,918 B minified), so what changes is what a new folder does, not what ships today. `app/globals.test.ts` compiles
+  the real stylesheet with the real PostCSS plugin over a throwaway project and fails when a sentinel class ships from
+  a file the lines leave out (a script, a config, Markdown, tooling, an unlisted folder, a test or spec), when a named
+  folder stops shipping, when removing one `@source` line does not stop its folder shipping, when a named folder does
+  not exist, and when a top-level folder that holds markup files (`.tsx`, `.jsx`, `.html`, `.mdx`, `.vue`, `.svelte`)
+  is neither named, nor listed as not rendered from, nor ignored by git; a control compile proves each fixture is
+  scanned without the allowlist. The test imports the stylesheet, so that `vitest run --changed` selects it on a
+  CSS-only edit; Vitest swaps every CSS import, `?raw` included, for an empty module, so it reads the text with `fs`.
+- **Consequences:** a fork that adds a top-level folder with markup files adds a line, and the test names the folder
+  until it does; the test cannot see classes held only in a `.ts` or `.js` file of a new folder, so that folder needs
+  the `@source` line by hand. A fork that renders Markdown or MDX with utility classes in it names that folder too.
+  Words in `messages/*.json` can still ship a utility: the word "table" ships `.table`. The selection edge relies on two
+  Vitest 4.1 internals (the plugin that empties a CSS import, and the walk over a test's transformed imports), so after
+  a Vitest bump `vitest related app/globals.css --run` must still select the test.
 - **Status:** in force.
 
 ## The logger writes each level through its own console method
@@ -143,13 +152,17 @@ Why things are the way they are, one entry per decision. History lives in `git l
 2026-10 · in force · guard `app/api/vitals/route.test.ts` · evidence: `app/api/vitals/route.ts`
 
 - **Context:** the beacon is a whole web-vitals `Metric`, with `entries`, `navigationURL` and an id, posted by any
-  client, and `info` lines now reach production logs.
-- **Decision:** the route logs only `name`, `value`, `delta`, `rating` and `navigationType`, each checked against the
-  sets that `Metric` declares. Each enum carries `satisfies`, so a web-vitals bump that drops a value fails typecheck.
-  Other keys are dropped. A bad or non-JSON body logs `{ invalid: true }`. The answer stays 204, and
-  `requireSameOrigin` stays first.
+  client, and `info` lines now reach production logs. A line without the page says that a metric was slow, not where.
+- **Decision:** the route logs `name`, `value`, `delta`, `rating` and `navigationType`, each checked against the sets
+  that `Metric` declares, and `page`, the path of the posted `navigationURL`. Each enum carries `satisfies`, so a
+  web-vitals bump that drops a value fails typecheck. `page` is read from the raw body, not the schema, so a missing or
+  malformed URL leaves the key out and never turns a valid metric into the invalid marker. Only `http:` and `https:`
+  URLs count, because the pathname of `mailto:` is the address; the query, the hash, the credentials and the origin
+  are dropped, and the path is cut at 512 characters, the limit of the CSP report route. Other keys are dropped. A bad
+  or non-JSON body logs `{ invalid: true }`. The answer stays 204, and `requireSameOrigin` stays first.
 - **Consequences:** a name or navigation type that the library adds later logs the marker until the schema names it.
-  Production writes one info line per metric per page view, five validated fields each.
+  Production writes one info line per metric per page view, five validated fields and the page path each. A fork whose
+  routes put an identifier in a path segment logs it, so it templates the path or drops `page` first.
 - **Status:** in force.
 
 ## Gate scripts cannot pass silently or race on ports
@@ -177,6 +190,32 @@ Why things are the way they are, one entry per decision. History lives in `git l
   `import.meta.main` (Node 24.2 and later, experimental): a script run by an older Node reads `undefined` and skips its
   check, which is the fail-open class this decision closes. These scripts now differ from the sibling templates until
   the same edit lands there.
+- **Status:** in force.
+
+## A probe's server group is recorded, so a killed probe cannot leave it running
+
+2026-10 · in force · guards `scripts/server-group.test.mjs`, `scripts/probe.test.mjs` · evidence: `scripts/server-group.mjs`
+
+- **Context:** the probe starts its server detached, so the server leads a process group of its own and the probe's
+  signal handlers stop it on a Ctrl-C, a closed terminal or a failed browser launch. A SIGKILL or a power cut runs no
+  handler: the group outlived the probe and kept its port, so the next probe found the port busy and moved on, with
+  the old server still running. Checked on this template's production server: the npm wrapper and the `next-server`
+  worker that holds the port share one group, and after a SIGKILL of the probe the next run stopped it. The other
+  measurements behind the rules below (a zombie leader answers signal 0, what `ps` prints for the wrapper) are in the
+  header of `scripts/server-group.mjs`.
+- **Decision:** right after the spawn the probe writes `.probe/server.json` (pid, port, arguments, the owner's pid and
+  the start time from `ps`), and the next run reads it before it looks for a port. A recorded group is stopped only
+  when all of these hold: the run that recorded it is gone, the group exists, the process at that pid started when the
+  record says (a second of tolerance), and its command line carries every argument the server was started with, whole
+  words, the `--` left out. Anything else is left alone, with one line saying why; nothing is signalled by port or by
+  program name. Stopping is SIGTERM, a bounded asynchronous wait of 3 s, then SIGKILL. The record is removed only once
+  the group is gone and only while the file still holds this run's own record, because probes in one checkout share it
+  and the last to start owns it; a group that could not be signalled keeps it. `clearScreenshots` removes `*.png` only,
+  since wiping the folder deleted the record unread. `scripts/server-group.mjs` knows no server, so the sibling
+  templates take it unchanged.
+- **Consequences:** where `ps` is missing the next run confirms nothing and signals nothing, and where process groups
+  are missing (Windows) the probe stops the wrapper alone, as before. For a production probe the build runs before the
+  record is read, so a stale server is still running during the build and is stopped just before the new one starts.
 - **Status:** in force.
 
 ## The Node floor is computed from the lockfile, not written by hand

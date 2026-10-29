@@ -27,7 +27,7 @@
 | `app/api/health/route.ts`       | Health check                                                       |
 | `app/api/example-form/route.ts` | JSON sample API (non-browser clients; forms use Server Action)      |
 | `app/api/csp-report/route.ts`   | CSP `report-to` ingest (POST)                                     |
-| `app/api/vitals/route.ts`       | `sendBeacon` Web Vitals (POST → 204)                               |
+| `app/api/vitals/route.ts`       | Web Vitals sink, posted by `fetch` with `keepalive`: logs a validated allowlist and the page as a path without its query (POST → 204) |
 | `app/actions/example-form.ts`   | Server Action example                                              |
 | `next.config.ts` (repo root)    | Static CSP + security headers on `/:path*`, experimental knobs, webpack vendor `splitChunks`, tracing/Turbopack root |
 
@@ -40,7 +40,7 @@
 ## Features / entities
 
 - **`features/example-form/`**: UI + model (Zod schema, types); consumed by `app/[locale]/example-form`.
-- **`entities/`**: FSD slot for domain slices; directory is intentionally absent in baseline and is created when first real domain entity appears.
+- **`entities/`**: FSD slot for domain slices; directory is intentionally absent in baseline and is created when first real domain entity appears. Tailwind reads only the folders `app/globals.css` names with `@source`, so the first markup under `entities/` needs `@source '../entities';` there, then one `APP_SOURCES` fixture under `entities/` in `app/globals.test.ts` (the test fails until both exist). The test finds a new folder by its markup files only: classes held only in a `.ts` or `.js` file of a new folder need the `@source` line by hand.
 - **Absent in the baseline on purpose:** `hooks/` (keep slice-local hooks under `features/*` / `entities/*`, or create it with the first shared hook) and any `loading.tsx` (add one per segment when a route gains slow data fetching).
 
 ## Data flow (high level)
@@ -48,7 +48,7 @@
 1. **Server**: RSC pages fetch or render static content; Server Actions / Route Handlers under `app/api`, `app/actions`.
 2. **Client**: `'use client'` islands; add TanStack Query only if the app introduces it (not in default `package.json`; the recipe is `.cursor/brain/EXTENSIONS.md` Phase 1d).
 3. **i18n**: next-intl SSR — `proxy.ts` composes next-intl middleware for document routes (locale redirect / rewrite), `[locale]` segment calls `setRequestLocale` + `getMessages`, server uses `getTranslations`, client islands use `useTranslations` inside `NextIntlClientProvider`. Single source: `messages/<locale>.json`.
-4. **Web Vitals**: Build-time attribution hints (`next.config` experimental) plus runtime `sendBeacon` ingestion at `/api/vitals` from the root reporter.
+4. **Web Vitals**: Build-time attribution hints (`next.config` experimental) plus runtime ingestion by `fetch` with `keepalive` at `/api/vitals` from the root reporter; the route logs the page as a path, never the query.
 5. **Beyond the baseline**: a real backend, auth, error monitoring, analytics, a second locale, remote images and the deploy are not wired here; `.cursor/brain/EXTENSIONS.md` holds one recipe per integration and says where each plugs into the files above.
 
 ## Bundling (webpack production)
