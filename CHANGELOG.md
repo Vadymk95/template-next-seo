@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.8](https://github.com/Vadymk95/template-next-seo/compare/v1.2.7...v1.2.8) (2026-10-29)
+
+
+### Bug fixes
+
+* **gate:** lessons from a fork build: vitals page path, probe stop, Tailwind, docs rules ([#129](https://github.com/Vadymk95/template-next-seo/issues/129)) ([5c0f7f9](https://github.com/Vadymk95/template-next-seo/commit/5c0f7f973a4ce3871fc2089bcd92d832c906f202))
+
 ## [1.2.7](https://github.com/Vadymk95/template-next-seo/compare/v1.2.6...v1.2.7) (2026-10-29)
 
 
