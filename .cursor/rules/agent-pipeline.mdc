@@ -67,7 +67,7 @@ Root-cause first; then fix; re-run the full loop.
 
 ### 4.3 Manual pass and self-review
 
-RSC vs client boundaries for touched files; SEO routes (`sitemap`, `robots`, metadata) if URLs or env changed; logging per `resilience.mdc`. Then the diff: plan alignment, ghost principle, regression on callers.
+RSC vs client boundaries for touched files; SEO routes (`sitemap`, `robots`, metadata) if URLs or env changed; logging per `resilience.mdc`. Then the diff: plan alignment, ghost principle, regression on callers. Find each changed module's importers by SYMBOL (`rg -w <exportName>`), never by file path: a directory import (`@/shared/ui/common/X`) or a barrel re-export hides the path.
 
 ---
 
@@ -105,8 +105,10 @@ Green means nothing until you know the gate can go red.
    Piping to `tail` returns the PIPE's status, so a failed run reads as a pass. Same rule for any
    stage you run. **And after a push: gate output present in the terminal is part of the contract —
    silence is a failure, not a pass.**
-2. **Mutation-check the tests**: if mentally reverting your change leaves the suite green, the test is
-   worthless. Writing a test is Step 3; proving it would have failed is this step.
+2. **Mutation-check the tests** in your head, not on disk: if reverting your change would leave the suite
+   green, the test is worthless. Writing a test is Step 3; proving it would have failed is this step. Do not
+   edit the code, run the tests and restore it: a physical mutation is for a NEW gate only (item 3), and a
+   pure file move needs none.
 3. **Prove a new gate gates**: break it on purpose once — an expired entry in
    `scripts/audit-allowlist.json`, a raw hex in a component, a staged logic file with no
    `*.test.*` sibling — and watch it refuse. Then revert the sabotage.

@@ -1,13 +1,19 @@
 import { EventEmitter } from 'node:events';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+    clearScreenshots,
+    GROUP_FILE,
     hasRenderedContent,
     killServerGroup,
     launchProbeBrowser,
     measureInPage,
+    OUT_DIR,
     parseProbeArgs,
     slugForPath,
     startedServerAnswers,
@@ -209,13 +215,84 @@ describe('launchProbeBrowser', () => {
     });
 });
 
+describe('clearScreenshots', () => {
+    /* The folder also holds the record of the server a running, or a killed, probe started: the next
+       run reads it to find a group nobody stopped. Wiping the whole folder deleted it unread. */
+    const folders = [];
+    const folder = () => {
+        const dir = mkdtempSync(join(tmpdir(), 'probe-out-'));
+        folders.push(dir);
+        return dir;
+    };
+    afterEach(() => {
+        for (const dir of folders.splice(0)) {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('removes the screenshots of the last run', () => {
+        const dir = folder();
+        writeFileSync(join(dir, 'login-390.png'), 'png');
+        writeFileSync(join(dir, 'root-1440.png'), 'png');
+
+        clearScreenshots(dir);
+
+        expect(existsSync(join(dir, 'login-390.png'))).toBe(false);
+        expect(existsSync(join(dir, 'root-1440.png'))).toBe(false);
+    });
+
+    it('keeps the record of a server group, which is not a screenshot', () => {
+        const dir = folder();
+        writeFileSync(join(dir, 'server.json'), '{}');
+        writeFileSync(join(dir, 'login-390.png'), 'png');
+
+        clearScreenshots(dir);
+
+        expect(existsSync(join(dir, 'server.json'))).toBe(true);
+    });
+
+    it('creates the folder when it is not there yet', () => {
+        const dir = join(folder(), 'nested');
+
+        clearScreenshots(dir);
+
+        expect(existsSync(dir)).toBe(true);
+    });
+
+    it('keeps the record inside the folder the repository already ignores', () => {
+        const ignored = readFileSync(join(import.meta.dirname, '..', '.gitignore'), 'utf8')
+            .split('\n')
+            .map((line) => line.trim());
+
+        expect(dirname(GROUP_FILE)).toBe(OUT_DIR);
+        expect(ignored).toContain(`${OUT_DIR}/`);
+    });
+
+    // `run` is the one caller and it needs a build and a browser, so the case reads the source: a
+    // probe that wipes the folder itself reads no record, whatever `clearScreenshots` keeps.
+    it('is what the probe runs to clear the folder, which nothing else removes', () => {
+        const source = readFileSync(join(import.meta.dirname, 'probe.mjs'), 'utf8');
+
+        expect(source).toContain('clearScreenshots();');
+        expect(source).not.toMatch(/rmSync\(\s*OUT_DIR/);
+    });
+});
+
 /* The server the probe starts is `npm run dev`, which starts `next dev`, which starts workers. Three
-   things went wrong with a bare `spawn` and `server.kill()`: the probe took port 3000 whether or not
+   things went wrong with a bare `spawn` and `server.kill()`: the probe took its port whether or not
    something already answered there and measured THAT server (another checkout's tree); a signal or a
-   failed browser launch skipped the cleanup; and killing the npm wrapper left `next dev` listening.
-   Nothing below starts a real server: the spawn, the port search and the process are injected. */
+   failed browser launch skipped the cleanup; and signalling the npm wrapper alone left the server
+   listening. A fourth surfaced with the fix: a probe killed outright runs no cleanup at all, so its
+   group is recorded in a file the next run reads. Nothing below starts a real server: the spawn, the
+   port search, the process, the signal table and the file of the record are all injected. */
 describe('withServer', () => {
     const PID = 4242;
+    const STALE = 5151;
+    const OTHER = 6363;
+    const START = 'Thu Oct 29 14:13:04 2026';
+    const RECORD = 'out/server.json';
+    const serverArgs = (port, script = 'dev') => ['run', script, '--', '--port', String(port)];
+    const failure = (code) => Object.assign(new Error(code), { code });
     const fakeServer = (overrides = {}) => ({
         pid: PID,
         exitCode: null,
@@ -224,30 +301,83 @@ describe('withServer', () => {
         ...overrides
     });
 
-    /* `findPort` is a stub that returns the base port unless the case hands one in; `realSearch`
-       leaves it out, so the case meets the search `withServer` uses by default. */
+    /* `groups` and `processes` are what already runs; a spawned server joins `groups`. SIGKILL always
+       ends a group, any other signal only when `endsOn` names it, so `endsOn: 'SIGKILL'` is a server
+       that ignores SIGTERM. `files` is the disk the record lives on. `findPort` is a stub that returns
+       the base port unless the case hands one in; `realSearch` leaves it out, so the case meets the
+       search `withServer` uses by default. */
     const setup = ({
         server = fakeServer(),
         findPort,
         realSearch = false,
         useDev = true,
-        basePort = 3000
+        basePort = 3000,
+        groups = [],
+        processes = [],
+        files = {},
+        endsOn = 'SIGTERM'
     } = {}) => {
-        const spawnServer = vi.fn(() => server);
-        const kill = vi.fn();
+        const liveGroups = new Set(groups);
+        const liveProcesses = new Set(processes);
+        const kill = vi.fn((target, signal) => {
+            if (signal === 0) {
+                const alive = target < 0 ? liveGroups.has(-target) : liveProcesses.has(target);
+                if (!alive) {
+                    throw failure('ESRCH');
+                }
+                return true;
+            }
+            if (!liveGroups.has(-target)) {
+                throw failure('ESRCH');
+            }
+            if (signal === endsOn || signal === 'SIGKILL') {
+                liveGroups.delete(-target);
+            }
+            return true;
+        });
+        const sent = () => kill.mock.calls.filter(([, signal]) => signal !== 0);
+        const disk = new Map(Object.entries(files));
+        const spawnServer = vi.fn(() => {
+            if (server.pid !== undefined) {
+                liveGroups.add(server.pid);
+            }
+            return server;
+        });
         const proc = Object.assign(new EventEmitter(), { exit: vi.fn() });
+        const log = vi.fn();
+        const group = {
+            kill,
+            identify: () => ({ start: START, command: serverArgs(3000).join(' ') }),
+            wait: () => Promise.resolve(),
+            termMs: 300,
+            pollMs: 100,
+            read: (file) => {
+                if (!disk.has(file)) {
+                    throw failure('ENOENT');
+                }
+                return disk.get(file);
+            },
+            write: (file, text) => {
+                disk.set(file, text);
+            },
+            remove: (file) => {
+                disk.delete(file);
+            }
+        };
         const options = {
             useDev,
             basePort,
             environment: { KEEP: 'yes', PORT: 'stale' },
             spawnServer,
             proc,
-            kill
+            groupFile: RECORD,
+            group,
+            log
         };
         if (!realSearch) {
             options.findPort = findPort ?? vi.fn((base) => Promise.resolve(base));
         }
-        return { server, spawnServer, kill, proc, options };
+        return { server, spawnServer, kill, sent, proc, options, disk, log, liveGroups };
     };
 
     const held = [];
@@ -265,7 +395,7 @@ describe('withServer', () => {
 
             expect(spawnServer).toHaveBeenCalledExactlyOnceWith(
                 'npm',
-                ['run', 'dev', '--', '--port', '3000'],
+                serverArgs(3000),
                 expect.objectContaining({ detached: true, shell: false, stdio: 'ignore' })
             );
             expect(spawnServer.mock.calls[0][2].env).toMatchObject({ KEEP: 'yes', PORT: '3000' });
@@ -276,7 +406,7 @@ describe('withServer', () => {
 
             await withServer(options, () => Promise.resolve());
 
-            expect(spawnServer.mock.calls[0][1]).toEqual(['run', 'start', '--', '--port', '3100']);
+            expect(spawnServer.mock.calls[0][1]).toEqual(serverArgs(3100, 'start'));
         });
 
         it('moves to the port the search returns when the base port is busy', async () => {
@@ -290,7 +420,7 @@ describe('withServer', () => {
             });
 
             expect(findPort).toHaveBeenCalledExactlyOnceWith(3000);
-            expect(spawnServer.mock.calls[0][1]).toEqual(['run', 'dev', '--', '--port', '3007']);
+            expect(spawnServer.mock.calls[0][1]).toEqual(serverArgs(3007));
             expect(spawnServer.mock.calls[0][2].env.PORT).toBe('3007');
             expect(seen).toBe(3007);
         });
@@ -311,7 +441,7 @@ describe('withServer', () => {
 
         it('starts nothing, and hooks nothing, when no port is free', async () => {
             const findPort = vi.fn(() => Promise.reject(new Error('No free port within 20')));
-            const { options, spawnServer, proc } = setup({ findPort });
+            const { options, spawnServer, proc, disk } = setup({ findPort });
 
             await expect(withServer(options, () => Promise.resolve())).rejects.toThrow(
                 /No free port/
@@ -319,26 +449,28 @@ describe('withServer', () => {
 
             expect(spawnServer).not.toHaveBeenCalled();
             expect(proc.listenerCount('SIGINT')).toBe(0);
+            expect(disk.has(RECORD)).toBe(false);
         });
     });
 
     describe('stopping it', () => {
         it('signals the whole group, not the wrapper, when the body succeeds', async () => {
-            const { options, kill } = setup();
+            const { options, sent, server } = setup();
 
             await withServer(options, () => Promise.resolve());
 
-            expect(kill).toHaveBeenCalledExactlyOnceWith(-PID, 'SIGTERM');
+            expect(sent()).toEqual([[-PID, 'SIGTERM']]);
+            expect(server.kill).not.toHaveBeenCalled();
         });
 
         it('signals the group when the body fails, and lets the failure through', async () => {
-            const { options, kill } = setup();
+            const { options, sent } = setup();
 
             await expect(
                 withServer(options, () => Promise.reject(new Error('browser did not launch')))
             ).rejects.toThrow('browser did not launch');
 
-            expect(kill).toHaveBeenCalledExactlyOnceWith(-PID, 'SIGTERM');
+            expect(sent()).toEqual([[-PID, 'SIGTERM']]);
         });
 
         /* SIGHUP is a closed terminal: the detached server is not in the terminal's session, so it
@@ -348,26 +480,78 @@ describe('withServer', () => {
             ['SIGTERM', 143],
             ['SIGHUP', 129]
         ])('signals the group on %s and exits with %i', async (signal, code) => {
-            const { options, kill, proc } = setup();
+            const { options, sent, proc } = setup();
 
             await withServer(options, () => {
                 proc.emit(signal);
                 return Promise.resolve();
             });
 
-            expect(kill).toHaveBeenCalledWith(-PID, 'SIGTERM');
+            expect(sent()).toEqual([[-PID, 'SIGTERM']]);
             expect(proc.exit).toHaveBeenCalledExactlyOnceWith(code);
         });
 
-        it('signals the group on any other way out of the process', async () => {
-            const { options, kill, proc } = setup();
+        it('ends the process only after the stop is over, SIGKILL and the record included', async () => {
+            // The group ignores SIGTERM, so the stop has to wait and escalate before the exit.
+            const { options, sent, proc, disk } = setup({ endsOn: 'SIGKILL' });
+            let atExit;
+            proc.exit.mockImplementation(() => {
+                atExit = { sent: sent(), record: disk.has(RECORD) };
+            });
 
             await withServer(options, () => {
+                proc.emit('SIGINT');
+                return Promise.resolve();
+            });
+
+            expect(atExit).toEqual({
+                sent: [
+                    [-PID, 'SIGTERM'],
+                    [-PID, 'SIGKILL']
+                ],
+                record: false
+            });
+        });
+
+        it('signals the group the moment the process is ending, and keeps the record while the group is still there', async () => {
+            // `endsOn: 'SIGKILL'`: the group outlives SIGTERM for a moment, as a real one does.
+            const { options, sent, proc, disk } = setup({ endsOn: 'SIGKILL' });
+
+            await withServer(options, () => {
+                proc.emit('exit');
+                // An exit handler cannot wait: nothing after it runs, so the signal has to be out
+                // already and the record has to be there for the run that follows to read.
+                expect(sent()).toEqual([[-PID, 'SIGTERM']]);
+                expect(disk.has(RECORD)).toBe(true);
+                return Promise.resolve();
+            });
+
+            expect(sent().slice(0, 1)).toEqual([[-PID, 'SIGTERM']]);
+        });
+
+        /* After a Ctrl-C the browser library's own handler can end the process before the stop has
+           finished its pause; the group is usually gone by then, and its record is no use. */
+        it('removes the record at once when the process ends after the group has already left', async () => {
+            const { options, proc, disk, liveGroups } = setup();
+
+            await withServer(options, () => {
+                liveGroups.delete(PID);
+                proc.emit('exit');
+                expect(disk.has(RECORD)).toBe(false);
+                return Promise.resolve();
+            });
+        });
+
+        it('signals once when a signal and the end of the body both ask', async () => {
+            const { options, sent, proc } = setup();
+
+            await withServer(options, () => {
+                proc.emit('SIGINT');
                 proc.emit('exit');
                 return Promise.resolve();
             });
 
-            expect(kill).toHaveBeenCalledWith(-PID, 'SIGTERM');
+            expect(sent()).toEqual([[-PID, 'SIGTERM']]);
         });
 
         it('is listening for the signals while the body runs, and only then', async () => {
@@ -390,32 +574,234 @@ describe('withServer', () => {
         });
 
         it('does not signal a second time for a signal that arrives after it stopped', async () => {
-            const { options, kill, proc } = setup();
+            const { options, sent, proc } = setup();
 
             await withServer(options, () => Promise.resolve());
             proc.emit('SIGINT');
 
-            expect(kill).toHaveBeenCalledTimes(1);
+            expect(sent()).toHaveLength(1);
+        });
+
+        it('kills a group that ignores SIGTERM once the grace period is spent', async () => {
+            const { options, sent } = setup({ endsOn: 'SIGKILL' });
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(sent()).toEqual([
+                [-PID, 'SIGTERM'],
+                [-PID, 'SIGKILL']
+            ]);
+        });
+    });
+
+    describe('the record of the group', () => {
+        // What a second probe in the same checkout writes while this one runs: the file is shared and
+        // the last to start owns it, so it names a group that is not this run's.
+        const theirs = JSON.stringify({
+            pid: OTHER,
+            port: 3001,
+            args: serverArgs(3001),
+            owner: 1,
+            start: START
+        });
+
+        it('is written right after the spawn, while the body runs', async () => {
+            const { options, disk } = setup();
+            let during;
+
+            await withServer(options, () => {
+                during = JSON.parse(disk.get(RECORD));
+                return Promise.resolve();
+            });
+
+            expect(during).toEqual({
+                pid: PID,
+                port: 3000,
+                args: serverArgs(3000),
+                owner: process.pid,
+                start: START
+            });
+        });
+
+        it('is removed when the body succeeds', async () => {
+            const { options, disk } = setup();
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(disk.has(RECORD)).toBe(false);
+        });
+
+        it('is removed when the body fails', async () => {
+            const { options, disk } = setup();
+
+            await expect(
+                withServer(options, () => Promise.reject(new Error('browser did not launch')))
+            ).rejects.toThrow('browser did not launch');
+
+            expect(disk.has(RECORD)).toBe(false);
+        });
+
+        it('is removed after a signal as well', async () => {
+            const { options, disk, proc } = setup();
+
+            await withServer(options, () => {
+                proc.emit('SIGINT');
+                return Promise.resolve();
+            });
+
+            expect(disk.has(RECORD)).toBe(false);
+        });
+
+        it('is removed once a group that ignored SIGTERM has been killed', async () => {
+            const { options, disk } = setup({ endsOn: 'SIGKILL' });
+
+            await withServer(options, () => Promise.resolve());
+
+            expect(disk.has(RECORD)).toBe(false);
+        });
+
+        it('is removed when the group had already left before the stop', async () => {
+            const { options, disk, liveGroups } = setup();
+
+            await withServer(options, () => {
+                liveGroups.delete(PID);
+                return Promise.resolve();
+            });
+
+            expect(disk.has(RECORD)).toBe(false);
+        });
+
+        /* A group that could not be signalled was never asked to stop and may still hold the port. Its
+           record is what lets the next run say so. */
+        it('is kept when the group could not be signalled', async () => {
+            const { options, disk, server } = setup();
+            const refused = vi.fn((_target, signal) => {
+                if (signal === 0) {
+                    return true;
+                }
+                throw failure('EPERM');
+            });
+
+            await withServer({ ...options, group: { ...options.group, kill: refused } }, () =>
+                Promise.resolve()
+            );
+
+            expect(server.kill).toHaveBeenCalledExactlyOnceWith('SIGTERM');
+            expect(disk.has(RECORD)).toBe(true);
+        });
+
+        it("is left alone when another run has written its own since: it is not this run's to remove", async () => {
+            const { options, disk, sent } = setup();
+
+            await withServer(options, () => {
+                disk.set(RECORD, theirs);
+                return Promise.resolve();
+            });
+
+            expect(sent()).toEqual([[-PID, 'SIGTERM']]);
+            expect(disk.get(RECORD)).toBe(theirs);
+        });
+
+        it("is left alone by the end of the process as well, when it is another run's", async () => {
+            const { options, proc, disk, liveGroups } = setup();
+
+            await withServer(options, () => {
+                liveGroups.delete(PID);
+                disk.set(RECORD, theirs);
+                proc.emit('exit');
+                expect(disk.get(RECORD)).toBe(theirs);
+                return Promise.resolve();
+            });
+        });
+
+        it('is not written for a server that never got a pid', async () => {
+            const { options, disk, sent } = setup({ server: fakeServer({ pid: undefined }) });
+            let during;
+
+            await withServer(options, () => {
+                during = disk.has(RECORD);
+                return Promise.resolve();
+            });
+
+            expect(during).toBe(false);
+            expect(sent()).toEqual([]);
+        });
+    });
+
+    describe('a group an earlier run left behind', () => {
+        const stale = (overrides = {}) =>
+            JSON.stringify({
+                pid: STALE,
+                port: 3000,
+                args: serverArgs(3000),
+                owner: 1,
+                start: START,
+                ...overrides
+            });
+
+        it('is stopped before a port is chosen, so its port is free when the search looks', async () => {
+            const findPort = vi.fn();
+            const harness = setup({ groups: [STALE], files: { [RECORD]: stale() }, findPort });
+            let sentWhenSearching;
+            findPort.mockImplementation((base) => {
+                sentWhenSearching = harness.sent();
+                return Promise.resolve(base);
+            });
+
+            await withServer(harness.options, () => Promise.resolve());
+
+            expect(sentWhenSearching).toEqual([[-STALE, 'SIGTERM']]);
+            expect(harness.log).toHaveBeenCalledWith(expect.stringMatching(/stopped.*5151/));
+        });
+
+        it('is left alone while the run that started it is still alive', async () => {
+            const harness = setup({
+                groups: [STALE],
+                processes: [1],
+                files: { [RECORD]: stale() }
+            });
+
+            await withServer(harness.options, () => Promise.resolve());
+
+            expect(harness.sent()).toEqual([[-PID, 'SIGTERM']]);
+            expect(harness.log).toHaveBeenCalledWith(expect.stringMatching(/still running/));
         });
     });
 });
 
 describe('killServerGroup', () => {
-    it('signals the wrapper itself where the group cannot be addressed', () => {
-        const server = { pid: 4242, kill: vi.fn() };
-        const kill = vi.fn(() => {
-            throw new Error('ESRCH');
-        });
+    const failure = (code) => Object.assign(new Error(code), { code });
 
-        expect(() => killServerGroup(server, { kill })).not.toThrow();
-        expect(server.kill).toHaveBeenCalledExactlyOnceWith('SIGTERM');
+    it.each(['ESRCH', 'EPERM'])(
+        'signals the wrapper itself where the group cannot be addressed (%s)',
+        async (code) => {
+            const server = { pid: 4242, kill: vi.fn() };
+            const kill = vi.fn(() => {
+                throw failure(code);
+            });
+
+            await killServerGroup(server, { kill });
+
+            expect(server.kill).toHaveBeenCalledExactlyOnceWith('SIGTERM');
+        }
+    );
+
+    it('leaves the wrapper to the group signal where the group could be addressed', async () => {
+        const server = { pid: 4242, kill: vi.fn() };
+        const kill = vi.fn();
+
+        await expect(
+            killServerGroup(server, { kill, isAlive: () => false, wait: () => Promise.resolve() })
+        ).resolves.toBe('terminated');
+
+        expect(server.kill).not.toHaveBeenCalled();
     });
 
-    it('does nothing for a server that never got a pid', () => {
+    it('does nothing for a server that never got a pid', async () => {
         const server = { pid: undefined, kill: vi.fn() };
         const kill = vi.fn();
 
-        killServerGroup(server, { kill });
+        await killServerGroup(server, { kill });
 
         expect(kill).not.toHaveBeenCalled();
         expect(server.kill).not.toHaveBeenCalled();

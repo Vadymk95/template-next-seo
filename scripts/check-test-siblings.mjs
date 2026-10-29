@@ -6,7 +6,9 @@
 //
 // Where it looks matters as much as what it checks:
 //   - staged mode reads the git INDEX, not the disk: a sibling test that exists only as an
-//     untracked file is not part of the commit, so it does not count.
+//     untracked file is not part of the commit, so it does not count. A repository with no
+//     commit yet is not judged: a fork's first commit is the whole template, and nothing
+//     earlier exists to compare with (range mode leaves that commit alone for the same reason).
 //   - range mode is the same rule over a pull request: every source file the range adds or
 //     changes needs a sibling tracked at head. It runs inside `verify` and `verify:scaffold`, so
 //     CI and the push in either phase reach it, because a hook can be skipped and a commit made
@@ -205,6 +207,16 @@ const checkStaged = () => {
     // The index is the truth: a sibling that is only on disk is not in the commit.
     const tracked = new Set(paths(['ls-files']));
     const staged = paths(['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
+
+    // No HEAD means no commit yet: everything staged is new, and a fork's first commit carries the
+    // whole template, so judging it would fail on every starter file that has no sibling. Asked only
+    // after the index reads above: outside a repository they fail loud, and a check that cannot look
+    // must not read that as a first commit.
+    if (!isCommit('HEAD')) {
+        console.log('TDD-gate: no commit yet (the first commit), nothing to check.');
+        return;
+    }
+
     const missing = findMissingSiblings(staged, (file) => tracked.has(file));
     if (missing.length > 0) {
         report(missing, 'staged');

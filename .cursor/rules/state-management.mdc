@@ -74,6 +74,7 @@ needs the patterns below.
 - **Server Components**: Use `fetch` directly or Server Actions
 - **Client Components**: Use `useQuery`, `useMutation` hooks
 - **Server-side data fetching**: Use async Server Components
+- **Multi-tenant apps**: put the membership or tenant id first in every query key; handle a 401 once, in the fetch boundary (`shared/lib/api/`), not per query; drop the whole cache (`queryClient.clear()`) when the active membership changes and on logout. The template ships none of the three: it has no query client.
 
 ### Server Component Data Fetching
 

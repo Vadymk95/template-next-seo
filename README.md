@@ -30,6 +30,8 @@ missed (a missed brand string in `<title>` or the dev banner is the usual slip):
   Enterprise plan), and without it the `codeql` job fails with "Code scanning is not enabled for this
   repository". Get the license, or delete the `codeql` job and its required check in one commit. Sources and
   the exact check name: [CI/CD](#-cicd)
+- Repository layout, keep the app at the git root: `scripts/check-hooks.mjs` refuses to run from a subfolder of the
+  repository, because every gate script reads git paths relative to the repository root
 
 Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 (layout + messages) and `Next.js SEO Template` (README + banner).
@@ -571,7 +573,8 @@ required check from `.github/ruleset.json` in the same commit. This template is 
 ### Pre-commit Hooks (Husky)
 
 - **pre-commit:** `lint-staged` autofix on the staged files, then the TDD sibling gate (a staged source file
-  needs a test sibling that is tracked or staged in the same index), then the repo-wide
+  needs a test sibling that is tracked or staged in the same index; the first commit of a repository is not judged,
+  as nothing earlier exists to compare with), then the repo-wide
   cheap checks (listed in `.husky/pre-commit`; the remedy on refusal: `npm run fix && git add -u`)
 - **commit-msg:** commitlint (`type(scope): subject`, max 96 chars)
 - **pre-push:** `npm run verify:push`, phase-aware — the moments and what is never run by hand are defined

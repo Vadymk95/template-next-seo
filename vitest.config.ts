@@ -30,6 +30,10 @@ export default defineConfig({
         // The runner default is `!CI`: a committed `.only` would pass every local run and shrink the
         // suite silently, then fail only after the push. Off everywhere, so the failure is local.
         allowOnly: false,
+        // A mock keeps its recorded calls and the implementation a test gave it unless the runner
+        // resets it, so a test could pass or fail by the order of its neighbours. Reset before each
+        // test: a mock a test relies on is configured in that test or in its `beforeEach`.
+        mockReset: true,
         // Only the browser SPECS are excluded, not all of `e2e/`: the pure predicates under
         // `e2e/support/` are unit-tested here, which is why the two runners split on the
         // extension (`.spec.ts` = Playwright, `.test.ts` = Vitest) and both configs carry the

@@ -1,15 +1,22 @@
 # DECISIONS — template-next-seo
 
-Why things are the way they are, one entry per decision. History lives in `git log -p -- .cursor/brain/DECISIONS.md` and the linked PRs: a wrong, superseded or dead decision is deleted from here, not archived. An entry stays under 30 lines (context, decision, consequences, status, evidence link); a decision a guard enforces names the guard and is stated once. The law itself is in `AGENTS.md`.
+Why things are the way they are, one entry per decision. History lives in `git log -p -- .cursor/brain/DECISIONS.md` and the linked PRs: a wrong, superseded or dead decision is deleted from here, not archived. Each entry has one row in the index below and holds at most 30 lines after its heading (`docs:check` holds both): context, decision, consequences, status, evidence link. A decision a guard enforces names the guard and is stated once. The law itself is in `AGENTS.md`.
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| docs:check reads the tree as a clean checkout does | 2026-10 | in force |
+| The gate's strict flags are read from the commands | 2026-10 | in force |
+| Gate tests pin the git defaults their flags override | 2026-10 | in force |
+| The app sits at the git root | 2026-10 | in force |
+| Mocks reset before every test | 2026-10 | in force |
+| The type check keeps its state file and still sees every input | 2026-10 | in force |
 | The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types | 2026-10 | in force |
-| Tailwind scans app code only: `@source not` for tests, docs and tooling | 2026-10 | in force |
+| Tailwind scans only the folders that hold markup: an `@source` allowlist | 2026-10 | in force |
 | The logger writes each level through its own console method | 2026-10 | in force |
 | The rate limiter follows Next's Server Action rule and logs no client address | 2026-10 | in force |
 | The Web Vitals sink logs a validated allowlist, never the posted body | 2026-10 | in force |
 | Gate scripts cannot pass silently or race on ports | 2026-10 | in force |
+| A probe's server group is recorded, so a killed probe cannot leave it running | 2026-10 | in force |
 | The Node floor is computed from the lockfile, not written by hand | 2026-10 | in force |
 | Each page states its own social preview, with its own image file | 2026-10 | in force |
 | Vendor `splitChunks` groups take JavaScript modules only | 2026-10 | in force |
@@ -52,6 +59,93 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
 
+## docs:check reads the tree as a clean checkout does
+
+2026-10 · in force · guard `scripts/docs-check.mjs` · evidence: `scripts/docs-check.test.mjs`
+
+- **Context:** the disk alone answers differently on a machine that kept an emptied folder or an ignored file than on
+  a clean checkout, so the same docs were green here and red in CI. A line number moves with every edit and nothing
+  can check it; a symbol can be searched. A cap and an index that only prose states are exceeded one entry at a time
+  (the gate-chain entry ran 31 lines, over the cap), and a typed `_measured` count in `scripts/gate-tiers.json` read
+  19 for a suite that holds 22 `test(` calls.
+- **Decision:** a path in a doc resolves only to a file git lists (tracked, or new and not ignored) that is on disk, or
+  to a folder holding one; this file is judged the same way, so an evidence link that points nowhere is red. A path
+  that ends in a line number is red, a file at the root included: cite the symbol. This file keeps its shape: one index
+  row per entry heading, at most 30 lines after a heading. A browser suite's measurement is printed on every run and no
+  suite carries a hand-written count. Where git cannot list the files, the run says the path and line-pointer checks
+  did not run instead of claiming them.
+- **Status:** in force.
+
+## The gate's strict flags are read from the commands
+
+2026-10 · in force · guard `scripts/docs-check.mjs` · evidence: `scripts/docs-check.test.mjs`
+
+- **Context:** the chain view in `scripts/gate-tiers.json` is derived from `package.json` and then compared with it, so
+  a flag dropped from a script is dropped from the view the same way and both equality checks stay green. A lint that
+  tolerates warnings, a test run that watches, or a "no tests found" pass is a gate that approves what it did not run.
+  The oxlint run in `scripts/lint-config.test.mjs` spells its own argv, so it never read the script either.
+- **Decision:** `docs:check` expands every gate script through its `npm run` steps and requires the flags that make a
+  tool strict: `--max-warnings 0` for ESLint, `--deny-warnings` for oxlint, and a test run that runs once
+  (`vitest run`) and never watches. `--passWithNoTests` may appear only in the iterate chain, the check
+  `moments.iterate` names in `scripts/gate-tiers.json`.
+- **Status:** in force.
+
+## Gate tests pin the git defaults their flags override
+
+2026-10 · in force · guard `scripts/check-gate-integrity.fixtures.mjs` · evidence: same file
+
+- **Decision:** a fixture repository sets repository-local git config that is the opposite of what each git flag of
+  the gate overrides (`diff.renames`, `diff.noprefix`, `core.quotepath`, `color.diff`). That config beats the
+  developer's global one, and the gate's own git reads it too.
+- **Why:** a flag's test is red on removal only while git would otherwise do the other thing, and a developer's global
+  config can make git do that thing on one machine only. Measured here on 2026-10-29, one flag deleted at a time from a
+  scratch copy of the checker: with a global config of `diff.renames=false`, `diff.noprefix=true` and
+  `core.quotepath=false`, deleting `--no-renames`, `--no-prefix` or the quotepath override left the suite green; with
+  the fixture defaults each deletion fails tests (2, 81 and 2). `--no-color` needs no global config, since git does not
+  colour a pipe: its deletion fails 85 tests only under the fixtures' `color.diff=always`.
+- **Status:** in force.
+
+## The app sits at the git root
+
+2026-10 · in force · guard `scripts/check-hooks.mjs` · evidence: `scripts/check-hooks.test.mjs`
+
+- **Decision:** `scripts/check-hooks.mjs`, the first step of `verify:iter`, `verify` and `verify:scaffold`, refuses an
+  app whose folder is not the git root, CI included, and says so in three lines.
+- **Why:** the gate scripts read git paths relative to the repository root (staged names, the hooks path,
+  `ref:path`). From a subfolder they match nothing and say nothing, and the hooks check itself resolved the hooks
+  folder against the folder it ran in, so an installed app there passed while git ran no hook. A refusal costs a
+  sentence in the fork checklist; support costs every script a rewrite and a test of its own.
+- **Status:** in force.
+
+## Mocks reset before every test
+
+2026-10 · in force · guard `scripts/vitest-force-rerun.test.mjs` · evidence: `vitest.config.ts`
+
+- **Decision:** `mockReset: true` in `vitest.config.ts`. Vitest keeps a mock's calls and implementation from one test
+  to the next by default; resetting before each test returns a mock to the implementation it was created with, so
+  the order of the tests in a file cannot decide a verdict. A mock therefore keeps only the implementation it was
+  created with: a return value or a spy is set inside the test or in a `beforeEach`, never once at module level
+  (`.cursor/rules/testing.mdc`).
+- **Consequences:** the config test pins the value; a test that relied on a mock set once at module level fails
+  with the reset on, and is fixed in the test, never by switching the option off.
+- **Status:** in force.
+
+## The type check keeps its state file and still sees every input
+
+2026-10 · in force · guard `tsconfig.json` · evidence: `package.json` `typecheck`
+
+- **Context:** `tsconfig.json` sets `incremental: true`, so a run keeps `tsconfig.tsbuildinfo` (git-ignored) and
+  the compiler is called with `--noEmit`. A sibling template runs `tsc -b` per project, and there a plain run stays
+  green over a changed type file outside the `include` and needs `--force`, so its push tiers run a forced check.
+- **Decision:** no forced variant here. Measured on a scratch project with TypeScript 6.0.3 on 2026-10-29: after a
+  warm run, a changed declaration file outside the `include` turned `tsc --noEmit` red, and so did deleting a key
+  of an imported JSON file; `tsc -b` over the same project stayed green (exit 0) for the changed declaration file
+  and went red only with `--force`. The blind spot of `tsc -b` does not apply to this check.
+- **Consequences:** `noImplicitOverride` sits beside `noUncheckedIndexedAccess`; the two lifecycle members of
+  `shared/ui/common/ErrorBoundary/index.tsx` spell `override`. Reopen if this check moves to `tsc -b`: its blind
+  spot would then need a forced run at the push.
+- **Status:** in force.
+
 ## The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types
 
 2026-10 · in force · guards `scripts/vitest-force-rerun.test.mjs`, `scripts/css-fingerprint.test.mjs`, `scripts/lint-config.test.mjs`, `scripts/lint-changed.test.mjs`, `scripts/drop-stale-route-types.test.mjs`, `scripts/iterate-chain.test.mjs`, the chain view checked by `docs:check` · evidence: `.cursor/brain/VERIFICATION.md`, the red-first runs named below
@@ -81,27 +175,35 @@ Why things are the way they are, one entry per decision. History lives in `git l
   package's files are not hashed).
 - **Status:** in force.
 
-## Tailwind scans app code only: `@source not` for tests, docs and tooling
+## Tailwind scans only the folders that hold markup: an `@source` allowlist
 
 2026-10 · in force · guard `app/globals.test.ts` · evidence: `app/globals.css`
 
 - **Context:** Tailwind 4 ships a rule for every class-shaped string in every file git does not ignore, so a class
   quoted in a test, a spec, a script, a root config file, a Markdown page or an agent rule became CSS that no page
   uses. Measured with the production PostCSS pipeline: 20 stray utility rules, 13 `@property` registrations and a
-  forced-colors block; 27,012 B minified (5,723 B gzip) before, 23,920 B (5,338 B) after. A cold compile took about
-  68 ms before and 52 ms after (median of seven fresh processes), so the gain that matters is bytes shipped.
-- **Decision:** eight `@source not` lines in `app/globals.css`: tests and specs, `e2e/`, `scripts/`, root `*.config.*`,
-  Markdown and MDX, `.cursor/`, `.github/`, `.claude/`. The config line is anchored to the root, so a nested
-  `site.config.ts` stays scanned. `messages/*.json` stays scanned; it is app copy. The scanner already skips the
-  gitignored coverage and report folders. `app/globals.test.ts` compiles the real stylesheet with the real PostCSS
-  plugin over a throwaway project and fails when a sentinel class of any excluded kind ships, or when an app folder
-  stops shipping; a control compile proves that each fixture is scanned without the lines. The test imports the
-  stylesheet, so that `vitest run --changed` selects it on a CSS-only edit; Vitest swaps every CSS import, `?raw`
-  included, for an empty module, so the test reads the text with `fs`. Cost: 0.26 s, no Next build.
-- **Consequences:** a fork that renders Markdown or MDX with utility classes in it narrows the Markdown line. Words in
-  `messages/*.json` can still ship a utility: the word "table" ships `.table`. The selection edge relies on two Vitest
-  4.1 internals (the plugin that empties a CSS import, and the walk over a test's transformed imports), so after a
-  Vitest bump `vitest related app/globals.css --run` must still select the test.
+  forced-colors block; 27,012 B minified (5,723 B gzip) before, 23,920 B (5,338 B) after (the earlier measurement; both
+  forms now 23,918 B); a cold compile of about 68 ms before and 52 ms after (median of seven fresh processes). That fix
+  was a deny list of eight `@source not` lines: a folder added later was scanned, strays included, and nothing failed.
+- **Decision:** `@import 'tailwindcss' source(none)` turns the automatic scan off and four `@source` lines name what is
+  read: `app/`, `features/`, `shared/` and `messages/` (app copy, so it stays scanned). One `@source not` line keeps
+  the tests and specs inside them out. A folder with class names that is added later needs one `@source` line; one
+  without needs nothing. Inside a named folder the scanner still skips what git ignores, and `tw-animate-css` still
+  resolves (both checked by compile). Compiled over this repository the two forms give the same bytes (29,185 B, or
+  23,918 B minified), so what changes is what a new folder does, not what ships today. `app/globals.test.ts` compiles
+  the real stylesheet with the real PostCSS plugin over a throwaway project and fails when a sentinel class ships from
+  a file the lines leave out (a script, a config, Markdown, tooling, an unlisted folder, a test or spec), when a named
+  folder stops shipping, when removing one `@source` line does not stop its folder shipping, when a named folder does
+  not exist, and when a top-level folder that holds markup files (`.tsx`, `.jsx`, `.html`, `.mdx`, `.vue`, `.svelte`)
+  is neither named, nor listed as not rendered from, nor ignored by git; a control compile proves each fixture is
+  scanned without the allowlist. The test imports the stylesheet, so that `vitest run --changed` selects it on a
+  CSS-only edit; Vitest swaps every CSS import, `?raw` included, for an empty module, so it reads the text with `fs`.
+- **Consequences:** a fork that adds a top-level folder with markup files adds a line, and the test names the folder
+  until it does; the test cannot see classes held only in a `.ts` or `.js` file of a new folder, so that folder needs
+  the `@source` line by hand. A fork that renders Markdown or MDX with utility classes in it names that folder too.
+  Words in `messages/*.json` can still ship a utility: the word "table" ships `.table`. The selection edge relies on two
+  Vitest 4.1 internals (the plugin that empties a CSS import, and the walk over a test's transformed imports), so after
+  a Vitest bump `vitest related app/globals.css --run` must still select the test.
 - **Status:** in force.
 
 ## The logger writes each level through its own console method
@@ -143,13 +245,17 @@ Why things are the way they are, one entry per decision. History lives in `git l
 2026-10 · in force · guard `app/api/vitals/route.test.ts` · evidence: `app/api/vitals/route.ts`
 
 - **Context:** the beacon is a whole web-vitals `Metric`, with `entries`, `navigationURL` and an id, posted by any
-  client, and `info` lines now reach production logs.
-- **Decision:** the route logs only `name`, `value`, `delta`, `rating` and `navigationType`, each checked against the
-  sets that `Metric` declares. Each enum carries `satisfies`, so a web-vitals bump that drops a value fails typecheck.
-  Other keys are dropped. A bad or non-JSON body logs `{ invalid: true }`. The answer stays 204, and
-  `requireSameOrigin` stays first.
+  client, and `info` lines now reach production logs. A line without the page says that a metric was slow, not where.
+- **Decision:** the route logs `name`, `value`, `delta`, `rating` and `navigationType`, each checked against the sets
+  that `Metric` declares, and `page`, the path of the posted `navigationURL`. Each enum carries `satisfies`, so a
+  web-vitals bump that drops a value fails typecheck. `page` is read from the raw body, not the schema, so a missing or
+  malformed URL leaves the key out and never turns a valid metric into the invalid marker. Only `http:` and `https:`
+  URLs count, because the pathname of `mailto:` is the address; the query, the hash, the credentials and the origin
+  are dropped, and the path is cut at 512 characters, the limit of the CSP report route. Other keys are dropped. A bad
+  or non-JSON body logs `{ invalid: true }`. The answer stays 204, and `requireSameOrigin` stays first.
 - **Consequences:** a name or navigation type that the library adds later logs the marker until the schema names it.
-  Production writes one info line per metric per page view, five validated fields each.
+  Production writes one info line per metric per page view, five validated fields and the page path each. A fork whose
+  routes put an identifier in a path segment logs it, so it templates the path or drops `page` first.
 - **Status:** in force.
 
 ## Gate scripts cannot pass silently or race on ports
@@ -177,6 +283,32 @@ Why things are the way they are, one entry per decision. History lives in `git l
   `import.meta.main` (Node 24.2 and later, experimental): a script run by an older Node reads `undefined` and skips its
   check, which is the fail-open class this decision closes. These scripts now differ from the sibling templates until
   the same edit lands there.
+- **Status:** in force.
+
+## A probe's server group is recorded, so a killed probe cannot leave it running
+
+2026-10 · in force · guards `scripts/server-group.test.mjs`, `scripts/probe.test.mjs` · evidence: `scripts/server-group.mjs`
+
+- **Context:** the probe starts its server detached, so the server leads a process group of its own and the probe's
+  signal handlers stop it on a Ctrl-C, a closed terminal or a failed browser launch. A SIGKILL or a power cut runs no
+  handler: the group outlived the probe and kept its port, so the next probe found the port busy and moved on, with
+  the old server still running. Checked on this template's production server: the npm wrapper and the `next-server`
+  worker that holds the port share one group, and after a SIGKILL of the probe the next run stopped it. The other
+  measurements behind the rules below (a zombie leader answers signal 0, what `ps` prints for the wrapper) are in the
+  header of `scripts/server-group.mjs`.
+- **Decision:** right after the spawn the probe writes `.probe/server.json` (pid, port, arguments, the owner's pid and
+  the start time from `ps`), and the next run reads it before it looks for a port. A recorded group is stopped only
+  when all of these hold: the run that recorded it is gone, the group exists, the process at that pid started when the
+  record says (a second of tolerance), and its command line carries every argument the server was started with, whole
+  words, the `--` left out. Anything else is left alone, with one line saying why; nothing is signalled by port or by
+  program name. Stopping is SIGTERM, a bounded asynchronous wait of 3 s, then SIGKILL. The record is removed only once
+  the group is gone and only while the file still holds this run's own record, because probes in one checkout share it
+  and the last to start owns it; a group that could not be signalled keeps it. `clearScreenshots` removes `*.png` only,
+  since wiping the folder deleted the record unread. `scripts/server-group.mjs` knows no server, so the sibling
+  templates take it unchanged.
+- **Consequences:** where `ps` is missing the next run confirms nothing and signals nothing, and where process groups
+  are missing (Windows) the probe stops the wrapper alone, as before. For a production probe the build runs before the
+  record is read, so a stale server is still running during the build and is stopped just before the new one starts.
 - **Status:** in force.
 
 ## The Node floor is computed from the lockfile, not written by hand
@@ -250,7 +382,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## `agentRules: false` keeps `next dev` out of `AGENTS.md`
 
-2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `next.config.ts:34`
+2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `agentRules` in `next.config.ts`
 
 - **Context:** The Next 16.4 dev server writes a managed `nextjs-agent-rules` block into `AGENTS.md` whenever it
   detects a coding agent and the block is missing. `AGENTS.md` is this repo's own law and must not drift under a
@@ -263,7 +395,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Footer year is read once at module load
 
-2026-10 · in force · evidence: PR #100, `shared/ui/common/Footer/index.tsx:10`
+2026-10 · in force · evidence: PR #100, `CURRENT_YEAR` in `shared/ui/common/Footer/index.tsx`
 
 - **Context:** oxlint 1.86 `react/purity` flagged `new Date().getFullYear()` called during render and turned
   `oxlint --deny-warnings` red.
@@ -402,8 +534,9 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Context:** `AGENTS.md` had grown to 457 lines, this file to 1048, and the mandatory read to about 75 KB; facts
   were restated across files, revisit dates sat in prose where a keyword check read them as deadlines, and nothing
   stopped an agent bumping a held package.
-- **Decision:** entries here stay under 30 lines (context, decision, consequences, status, evidence link);
-  a superseded or wrong decision is deleted, not archived, and history lives in `git log -p` and the linked PRs.
+- **Decision:** entries here hold at most 30 lines after the heading and one index row each (`docs:check` holds
+  both; context, decision, consequences, status, evidence link); a superseded or wrong decision is deleted, not
+  archived, and history lives in `git log -p` and the linked PRs.
   `AGENTS.md` holds rules and pointers (versions in `package.json`, commands in the `README.md` table), one line
   per hold. Revisits are events (an upstream release, a Dependabot PR), not calendar dates; only structured files
   carry dates. Only the `alwaysApply` core of `.cursor/rules` loads on every Cursor turn; the rest load by glob.
@@ -503,14 +636,14 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Consequences:** `better-tailwindcss/no-deprecated-classes` does not help: both classes are valid and not
   deprecated. The build emits no warning, so on every Tailwind minor bump read the release notes for renamed
   utilities; this one test is the only guard.
-- **Button ring offset:** the `Button` base variant omits `ring-offset-background` (`shared/ui/button.tsx:10`); the
+- **Button ring offset:** the `Button` base variant omits `ring-offset-background` (`buttonVariants` in `shared/ui/button.tsx`); the
   focus ring comes from `ring-*` and `ring-offset-2` alone, matching the sibling enterprise template. Nothing
   guards it: do not re-add the shadcn default.
 - **Status:** in force.
 
 ## Tailwind class lint: two rules adopted, `no-unknown-classes` refused
 
-2026-08 · in force · guard `better-tailwindcss` rules in `eslint.config.js:393` · evidence: same file
+2026-08 · in force · guard the `better-tailwindcss` rules in `eslint.config.js` · evidence: same file
 
 - **Context:** a pre-flight found `no-deprecated-classes` 2 findings, both genuine, `enforce-canonical-classes` 0,
   `no-unknown-classes` 0.
@@ -535,7 +668,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
   Playwright and installs browsers for a version this repo does not pin.
 - **Test budgets follow what the test does:** the `verify-push` CLI cases boot node, npm and node, took seconds
   under a busy worker pool, and timed out at vitest's 5 s default. The describe block carries a 20 s budget
-  (`scripts/verify-push.test.mjs:119`). A `skip` was rejected: those cases prove phase routing and exit-code
+  (the `timeout` option of the CLI `describe` in `scripts/verify-push.test.mjs`). A `skip` was rejected: those cases prove phase routing and exit-code
   passthrough, the thing a silent pass would hide.
 - **Status:** in force.
 
@@ -555,7 +688,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Complexity ratchet: thresholds above the measured ceiling, production code only
 
-2026-08 · in force · guard five ESLint core rules in `eslint.config.js:421` · evidence: the measured table at `eslint.config.js:401`
+2026-08 · in force · guard five ESLint core rules in the complexity ratchet block of `eslint.config.js` · evidence: the measured table in the comment above it
 
 - **Decision:** `complexity` 15, `max-depth` 4, `max-params` 6, `max-lines-per-function` 130, `max-lines` 200 gate
   `app`, `features`, `shared` and `i18n`. The thresholds sit above the measured ceiling (12 / 3 / 5 / 102 / 143),
@@ -613,9 +746,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
   in code or after `npm run`; spelled with a separator; a stage word no script or step spells (`eslint`, also
   a step, stays ordinary until it is in code); adjacent names are one unit, strong when any is. Read: docs
   (fences, tables, this file), workflow names and comments, `.husky/*` comments, `gate-tiers.json` prose.
-- **Consequences:** a false positive costs a reword, never an allowance; the windows and
-  `RETELLING_MIN_STAGES` move only on a measurement (places of the old tree caught, lines flagged on the
-  rewritten tree):
+- **Consequences:** a false positive costs a reword, never an allowance; the windows and `RETELLING_MIN_STAGES`
+  move only on a measurement (places of the old tree caught, lines flagged on the rewritten tree):
 
 | rule                                                 | caught of 31 | flagged |
 | ---------------------------------------------------- | ------------ | ------- |
@@ -663,7 +795,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## ESLint 10, with `$eslint` overrides and a literal `settings.react.version`
 
-2026-07 · in force · guard `eslint.config.js` (trailing settings block) · evidence: `eslint.config.js:432`, `package.json` `overrides`
+2026-07 · in force · guard `eslint.config.js` (trailing settings block) · evidence: the comment on that block, `package.json` `overrides`
 
 - **Context:** the 9.x line ends its support on 2026-08-06, and `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and
   the transitive `eslint-plugin-import` still cap `eslint` at `^9` in their peers.
@@ -679,7 +811,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## `no-magic-numbers` ignores HTTP status codes
 
-2026-07 · in force · guard `@typescript-eslint/no-magic-numbers` in `eslint.config.js:175` · evidence: same file
+2026-07 · in force · guard `@typescript-eslint/no-magic-numbers` in `eslint.config.js` · evidence: same file, `scripts/lint-config.test.mjs`
 
 - **Context:** enabling the rule gave 54 findings, mostly `{ status: 404 }` in route handlers and Next's own
   `images.deviceSizes` table. A status code is a universal table and self-documenting at the use site.
@@ -689,6 +821,10 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Consequences:** five real values survived and were named, because the bare number hid intent: the CSP report
   field truncation, the nonce byte length, the digest length of the rate-limit key hint that reaches a log line, and
   the user-agent slice in the anonymous rate-limit key (it bounds bucket cardinality against a spoofed user agent).
+- **Numeric literal types:** `ignoreNumericLiteralTypes` is on, because `type Gap = 3 | 5` is a name already and the
+  rule asked for a constant behind each number. A union written inline in a property type (`max?: 4 | 5`) still
+  counts, so name it as an alias; `scripts/lint-config.test.mjs` pins the alias, the same numbers used as values and
+  the inline union.
 - **Status:** in force.
 
 ## Constants only for a second call site or an external contract
@@ -720,7 +856,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Content Security Policy: nonce on dynamic routes, `'unsafe-inline'` on ISR routes
 
-2026-05 · in force · guard `proxy.test.ts`, `next.config.test.ts` · evidence: `proxy.ts:109`, `shared/lib/cspHeader.ts`
+2026-05 · in force · guard `proxy.test.ts`, `next.config.test.ts` · evidence: `applyProxyCsp` in `proxy.ts`, `shared/lib/cspHeader.ts`
 
 - **Context:** Next 16 emits inline `self.__next_f.push(...)` scripts into prerendered HTML at build time. A cached
   ISR page cannot carry a per-request nonce ("Nonces only support dynamic routes" in the Next CSP guide), and a hash
@@ -746,7 +882,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Context:** `next/web-vitals` wraps the raw package and does not expose attribution metrics. Two of six voters
   called the addition speculative; four accepted it as trivial (about 5 KB, no runtime cost).
 - **Decision:** `web-vitals` stays a direct dependency so a fork can read attribution without a new install.
-  `experimental.webVitalsAttribution: ['LCP', 'INP', 'CLS']` (`next.config.ts:87`) is the Next-side half: Next
+  `experimental.webVitalsAttribution: ['LCP', 'INP', 'CLS']` (`next.config.ts`) is the Next-side half: Next
   documents attribution as off by default and enabled per metric; this list is the set that carries it here.
 - **Consequences:** revisit when a fork has built and never imports the raw package: then remove it.
 - **Status:** in force; no fork data yet.
@@ -824,7 +960,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks
 
-2026-03 · in force · evidence: `package.json` `build`, `next.config.ts:63`, `app/globals.css`
+2026-03 · in force · evidence: `package.json` `build`, `outputFileTracingRoot` in `next.config.ts`, `app/globals.css`
 
 - **Webpack build.** `next build` defaults to Turbopack in Next 16, but this repo has a custom `webpack()` hook for
   vendor chunking and the bundle analyzer, so `build` and `build:analyze` run `next build --webpack`. `build:turbo`

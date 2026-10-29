@@ -178,6 +178,21 @@ describe('against a real git repository', { timeout: 30_000 }, () => {
 
             expect(() => changedFiles({ cwd: root })).toThrow(/no commit/);
         });
+
+        it('keeps the git failure as the cause of the no-commit error', () => {
+            const root = mkdtempSync(path.join(tmpdir(), 'lint-changed-'));
+            roots.push(root);
+            git(root, ['init', '--quiet', '--initial-branch=main']);
+            let thrown;
+
+            try {
+                changedFiles({ cwd: root });
+            } catch (error) {
+                thrown = error;
+            }
+
+            expect(thrown.cause).toMatchObject({ status: 1 });
+        });
     });
 
     describe('the CLI', () => {

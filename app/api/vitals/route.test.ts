@@ -39,14 +39,20 @@ const REPORTED = {
     navigationStartTime: 0
 };
 
-/* The only fields of a metric that reach the log. */
-const LOGGED = {
+/* The metric fields that reach the log, whatever page the beacon names. */
+const LOGGED_METRIC = {
     name: 'LCP',
     value: 1234.5,
     delta: 1234.5,
     rating: 'good',
     navigationType: 'navigate'
 };
+
+/* The metric as logged for REPORTED: the page is the path of `navigationURL`, never the URL. */
+const LOGGED = { ...LOGGED_METRIC, page: '/en' };
+
+/* The longest path the log carries: a client chooses the path, so it is cut. */
+const MAX_PAGE_LENGTH = 512;
 
 const INVALID_MARKER = { invalid: true };
 
@@ -69,6 +75,67 @@ describe('POST /api/vitals', () => {
         expect(res.body).toBeNull();
         expect(loggedCalls()).toStrictEqual([['[vitals]', { metric: LOGGED }]]);
     });
+
+    it('logs the page as a bare path: no query, no email, no origin', async () => {
+        await POST(post(JSON.stringify(REPORTED)));
+
+        const line = JSON.stringify(loggedCalls());
+        expect(line).not.toContain('jane@example.com');
+        expect(line).not.toContain('email=');
+        expect(line).not.toContain('?');
+        expect(line).not.toContain('localhost');
+    });
+
+    it.each([
+        ['a query', 'http://localhost:3000/en?token=abc', '/en'],
+        ['a hash', 'http://localhost:3000/en#token=abc', '/en'],
+        ['credentials', 'http://u:p@localhost:3000/en', '/en'],
+        ['another origin', 'https://example.com:8443/en/example-form', '/en/example-form'],
+        ['no path after the origin', 'http://localhost:3000', '/']
+    ])('reduces a navigation URL with %s to its path', async (_, navigationURL, page) => {
+        await POST(post(JSON.stringify({ ...REPORTED, navigationURL })));
+
+        expect(loggedCalls()).toStrictEqual([['[vitals]', { metric: { ...LOGGED_METRIC, page } }]]);
+    });
+
+    it('cuts a path longer than the limit to exactly the limit', async () => {
+        const path = `/${'a'.repeat(MAX_PAGE_LENGTH + 88)}`;
+
+        await POST(post(JSON.stringify({ ...REPORTED, navigationURL: `${ORIGIN}${path}` })));
+
+        expect(loggedCalls()).toStrictEqual([
+            ['[vitals]', { metric: { ...LOGGED_METRIC, page: path.slice(0, MAX_PAGE_LENGTH) } }]
+        ]);
+    });
+
+    it('keeps a path of exactly the limit whole', async () => {
+        const path = `/${'a'.repeat(MAX_PAGE_LENGTH - 1)}`;
+
+        await POST(post(JSON.stringify({ ...REPORTED, navigationURL: `${ORIGIN}${path}` })));
+
+        expect(loggedCalls()).toStrictEqual([
+            ['[vitals]', { metric: { ...LOGGED_METRIC, page: path } }]
+        ]);
+    });
+
+    it.each([
+        ['missing', undefined],
+        ['a number', 42],
+        ['an object', { href: 'http://localhost:3000/en' }],
+        ['text that is not a URL', 'not a url'],
+        ['a relative path', '/en?x=1'],
+        ['a mailto address', 'mailto:jane@example.com'],
+        ['a javascript URL', 'javascript:alert(1)'],
+        ['a data URL', 'data:text/plain,hi']
+    ])(
+        'logs the metric without a page, never the invalid marker, when navigationURL is %s',
+        async (_, navigationURL) => {
+            const res = await POST(post(JSON.stringify({ ...REPORTED, navigationURL })));
+
+            expect(res.status).toBe(204);
+            expect(loggedCalls()).toStrictEqual([['[vitals]', { metric: LOGGED_METRIC }]]);
+        }
+    );
 
     it.each([
         ['an email', { email: 'jane@example.com' }],

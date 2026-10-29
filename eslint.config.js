@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import eslintComments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import nextTypescript from 'eslint-config-next/typescript';
@@ -114,7 +116,10 @@ export default defineConfig([
             'import-x/resolver-next': [
                 createTypeScriptImportResolver({
                     alwaysTryTypes: true,
-                    project: './tsconfig.json'
+                    // Anchored at this folder like `tsconfigRootDir` above: a relative path is read from
+                    // the directory lint started in, and from any other folder every `@/` import
+                    // stops resolving.
+                    project: path.join(import.meta.dirname, 'tsconfig.json')
                 })
             ]
         },
@@ -181,6 +186,8 @@ export default defineConfig([
             // domain magic — `{ status: 404 }` is self-documenting at the use
             // site, which this repo's constants ADR names as a reason NOT to
             // extract. Naming 20 of them would add indirection, not insight.
+            // `type Gap = 3 | 5` is a name already, so a numeric literal type declared as an alias
+            // passes; the same union written inline in a property type still counts: name it as an alias.
             '@typescript-eslint/no-magic-numbers': [
                 'error',
                 {
@@ -194,7 +201,8 @@ export default defineConfig([
                     ignoreReadonlyClassProperties: true,
                     ignoreArrayIndexes: true,
                     ignoreDefaultValues: true,
-                    ignoreTypeIndexes: true
+                    ignoreTypeIndexes: true,
+                    ignoreNumericLiteralTypes: true
                 }
             ],
             'no-restricted-imports': [

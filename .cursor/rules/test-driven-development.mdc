@@ -43,7 +43,7 @@ Components stay presentational; the logic worth a test-first loop lives in the h
 ### Test Requirements
 
 - Cover the happy path, the edge cases, the error paths (error codes) and, for stores, the state changes.
-- Regression-first for a fix: the new test must fail without the fix.
+- Regression-first for a fix: the new test must fail without the fix; for a lint-only residual the red is the lint run on the unfixed copy.
 - Cover async transitions (loading to loaded), entity switches (A to B) and boundaries (empty, full, partial).
 
 ### Exceptions

@@ -7,6 +7,8 @@
 // config pattern matches a DIRECTORY of that name and never the file, and a `**` never crosses a
 // dot-directory, so a checkout under `.worktrees/` matched nothing at all. Measured: with
 // `package.json` dirty, `vitest run --changed` ran 0 of 64 test files.
+//
+// It also pins the runner option that isolates mocks from one test to the next.
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -75,5 +77,13 @@ describe('vitest force-rerun triggers', () => {
 
         expect(matches(path.resolve('package.json')), 'package.json').toBe(true);
         expect(matches(path.resolve('vitest.config.ts')), 'vitest.config.ts').toBe(true);
+    });
+});
+
+describe('vitest mock isolation', () => {
+    // A mock keeps its recorded calls and the implementation a test gave it unless the runner resets
+    // it, so a test could pass or fail by the order of its neighbours.
+    it('resets every mock before each test', () => {
+        expect(config.test.mockReset).toBe(true);
     });
 });

@@ -739,7 +739,7 @@ CMD ["node", "server.js"]
 
 **What to wire:**
 
-- **TLS and HSTS.** Terminate TLS at the proxy and redirect HTTP to HTTPS. The app already sends production HSTS (`max-age=31536000; includeSubDomains; preload`, `next.config.ts` lines 51-56), so do not add a second `Strict-Transport-Security` at the proxy: one home. `includeSubDomains` commits every subdomain to HTTPS, and joining the browsers' preload list is a separate manual step that is hard to undo (**training data**); `README.md` carries the preload note.
+- **TLS and HSTS.** Terminate TLS at the proxy and redirect HTTP to HTTPS. The app already sends production HSTS (`max-age=31536000; includeSubDomains; preload`, the production branch of `headers()` in `next.config.ts`), so do not add a second `Strict-Transport-Security` at the proxy: one home. `includeSubDomains` commits every subdomain to HTTPS, and joining the browsers' preload list is a separate manual step that is hard to undo (**training data**); `README.md` carries the preload note.
 - **Streaming.** A proxy that buffers responses delivers a streamed page all at once. Per the guide, nginx needs `X-Accel-Buffering: no` and a balancer must support chunked transfer. Set the header in `next.config.ts` (ask-first) or switch buffering off for the app location at the proxy (**training data**).
 - **Pass the right headers on:** `Host` unchanged (or the public host in `x-forwarded-host`, 7b), `X-Forwarded-For` as one overwritten value (7a), and `X-Forwarded-Proto`. Do not strip or duplicate `Content-Security-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` or `Reporting-Endpoints`. Your CDN rules from Phase 6c still apply.
 - **`/api/health` through a CDN.** The route sends `Cache-Control: public, s-maxage=10, stale-while-revalidate=30`, and it is rate limited like every `/api/` path (`proxy.test.ts` proves the 429). A probe that goes through a CDN can see a stale answer for tens of seconds (standard HTTP caching semantics), and an external monitor on shared infrastructure can share a limiter bucket. Probe the container directly for liveness; point an external monitor at a path you do not need to protect, at a modest interval.
@@ -788,7 +788,7 @@ When you graduate a phase, update these in the same pull request, so the brain d
 
 - `README.md`: the Environment Variables and Deployment sections, for each new variable or host step.
 - `.env.example`, `shared/lib/env.ts` (public variables) and the server-only env module from Phase 1a: every new variable with its validation. A server-only variable never gets a `NEXT_PUBLIC_` name.
-- `SECURITY_REQUIREMENTS.md`: the session, token and header statements the phase changes (for example, line 19 says the app never reads the session token, which the self-managed option in Phase 2 contradicts).
+- `SECURITY_REQUIREMENTS.md`: the session, token and header statements the phase changes (for example, the statement that the app never reads the session token, which the self-managed option in Phase 2 contradicts).
 - `.cursor/brain/SKELETONS.md`: a new danger zone when the phase introduces one (a monitoring init above the error boundary, an auth check placed before the rate limiter).
 - `.cursor/brain/DECISIONS.md`: one short entry per adopted phase (context, decision, consequences), with the option you chose from its table and why.
 - `.cursor/brain/MAP.md`, `.cursor/brain/PROJECT_CONTEXT.md` and `.cursor/brain/READING_INDEX.md`: the new files, the stack row and the situation entry.
