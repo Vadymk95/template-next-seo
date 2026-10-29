@@ -1,6 +1,6 @@
 # template-next-seo — agent guide
 
-Operating contract for any AI agent editing this repo; read it in full before the first change. One canonical place per fact: rules live here, versions in `package.json` and the stack table of `.cursor/brain/PROJECT_CONTEXT.md`, the why in `.cursor/brain/DECISIONS.md`, the file map in `.cursor/brain/MAP.md`. **Code is ground truth:** if a line here conflicts with the code, follow the code and fix or flag the line in the same session. Cursor and Codex load this file natively and Claude Code through `CLAUDE.md`: edit THIS file, never the shim.
+Operating contract for any AI agent editing this repo; read it in full before the first change. One canonical place per fact: rules live here, versions in `package.json` and the stack table of `.cursor/brain/PROJECT_CONTEXT.md`, the why in `.cursor/brain/DECISIONS.md`, the file map in `.cursor/brain/MAP.md`. **Code is ground truth:** if a line here conflicts with the code, follow the code and fix or flag the line in the same session. A pointer names a path and the symbol in it, never a line number: `docs:check` fails `path:12`. Cursor and Codex load this file natively and Claude Code through `CLAUDE.md`: edit THIS file, never the shim.
 
 ## Stack
 
@@ -30,12 +30,12 @@ npm run test:one -- <file>  # one unit test file, through the tracer (not around
 npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
 npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
-npm run docs:check          # mechanical doc drift, the gate chain view and any retelling or composition of it included (pre-commit when docs are staged and inside verify; weekly CI adds --weekly)
+npm run docs:check          # mechanical doc drift: paths against the files git lists, line pointers, the DECISIONS shape, the gate chain view with its strict flags, any retelling or composition of it (pre-commit when docs are staged and inside verify; weekly CI adds --weekly)
 npm run fix                 # the one remedy: repo-wide autofix, then format
 npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
 ```
 
-Every other script, one line each: `README.md` § Commands. The stages each gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`). After cloning run `npm run prepare` once (`.npmrc` disables lifecycle scripts, so husky does not install itself, and `verify:iter` and `verify` fail loudly without hooks because a push from such a clone runs no gate; `min-release-age=3` is a dependency cooldown in DAYS, so an urgent new package needs `--min-release-age=0`; the lockfile obeys it too: `npm run lock:age` (a network-bound check) fails a changed `name@version` younger than the cooldown unless `scripts/lock-age-allowlist.json` lists it with a reason and an expiry) and copy `.env.example` (`scripts/check-build-env.mjs` names the fix when the production build lacks `NEXT_PUBLIC_APP_URL`).
+Every other script, one line each: `README.md` § Commands. The stages each gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`). After cloning run `npm run prepare` once (`.npmrc` disables lifecycle scripts, so husky does not install itself, and `verify:iter` and `verify` fail loudly without hooks because a push from such a clone runs no gate; `min-release-age=3` is a dependency cooldown in DAYS, so an urgent new package needs `--min-release-age=0`; the lockfile obeys it too: `npm run lock:age` (a network-bound check) fails a changed `name@version` younger than the cooldown. Prefer waiting it out. An agent never runs the `--min-release-age=0` install and never edits `scripts/lock-age-allowlist.json` (an agent's classifier refuses both); the operator runs the bypass install and lists the row: a reason, and an expiry no later than the day the version is old enough on its own) and copy `.env.example` (`scripts/check-build-env.mjs` names the fix when the production build lacks `NEXT_PUBLIC_APP_URL`).
 
 <!-- shared-harness:begin -->
 <!-- This block is byte-identical in all four templates (template-1, template-spa-pwa, template-next-seo, template-rn). Change it in every template in the same commit, or not at all. Stack-specific facts (ports, what is skipped and why, timings) live OUTSIDE this block: in the command table above and in `.cursor/brain/VERIFICATION.md`; the stages each gate script runs live in `scripts/gate-tiers.json`. -->
@@ -65,7 +65,8 @@ list of the stages each gate script runs (`checks.<name>.chain`, checked against
   before the first deploy) runs the offline checks and loudly SKIPS the heavy stages; phase 1 (from the
   first deploy) runs the full `verify:ci`. A skipped stage is printed, never silent; flip the phase in one
   commit at the first deploy. A repo whose gate has no heavy stage runs the full `verify:ci` at push and
-  records in `gate-tiers.json` that a phase switch would gate nothing.
+  records in `gate-tiers.json` that a phase switch would gate nothing. With no remote there is no push
+  moment: the lead hand-runs the push chain once per slice on the main checkout; an implementer never does.
 - **CI** - phase-blind: always the full `verify:ci`, plus what only CI can do (the security workflow, the
   scheduled mutation job, a mandatory dev-smoke job where the repo has one).
 
@@ -105,17 +106,19 @@ moments, blown budgets, gate runs from a worktree). After a push, gate output in
 the contract: **silence is a failure, not a pass** - a push that printed no gate ran no gate, whatever the
 exit code says.
 
-**Ports.** A busy port means MOVE, never kill a server you did not start; the single-spec and measure
-scripts take the next free port. Only the push gate clears its own port.
+**Ports.** A busy port means MOVE, never kill a server you did not start; every script that starts its
+own server takes the next free port. Only the push gate clears its own port.
 
 ### Lanes - who runs what
 
 - **Main agent, inline.** Iterate and measure while working; the push runs the chain, never a hand-run.
-- **Implementer subagent.** Works in a hand-made `git worktree` OUTSIDE the repo directory, on its own
-  port, with `node_modules` symlinked from the main checkout. Iterate and measure only; the gate never
-  runs from a worktree (the tracer records it as a finding). The lead removes the worktree, checks the
-  branch out in the main checkout and pushes from there, so the gate runs once, at the push, for every
-  writer.
+- **Implementer subagent.** Works in a hand-made `git worktree` OUTSIDE the repo directory, on its own port,
+  with `node_modules` symlinked from the main checkout. Iterate and measure only; the gate never runs from a
+  worktree. The lead removes the worktree, checks the branch out in the main checkout and pushes from there,
+  so the gate runs once, at the push, for every writer. A lane never waits on a prompt: it writes only in its
+  worktree and its scratch folder (a planner or gate file change goes in the report as exact lines, which the lead
+  applies with the operator), reads with Read and Grep, and runs `git -C <dir>` and `npm run --prefix <dir>`
+  instead of `cd`, with no shell variable or `;` chain. Lane rules: `.cursor/templates/LANE.md`.
 - **Copilot coding agent.** Hand-over is a fully specified issue (goal as behaviour, paths in scope,
   acceptance, out of scope; use `.github/ISSUE_TEMPLATE/agent-task.yml` where the repo ships it), assigned
   to Copilot. It works on its own branch and opens a draft pull request; workflows on that PR start only
@@ -169,7 +172,7 @@ that lives only in a conversation is not a plan.
 ## Architecture and contracts
 
 - **FSD, one-way imports:** `app → features → entities → shared`, absolute `@/*` imports, no deep relative paths across layers, no circular barrels. Reuse first: search for an existing equivalent before creating one, and match the surrounding file. Map: `.cursor/brain/MAP.md`.
-- **Content and rendering:** anything that renders authored copy is proven against content it has not seen (`minimal` / `typical` / `long` / `unbroken` text, `none` / `one` / `many` collections), and engines disagree about layout, so measure (`CROSS_BROWSER=1`), never predict (`DECISIONS.md` § Content variance, § Cross-engine coverage).
+- **Content and rendering:** anything that renders authored copy is proven against content it has not seen (`minimal` / `typical` / `long` / `unbroken` text, `none` / `one` / `many` collections). Add the case as a `test.step` or an extra assertion in the existing test, never a new `test(` (the suite ceiling in `gate-tiers.json` counts those calls). Engines disagree about layout, so measure (`CROSS_BROWSER=1`), never predict (`DECISIONS.md` § Content variance, § Cross-engine coverage).
 - **i18n (next-intl SSR):** `messages/<locale>.json` is the only message source. Every page and layout narrows the route param with `requireLocale()` from `@/i18n/request-locale` and calls `setRequestLocale(locale)` BEFORE any client descendant renders; Server Actions use `getTranslations({ locale })`. The root `app/layout.tsx` owns `title.default` + `title.template` (Next applies a template only to descendants): do not move it down.
 - **Security:** the static document CSP lives in `next.config.ts` `headers()`, the nonce CSP with `strict-dynamic` in `proxy.ts` for its matcher. `proxy.ts` composes next-intl, nonce CSP, rate limit and the `/dev` production gate in a fixed order: do not reorder, and add no branch BEFORE the rate limiter (it gates on `isApi || isServerAction`). Matcher coverage is the only guarantee a route is throttled. COOP/CORP `same-origin` may break OAuth popups: use same-tab redirects. **Never commit keys or configuration values, public ones (`NEXT_PUBLIC_*`, a Firebase web config) included:** `.env.example` placeholders only, real values in the deploy platform's secret store and GitHub Secrets (`NEXT_PUBLIC_*` is inlined into the client bundle, so treat it as world-readable, which is still no reason to commit it). Detail: `.cursor/brain/SKELETONS.md`.
 

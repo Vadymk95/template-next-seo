@@ -23,7 +23,7 @@ priority: 88
 
 ## 3. Constants
 
-- No magic strings/numbers for domain values — `shared/constants/` or slice-local `model/constants.ts`.
+- No magic strings/numbers for domain values — `shared/constants/` or slice-local `model/constants.ts`. A numeric literal type declared as an alias (`type Gap = 3 | 5`) is not counted; the same union written inline in a property type (`max?: 4 | 5`) still is, so name it as an alias.
 - Prefer `as const` + derived types over loose enums.
 
 ## 4. Size & Dependencies (new code)

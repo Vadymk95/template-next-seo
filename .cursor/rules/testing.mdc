@@ -30,7 +30,7 @@ alwaysApply: false
 - **Use `beforeEach`, `afterEach`** for setup/teardown when needed
 - **Arrange-Act-Assert**: set up, act, then assert, in that order and visibly separated
 - **Independent tests**: each test builds its own state and never relies on another test's order or leftovers
-- **Mock external dependencies** (APIs, the network) at the boundary; do not mock the unit under test
+- **Mock external dependencies** (APIs, the network) at the boundary; do not mock the unit under test. Mocks reset before every test (`mockReset` in `vitest.config.ts`): a mock keeps only the implementation it was created with, so set a return value or a spy inside the test or a `beforeEach`, never once at module level
 - **Use `renderWithProviders`** from test utilities — wraps the component in `NextIntlClientProvider` (locale + messages) so `useTranslations` works in tests
 
 ### Example

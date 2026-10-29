@@ -5,14 +5,16 @@
 // which ESLint hashes into every cache entry. Two things hold that up and neither is visible in the
 // config: the cache really does key on `settings` (the first block, against ESLint itself) and the real
 // config really carries the fingerprint for the files the rules cover (the second block).
-// `css-fingerprint.test.mjs` covers the hash. The last block: both linters leave `.cursor/` alone, so
-// an agent's scratch script there cannot red the iterate chain.
+// `css-fingerprint.test.mjs` covers the hash. Then one rule option that must stay on, linted through
+// the real config. The last block: both linters leave `.cursor/` alone, so an agent's scratch script
+// there cannot red the iterate chain.
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { ESLint } from 'eslint';
+import { ESLint, Linter } from 'eslint';
+import tseslint from 'typescript-eslint';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { cssFingerprint } from './css-fingerprint.mjs';
@@ -109,6 +111,64 @@ describe('eslint.config.js', { timeout: 60_000 }, () => {
         const config = await eslint.calculateConfigForFile('shared/lib/logger.ts');
 
         expect(config.settings).not.toHaveProperty('tailwindCssFingerprint');
+    });
+});
+
+describe('a numeric literal type is not a magic number', { timeout: 60_000 }, () => {
+    const MAGIC_NUMBERS = '@typescript-eslint/no-magic-numbers';
+    const eslint = new ESLint({ cwd: process.cwd() });
+
+    // The options the real config resolves for the path, the rule run through `Linter`: no TypeScript
+    // program is built, so a case costs milliseconds.
+    const magicNumbers = async (code, filePath) => {
+        const { rules } = await eslint.calculateConfigForFile(filePath);
+        const messages = new Linter().verify(
+            code,
+            [
+                {
+                    files: ['**/*.ts'],
+                    plugins: { '@typescript-eslint': tseslint.plugin },
+                    languageOptions: { parser: tseslint.parser, sourceType: 'module' },
+                    rules: { [MAGIC_NUMBERS]: rules[MAGIC_NUMBERS] }
+                }
+            ],
+            { filename: filePath }
+        );
+
+        // A snippet that does not parse at all must never read as "no finding".
+        expect(
+            messages.filter(({ fatal }) => fatal),
+            'the snippet must parse'
+        ).toEqual([]);
+
+        return messages;
+    };
+
+    // `type Gap = 3 | 5` names its numbers already; the rule used to ask for a constant behind each.
+    it('accepts a union of numeric literal types declared as an alias', async () => {
+        const found = await magicNumbers('export type Gap = 3 | 5;\n', 'shared/lib/gap.ts');
+
+        expect(found).toEqual([]);
+    });
+
+    it('still counts the same numbers used as values', async () => {
+        const found = await magicNumbers(
+            'export const scale = (n: number): number => n * 3 + 5;\n',
+            'shared/lib/gap.ts'
+        );
+
+        expect(found).toHaveLength(2);
+    });
+
+    // The option covers a union that is the whole alias; one written inside a property type is not
+    // covered, which is why the rule note tells the author to name it as an alias.
+    it('still counts a union written inline in a property type', async () => {
+        const found = await magicNumbers(
+            'export interface Props {\n    max?: 4 | 5;\n}\n',
+            'shared/lib/gap.ts'
+        );
+
+        expect(found).toHaveLength(2);
     });
 });
 

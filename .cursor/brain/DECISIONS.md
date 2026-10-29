@@ -1,9 +1,15 @@
 # DECISIONS — template-next-seo
 
-Why things are the way they are, one entry per decision. History lives in `git log -p -- .cursor/brain/DECISIONS.md` and the linked PRs: a wrong, superseded or dead decision is deleted from here, not archived. An entry stays under 30 lines (context, decision, consequences, status, evidence link); a decision a guard enforces names the guard and is stated once. The law itself is in `AGENTS.md`.
+Why things are the way they are, one entry per decision. History lives in `git log -p -- .cursor/brain/DECISIONS.md` and the linked PRs: a wrong, superseded or dead decision is deleted from here, not archived. Each entry has one row in the index below and holds at most 30 lines after its heading (`docs:check` holds both): context, decision, consequences, status, evidence link. A decision a guard enforces names the guard and is stated once. The law itself is in `AGENTS.md`.
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| docs:check reads the tree as a clean checkout does | 2026-10 | in force |
+| The gate's strict flags are read from the commands | 2026-10 | in force |
+| Gate tests pin the git defaults their flags override | 2026-10 | in force |
+| The app sits at the git root | 2026-10 | in force |
+| Mocks reset before every test | 2026-10 | in force |
+| The type check keeps its state file and still sees every input | 2026-10 | in force |
 | The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types | 2026-10 | in force |
 | Tailwind scans only the folders that hold markup: an `@source` allowlist | 2026-10 | in force |
 | The logger writes each level through its own console method | 2026-10 | in force |
@@ -52,6 +58,93 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## docs:check reads the tree as a clean checkout does
+
+2026-10 · in force · guard `scripts/docs-check.mjs` · evidence: `scripts/docs-check.test.mjs`
+
+- **Context:** the disk alone answers differently on a machine that kept an emptied folder or an ignored file than on
+  a clean checkout, so the same docs were green here and red in CI. A line number moves with every edit and nothing
+  can check it; a symbol can be searched. A cap and an index that only prose states are exceeded one entry at a time
+  (the gate-chain entry ran 31 lines, over the cap), and a typed `_measured` count in `scripts/gate-tiers.json` read
+  19 for a suite that holds 22 `test(` calls.
+- **Decision:** a path in a doc resolves only to a file git lists (tracked, or new and not ignored) that is on disk, or
+  to a folder holding one; this file is judged the same way, so an evidence link that points nowhere is red. A path
+  that ends in a line number is red, a file at the root included: cite the symbol. This file keeps its shape: one index
+  row per entry heading, at most 30 lines after a heading. A browser suite's measurement is printed on every run and no
+  suite carries a hand-written count. Where git cannot list the files, the run says the path and line-pointer checks
+  did not run instead of claiming them.
+- **Status:** in force.
+
+## The gate's strict flags are read from the commands
+
+2026-10 · in force · guard `scripts/docs-check.mjs` · evidence: `scripts/docs-check.test.mjs`
+
+- **Context:** the chain view in `scripts/gate-tiers.json` is derived from `package.json` and then compared with it, so
+  a flag dropped from a script is dropped from the view the same way and both equality checks stay green. A lint that
+  tolerates warnings, a test run that watches, or a "no tests found" pass is a gate that approves what it did not run.
+  The oxlint run in `scripts/lint-config.test.mjs` spells its own argv, so it never read the script either.
+- **Decision:** `docs:check` expands every gate script through its `npm run` steps and requires the flags that make a
+  tool strict: `--max-warnings 0` for ESLint, `--deny-warnings` for oxlint, and a test run that runs once
+  (`vitest run`) and never watches. `--passWithNoTests` may appear only in the iterate chain, the check
+  `moments.iterate` names in `scripts/gate-tiers.json`.
+- **Status:** in force.
+
+## Gate tests pin the git defaults their flags override
+
+2026-10 · in force · guard `scripts/check-gate-integrity.fixtures.mjs` · evidence: same file
+
+- **Decision:** a fixture repository sets repository-local git config that is the opposite of what each git flag of
+  the gate overrides (`diff.renames`, `diff.noprefix`, `core.quotepath`, `color.diff`). That config beats the
+  developer's global one, and the gate's own git reads it too.
+- **Why:** a flag's test is red on removal only while git would otherwise do the other thing, and a developer's global
+  config can make git do that thing on one machine only. Measured here on 2026-10-29, one flag deleted at a time from a
+  scratch copy of the checker: with a global config of `diff.renames=false`, `diff.noprefix=true` and
+  `core.quotepath=false`, deleting `--no-renames`, `--no-prefix` or the quotepath override left the suite green; with
+  the fixture defaults each deletion fails tests (2, 81 and 2). `--no-color` needs no global config, since git does not
+  colour a pipe: its deletion fails 85 tests only under the fixtures' `color.diff=always`.
+- **Status:** in force.
+
+## The app sits at the git root
+
+2026-10 · in force · guard `scripts/check-hooks.mjs` · evidence: `scripts/check-hooks.test.mjs`
+
+- **Decision:** `scripts/check-hooks.mjs`, the first step of `verify:iter`, `verify` and `verify:scaffold`, refuses an
+  app whose folder is not the git root, CI included, and says so in three lines.
+- **Why:** the gate scripts read git paths relative to the repository root (staged names, the hooks path,
+  `ref:path`). From a subfolder they match nothing and say nothing, and the hooks check itself resolved the hooks
+  folder against the folder it ran in, so an installed app there passed while git ran no hook. A refusal costs a
+  sentence in the fork checklist; support costs every script a rewrite and a test of its own.
+- **Status:** in force.
+
+## Mocks reset before every test
+
+2026-10 · in force · guard `scripts/vitest-force-rerun.test.mjs` · evidence: `vitest.config.ts`
+
+- **Decision:** `mockReset: true` in `vitest.config.ts`. Vitest keeps a mock's calls and implementation from one test
+  to the next by default; resetting before each test returns a mock to the implementation it was created with, so
+  the order of the tests in a file cannot decide a verdict. A mock therefore keeps only the implementation it was
+  created with: a return value or a spy is set inside the test or in a `beforeEach`, never once at module level
+  (`.cursor/rules/testing.mdc`).
+- **Consequences:** the config test pins the value; a test that relied on a mock set once at module level fails
+  with the reset on, and is fixed in the test, never by switching the option off.
+- **Status:** in force.
+
+## The type check keeps its state file and still sees every input
+
+2026-10 · in force · guard `tsconfig.json` · evidence: `package.json` `typecheck`
+
+- **Context:** `tsconfig.json` sets `incremental: true`, so a run keeps `tsconfig.tsbuildinfo` (git-ignored) and
+  the compiler is called with `--noEmit`. A sibling template runs `tsc -b` per project, and there a plain run stays
+  green over a changed type file outside the `include` and needs `--force`, so its push tiers run a forced check.
+- **Decision:** no forced variant here. Measured on a scratch project with TypeScript 6.0.3 on 2026-10-29: after a
+  warm run, a changed declaration file outside the `include` turned `tsc --noEmit` red, and so did deleting a key
+  of an imported JSON file; `tsc -b` over the same project stayed green (exit 0) for the changed declaration file
+  and went red only with `--force`. The blind spot of `tsc -b` does not apply to this check.
+- **Consequences:** `noImplicitOverride` sits beside `noUncheckedIndexedAccess`; the two lifecycle members of
+  `shared/ui/common/ErrorBoundary/index.tsx` spell `override`. Reopen if this check moves to `tsc -b`: its blind
+  spot would then need a forced run at the push.
+- **Status:** in force.
 
 ## The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types
 
@@ -289,7 +382,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## `agentRules: false` keeps `next dev` out of `AGENTS.md`
 
-2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `next.config.ts:34`
+2026-10 · in force · guard `next.config.test.ts` · evidence: PR #100, `agentRules` in `next.config.ts`
 
 - **Context:** The Next 16.4 dev server writes a managed `nextjs-agent-rules` block into `AGENTS.md` whenever it
   detects a coding agent and the block is missing. `AGENTS.md` is this repo's own law and must not drift under a
@@ -302,7 +395,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Footer year is read once at module load
 
-2026-10 · in force · evidence: PR #100, `shared/ui/common/Footer/index.tsx:10`
+2026-10 · in force · evidence: PR #100, `CURRENT_YEAR` in `shared/ui/common/Footer/index.tsx`
 
 - **Context:** oxlint 1.86 `react/purity` flagged `new Date().getFullYear()` called during render and turned
   `oxlint --deny-warnings` red.
@@ -441,8 +534,9 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Context:** `AGENTS.md` had grown to 457 lines, this file to 1048, and the mandatory read to about 75 KB; facts
   were restated across files, revisit dates sat in prose where a keyword check read them as deadlines, and nothing
   stopped an agent bumping a held package.
-- **Decision:** entries here stay under 30 lines (context, decision, consequences, status, evidence link);
-  a superseded or wrong decision is deleted, not archived, and history lives in `git log -p` and the linked PRs.
+- **Decision:** entries here hold at most 30 lines after the heading and one index row each (`docs:check` holds
+  both; context, decision, consequences, status, evidence link); a superseded or wrong decision is deleted, not
+  archived, and history lives in `git log -p` and the linked PRs.
   `AGENTS.md` holds rules and pointers (versions in `package.json`, commands in the `README.md` table), one line
   per hold. Revisits are events (an upstream release, a Dependabot PR), not calendar dates; only structured files
   carry dates. Only the `alwaysApply` core of `.cursor/rules` loads on every Cursor turn; the rest load by glob.
@@ -542,14 +636,14 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Consequences:** `better-tailwindcss/no-deprecated-classes` does not help: both classes are valid and not
   deprecated. The build emits no warning, so on every Tailwind minor bump read the release notes for renamed
   utilities; this one test is the only guard.
-- **Button ring offset:** the `Button` base variant omits `ring-offset-background` (`shared/ui/button.tsx:10`); the
+- **Button ring offset:** the `Button` base variant omits `ring-offset-background` (`buttonVariants` in `shared/ui/button.tsx`); the
   focus ring comes from `ring-*` and `ring-offset-2` alone, matching the sibling enterprise template. Nothing
   guards it: do not re-add the shadcn default.
 - **Status:** in force.
 
 ## Tailwind class lint: two rules adopted, `no-unknown-classes` refused
 
-2026-08 · in force · guard `better-tailwindcss` rules in `eslint.config.js:393` · evidence: same file
+2026-08 · in force · guard the `better-tailwindcss` rules in `eslint.config.js` · evidence: same file
 
 - **Context:** a pre-flight found `no-deprecated-classes` 2 findings, both genuine, `enforce-canonical-classes` 0,
   `no-unknown-classes` 0.
@@ -574,7 +668,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
   Playwright and installs browsers for a version this repo does not pin.
 - **Test budgets follow what the test does:** the `verify-push` CLI cases boot node, npm and node, took seconds
   under a busy worker pool, and timed out at vitest's 5 s default. The describe block carries a 20 s budget
-  (`scripts/verify-push.test.mjs:119`). A `skip` was rejected: those cases prove phase routing and exit-code
+  (the `timeout` option of the CLI `describe` in `scripts/verify-push.test.mjs`). A `skip` was rejected: those cases prove phase routing and exit-code
   passthrough, the thing a silent pass would hide.
 - **Status:** in force.
 
@@ -594,7 +688,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Complexity ratchet: thresholds above the measured ceiling, production code only
 
-2026-08 · in force · guard five ESLint core rules in `eslint.config.js:421` · evidence: the measured table at `eslint.config.js:401`
+2026-08 · in force · guard five ESLint core rules in the complexity ratchet block of `eslint.config.js` · evidence: the measured table in the comment above it
 
 - **Decision:** `complexity` 15, `max-depth` 4, `max-params` 6, `max-lines-per-function` 130, `max-lines` 200 gate
   `app`, `features`, `shared` and `i18n`. The thresholds sit above the measured ceiling (12 / 3 / 5 / 102 / 143),
@@ -652,9 +746,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
   in code or after `npm run`; spelled with a separator; a stage word no script or step spells (`eslint`, also
   a step, stays ordinary until it is in code); adjacent names are one unit, strong when any is. Read: docs
   (fences, tables, this file), workflow names and comments, `.husky/*` comments, `gate-tiers.json` prose.
-- **Consequences:** a false positive costs a reword, never an allowance; the windows and
-  `RETELLING_MIN_STAGES` move only on a measurement (places of the old tree caught, lines flagged on the
-  rewritten tree):
+- **Consequences:** a false positive costs a reword, never an allowance; the windows and `RETELLING_MIN_STAGES`
+  move only on a measurement (places of the old tree caught, lines flagged on the rewritten tree):
 
 | rule                                                 | caught of 31 | flagged |
 | ---------------------------------------------------- | ------------ | ------- |
@@ -702,7 +795,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## ESLint 10, with `$eslint` overrides and a literal `settings.react.version`
 
-2026-07 · in force · guard `eslint.config.js` (trailing settings block) · evidence: `eslint.config.js:432`, `package.json` `overrides`
+2026-07 · in force · guard `eslint.config.js` (trailing settings block) · evidence: the comment on that block, `package.json` `overrides`
 
 - **Context:** the 9.x line ends its support on 2026-08-06, and `eslint-plugin-react`, `eslint-plugin-jsx-a11y` and
   the transitive `eslint-plugin-import` still cap `eslint` at `^9` in their peers.
@@ -718,7 +811,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## `no-magic-numbers` ignores HTTP status codes
 
-2026-07 · in force · guard `@typescript-eslint/no-magic-numbers` in `eslint.config.js:175` · evidence: same file
+2026-07 · in force · guard `@typescript-eslint/no-magic-numbers` in `eslint.config.js` · evidence: same file, `scripts/lint-config.test.mjs`
 
 - **Context:** enabling the rule gave 54 findings, mostly `{ status: 404 }` in route handlers and Next's own
   `images.deviceSizes` table. A status code is a universal table and self-documenting at the use site.
@@ -728,6 +821,10 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Consequences:** five real values survived and were named, because the bare number hid intent: the CSP report
   field truncation, the nonce byte length, the digest length of the rate-limit key hint that reaches a log line, and
   the user-agent slice in the anonymous rate-limit key (it bounds bucket cardinality against a spoofed user agent).
+- **Numeric literal types:** `ignoreNumericLiteralTypes` is on, because `type Gap = 3 | 5` is a name already and the
+  rule asked for a constant behind each number. A union written inline in a property type (`max?: 4 | 5`) still
+  counts, so name it as an alias; `scripts/lint-config.test.mjs` pins the alias, the same numbers used as values and
+  the inline union.
 - **Status:** in force.
 
 ## Constants only for a second call site or an external contract
@@ -759,7 +856,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Content Security Policy: nonce on dynamic routes, `'unsafe-inline'` on ISR routes
 
-2026-05 · in force · guard `proxy.test.ts`, `next.config.test.ts` · evidence: `proxy.ts:109`, `shared/lib/cspHeader.ts`
+2026-05 · in force · guard `proxy.test.ts`, `next.config.test.ts` · evidence: `applyProxyCsp` in `proxy.ts`, `shared/lib/cspHeader.ts`
 
 - **Context:** Next 16 emits inline `self.__next_f.push(...)` scripts into prerendered HTML at build time. A cached
   ISR page cannot carry a per-request nonce ("Nonces only support dynamic routes" in the Next CSP guide), and a hash
@@ -785,7 +882,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Context:** `next/web-vitals` wraps the raw package and does not expose attribution metrics. Two of six voters
   called the addition speculative; four accepted it as trivial (about 5 KB, no runtime cost).
 - **Decision:** `web-vitals` stays a direct dependency so a fork can read attribution without a new install.
-  `experimental.webVitalsAttribution: ['LCP', 'INP', 'CLS']` (`next.config.ts:87`) is the Next-side half: Next
+  `experimental.webVitalsAttribution: ['LCP', 'INP', 'CLS']` (`next.config.ts`) is the Next-side half: Next
   documents attribution as off by default and enabled per metric; this list is the set that carries it here.
 - **Consequences:** revisit when a fork has built and never imports the raw package: then remove it.
 - **Status:** in force; no fork data yet.
@@ -863,7 +960,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 ## Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks
 
-2026-03 · in force · evidence: `package.json` `build`, `next.config.ts:63`, `app/globals.css`
+2026-03 · in force · evidence: `package.json` `build`, `outputFileTracingRoot` in `next.config.ts`, `app/globals.css`
 
 - **Webpack build.** `next build` defaults to Turbopack in Next 16, but this repo has a custom `webpack()` hook for
   vendor chunking and the bundle analyzer, so `build` and `build:analyze` run `next build --webpack`. `build:turbo`

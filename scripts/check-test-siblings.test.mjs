@@ -317,6 +317,33 @@ describe('the CLI against a real git repository', () => {
             expect(verdict.code).toBe(2);
             expect(verdict.output).toContain('git');
         });
+
+        // A fork's first commit is the whole template, starter files with no sibling included, and
+        // there is no earlier commit to compare with, so nothing is judged (range mode does the same).
+        it('says so, and passes, on the first commit of a repository', () => {
+            const root = makeRepo();
+            write(root, SOURCE);
+            git(root, ['add', '-A']);
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(0);
+            expect(verdict.output).toContain('the first commit');
+        });
+
+        it('judges the second commit again', () => {
+            const root = makeRepo();
+            write(root, SOURCE);
+            commit(root, 'first');
+            write(root, 'shared/lib/added.ts');
+            git(root, ['add', '-A']);
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('shared/lib/added.ts');
+            expect(verdict.output).not.toContain(SOURCE);
+        });
     });
 
     describe('range mode (--base / --range)', () => {

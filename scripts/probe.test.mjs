@@ -260,7 +260,12 @@ describe('clearScreenshots', () => {
     });
 
     it('keeps the record inside the folder the repository already ignores', () => {
+        const ignored = readFileSync(join(import.meta.dirname, '..', '.gitignore'), 'utf8')
+            .split('\n')
+            .map((line) => line.trim());
+
         expect(dirname(GROUP_FILE)).toBe(OUT_DIR);
+        expect(ignored).toContain(`${OUT_DIR}/`);
     });
 
     // `run` is the one caller and it needs a build and a browser, so the case reads the source: a

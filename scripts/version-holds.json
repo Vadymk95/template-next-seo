@@ -4,14 +4,14 @@
         "held": "<5",
         "reason": "Under vitest 5 the Stryker vitest runner (10.0.0, dated 2026-08-14) runs zero tests per mutant: the one-file probe kills 0 of 48 mutants where vitest 4.1.11 kills 37. Re-probed 2026-10-07 with vitest 5.0.3: still 0 of 48.",
         "lift": "A @stryker-mutator/vitest-runner release dated after 2026-09-03; then run `npm install -D vitest@5 @vitest/coverage-v8@5` and `npx stryker run --mutate shared/lib/rateLimitCore.ts`, and take vitest 5 only when it kills mutants, in the commit that drops the Dependabot ignore.",
-        "evidence": ".cursor/brain/DECISIONS.md:249"
+        "evidence": "https://github.com/Vadymk95/template-next-seo/commit/c6488edc41a4db8fff2e4aaa5bafbc0454d5a7fb"
     },
     {
         "package": "@vitest/coverage-v8",
         "held": "<5",
         "reason": "Moves in lockstep with vitest, which is held below 5 for the Stryker runner (see the vitest entry).",
         "lift": "With the vitest hold: the same runner release and probe, in the same commit.",
-        "evidence": ".cursor/brain/DECISIONS.md:249"
+        "evidence": "https://github.com/Vadymk95/template-next-seo/commit/c6488edc41a4db8fff2e4aaa5bafbc0454d5a7fb"
     },
     {
         "package": "typescript",
@@ -39,6 +39,6 @@
         "held": "<25",
         "reason": "The Node typings track the runtime floor: engines.node is >=24, so types for a later Node would let code use APIs the declared floor does not have.",
         "lift": "When engines.node moves to the next major (an operator decision, see AGENTS.md § Out of scope); bump both in one commit and drop the Dependabot ignore.",
-        "evidence": "package.json:11"
+        "evidence": "https://github.com/Vadymk95/template-next-seo/commit/93c105954d56cb7a432cc08ded52d6e74d4c8201"
     }
 ]
