@@ -1,6 +1,24 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/*
+ * Tailwind ships a rule for every class-shaped string in every file git does not ignore, so a class
+ * quoted in a test, a spec, a script, a root config file, a doc page or a comment became CSS that
+ * no page uses. These files hold no markup and stay out of the scan; every other folder stays in,
+ * and a folder added later is scanned unless a line here names it. Paths resolve from this file;
+ * the config line reaches the project root only, so a nested `site.config.ts` is still scanned. A
+ * fork that renders Markdown or MDX with utility classes in it narrows the Markdown line.
+ * `app/globals.test.ts` pins these lines.
+ */
+@source not '../**/*.{test,spec}.*';
+@source not '../e2e';
+@source not '../scripts';
+@source not '../*.config.*';
+@source not '../**/*.{md,mdx}';
+@source not '../.cursor';
+@source not '../.github';
+@source not '../.claude';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
