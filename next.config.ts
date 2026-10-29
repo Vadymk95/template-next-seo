@@ -108,8 +108,10 @@ const nextConfig: NextConfig = {
         ]
     },
     compiler: {
+        // The logger writes its info, warn and error lines through the console method of that
+        // name; `shared/lib/logger.test.ts` fails when this list misses one of them.
         removeConsole:
-            process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false
+            process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn', 'info'] } : false
     },
     webpack: (config, { isServer, dev }) => {
         if (!isServer && !dev) {

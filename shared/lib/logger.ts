@@ -29,6 +29,26 @@ const report = {
     }
 };
 
+// Each level goes to the console method of its name. A production build strips every console
+// method that `compiler.removeConsole.exclude` in next.config.ts does not name, and
+// `logger.test.ts` fails when a method written here is missing from that list. `debug` keeps
+// console.log: it prints only in development, where nothing is stripped.
+function writeToConsole(level: LogLevel, ...args: unknown[]): void {
+    switch (level) {
+        case 'info':
+            console.info(...args);
+            return;
+        case 'warn':
+            console.warn(...args);
+            return;
+        case 'error':
+            console.error(...args);
+            return;
+        case 'debug':
+            console.log(...args);
+    }
+}
+
 class Logger {
     private formatLog(
         level: LogLevel,
@@ -60,15 +80,20 @@ class Logger {
         const entry = this.formatLog(level, message, context, error);
 
         if (process.env.NODE_ENV === 'production') {
+            // A browser console is the visitor's, not a log drain. A production build used to strip
+            // every client-side info line, so keep it quiet there; warn and error still write.
+            if (level === 'info' && typeof window !== 'undefined') {
+                return;
+            }
             // In production, log as JSON for log aggregation
-            console.log(JSON.stringify(entry));
+            writeToConsole(level, JSON.stringify(entry));
         } else {
             // In development, log with colors
             const prefix = `[${entry.timestamp}] [${level.toUpperCase()}]`;
             if (error) {
                 console.error(prefix, message, context, error);
             } else {
-                console.log(prefix, message, context ?? '');
+                writeToConsole(level, prefix, message, context ?? '');
             }
         }
     }
