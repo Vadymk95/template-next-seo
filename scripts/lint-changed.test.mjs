@@ -267,7 +267,11 @@ describe('against a real git repository', { timeout: 30_000 }, () => {
             const link = path.join(links, 'odd #1 %20.mjs');
             symlinkSync(SCRIPT, link);
 
-            expect(runScript(root, link).status).toBe(1);
+            const result = runScript(root, link);
+
+            // The finding itself, so a crash (which also exits 1) cannot pass for a lint run.
+            expect(result.status).toBe(1);
+            expect(result.stdout).toContain('no-var');
         });
 
         it('still runs from a folder with # and % in its name', () => {
@@ -280,8 +284,17 @@ describe('against a real git repository', { timeout: 30_000 }, () => {
             // The copy resolves `eslint` from its own location, so it gets this repository's modules.
             symlinkSync(path.resolve('node_modules'), path.join(folder, 'node_modules'));
             copyFileSync(SCRIPT, path.join(folder, 'lint-changed.mjs'));
+            // ...and imports the entry guard from beside itself.
+            copyFileSync(
+                path.join(path.dirname(SCRIPT), 'is-entry-point.mjs'),
+                path.join(folder, 'is-entry-point.mjs')
+            );
 
-            expect(runScript(root, path.join(folder, 'lint-changed.mjs')).status).toBe(1);
+            const result = runScript(root, path.join(folder, 'lint-changed.mjs'));
+
+            // The finding itself, so a crash (which also exits 1) cannot pass for a lint run.
+            expect(result.status).toBe(1);
+            expect(result.stdout).toContain('no-var');
         });
     });
 });

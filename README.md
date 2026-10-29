@@ -62,7 +62,7 @@ Placeholder brands currently in the scaffold: `React Enterprise Foundation`
 ### Security
 
 - ✅ **Edge proxy** (`proxy.ts`) - stricter CSP + rate limits for `/api/*` and `/dev/*`
-- ✅ **Rate limiting** - 100 requests/minute for API routes
+- ✅ **Rate limiting** - 100 requests/minute for API routes and Server Actions
 - ✅ **Security headers** - static set in `next.config.ts`, CSP override on API/dev via `proxy.ts`
 - ✅ **Input validation** - Zod schemas for forms and API routes
 

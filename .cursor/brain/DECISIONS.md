@@ -5,6 +5,11 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Decision | Date | Status |
 | --- | --- | --- |
 | The iterate chain: a config edit reruns everything, ESLint sees the changed files, a deleted route cannot red the types | 2026-10 | in force |
+| Tailwind scans app code only: `@source not` for tests, docs and tooling | 2026-10 | in force |
+| The logger writes each level through its own console method | 2026-10 | in force |
+| The rate limiter follows Next's Server Action rule and logs no client address | 2026-10 | in force |
+| The Web Vitals sink logs a validated allowlist, never the posted body | 2026-10 | in force |
+| Gate scripts cannot pass silently or race on ports | 2026-10 | in force |
 | The Node floor is computed from the lockfile, not written by hand | 2026-10 | in force |
 | Each page states its own social preview, with its own image file | 2026-10 | in force |
 | Vendor `splitChunks` groups take JavaScript modules only | 2026-10 | in force |
@@ -61,17 +66,117 @@ Why things are the way they are, one entry per decision. History lives in `git l
   `validator.ts` importing it: `tsc` failed with TS2307 until a live `next dev` rewrote it. (6) `mutation-scope.test.mjs`
   reads configs as text, so `--changed` never selects it and a new top-level layer failed only at the push.
 - **Decision:** (1) `forceRerunTriggers` are literal paths anchored at the config's folder, glob syntax escaped. (2) The
-  ESLint config carries a fingerprint of the stylesheet and its local `@import`s in `settings` for `**/*.tsx`; ESLint
-  hashes `settings` into every cache entry, so `lint`, `fix` and the staged pass follow it with no second cache. (3)
-  `lint-changed` lints tracked changes against HEAD plus untracked files with the `lint` flags and the same cache,
-  and skips ignored paths quietly. (4) Both linters ignore `.cursor/`. (5) `typecheck` drops a generated type file only
-  when it imports a module that is gone. (6) The chain runs the scope test by name (0.85 s alone).
+  ESLint config carries a fingerprint of the stylesheet, its local `@import`s and the installed version of each package
+  it imports (`tailwindcss`, `tw-animate-css`; the nearest `node_modules` above the importing file) in `settings` for
+  `**/*.tsx`; ESLint hashes `settings` into every cache entry, so `lint`, `fix` and the staged pass follow it with no
+  second cache, and a package upgrade needs no manual `.eslintcache` delete. (3) `lint-changed` lints tracked changes
+  against HEAD plus untracked files with the `lint` flags and the same cache, and skips ignored paths quietly. (4) Both
+  linters ignore `.cursor/`. (5) `typecheck` drops a generated type file only when it imports a module that is gone.
+  (6) The chain runs the scope test by name (0.85 s alone).
 - **Consequences:** a dirty `package.json` or vitest config costs the whole suite (~18 s, over the 15 s iterate budget,
   on purpose); the rest, five runs at a load of 8 to 11 on 12 cores: 3.1 s docs only, one component 8.3 s the first
   time and 4.6 s on a re-run, ten files 9.9 s and 5.4 s. Rejected: the stylesheet hash in the cache PATH (`.eslintcache/<hash>`): an
   existing `.eslintcache` file makes ESLint skip the write silently (measured: exit 0, file unchanged), and `fix`
-  and the staged pass would need a wrapper too. Not covered: a package the stylesheet imports; delete `.eslintcache`
-  after upgrading `tailwindcss`.
+  and the staged pass would need a wrapper too. Not covered: a patched copy of a package with an unchanged version (the
+  package's files are not hashed).
+- **Status:** in force.
+
+## Tailwind scans app code only: `@source not` for tests, docs and tooling
+
+2026-10 · in force · guard `app/globals.test.ts` · evidence: `app/globals.css`
+
+- **Context:** Tailwind 4 ships a rule for every class-shaped string in every file git does not ignore, so a class
+  quoted in a test, a spec, a script, a root config file, a Markdown page or an agent rule became CSS that no page
+  uses. Measured with the production PostCSS pipeline: 20 stray utility rules, 13 `@property` registrations and a
+  forced-colors block; 27,012 B minified (5,723 B gzip) before, 23,920 B (5,338 B) after. A cold compile took about
+  68 ms before and 52 ms after (median of seven fresh processes), so the gain that matters is bytes shipped.
+- **Decision:** eight `@source not` lines in `app/globals.css`: tests and specs, `e2e/`, `scripts/`, root `*.config.*`,
+  Markdown and MDX, `.cursor/`, `.github/`, `.claude/`. The config line is anchored to the root, so a nested
+  `site.config.ts` stays scanned. `messages/*.json` stays scanned; it is app copy. The scanner already skips the
+  gitignored coverage and report folders. `app/globals.test.ts` compiles the real stylesheet with the real PostCSS
+  plugin over a throwaway project and fails when a sentinel class of any excluded kind ships, or when an app folder
+  stops shipping; a control compile proves that each fixture is scanned without the lines. The test imports the
+  stylesheet, so that `vitest run --changed` selects it on a CSS-only edit; Vitest swaps every CSS import, `?raw`
+  included, for an empty module, so the test reads the text with `fs`. Cost: 0.26 s, no Next build.
+- **Consequences:** a fork that renders Markdown or MDX with utility classes in it narrows the Markdown line. Words in
+  `messages/*.json` can still ship a utility: the word "table" ships `.table`. The selection edge relies on two Vitest
+  4.1 internals (the plugin that empties a CSS import, and the walk over a test's transformed imports), so after a
+  Vitest bump `vitest related app/globals.css --run` must still select the test.
+- **Status:** in force.
+
+## The logger writes each level through its own console method
+
+2026-10 · in force · guard `shared/lib/logger.test.ts` · evidence: `shared/lib/logger.ts`, `next.config.ts` `compiler.removeConsole`
+
+- **Context:** `compiler.removeConsole` strips every console method that is not in `exclude`, and `exclude` named only
+  `error` and `warn`. The logger wrote every level through `console.log`, so a production deployment logged nothing.
+- **Decision:** `info`, `warn` and `error` go through `console.info`, `console.warn` and `console.error`, in production
+  and in development, and `exclude` is `['error', 'warn', 'info']`. `debug` keeps `console.log`, because it prints only
+  in development, where nothing is stripped. In a browser in production `info` is not written (`typeof window`),
+  because a production build used to strip it there; `warn` and `error` stay.
+- **Consequences:** `warn` and `error` JSON lines now go to stderr, `info` to stdout. The test reads both sides: the
+  config imported under production, and the methods each level calls. It fails if production would strip a method the
+  logger uses. It reads the config, not the compiled bundle.
+- **Status:** in force.
+
+## The rate limiter follows Next's Server Action rule and logs no client address
+
+2026-10 · in force · guard `proxy.test.ts` · evidence: `proxy.ts`, `getServerActionRequestMetadata` in `next/dist/server/lib/server-action-request-meta.js`
+
+- **Context:** only a request with `next-action` was limited, but Next also runs header-less form POSTs as actions: a
+  form posted without script sends no header. The failure log held the first 24 characters of the key: a whole IPv4
+  address, or the leading groups of an IPv6 one, and for an anonymous key (`anon:` plus the user agent) the start of
+  the user agent. The Upstash error text embedded the whole command, key included.
+- **Decision:** limit a POST that carries the header, or whose content type is exactly
+  `application/x-www-form-urlencoded`, or starts with `multipart/form-data`. This is Next's own rule
+  (`getServerActionRequestMetadata`); `proxy.test.ts` compares its rows with Next's function, so an upgrade that
+  changes the rule turns the test red. Log the key's kind plus 8 hex characters of SHA-256 over a random per-process
+  salt: an unsalted 32-bit digest of an IPv4 address can be reversed by hashing all 2^32 addresses. Log the Upstash
+  error with the key cut out (`[key]`).
+- **Consequences:** a GET with `next-action` to a page is no longer limited; Next ignores the header on a GET. A POST
+  with an empty `next-action` is limited. A urlencoded POST with `; charset=` is not limited, because Next compares
+  the whole header (the test pins this). A hint matches only within one process.
+- **Status:** in force.
+
+## The Web Vitals sink logs a validated allowlist, never the posted body
+
+2026-10 · in force · guard `app/api/vitals/route.test.ts` · evidence: `app/api/vitals/route.ts`
+
+- **Context:** the beacon is a whole web-vitals `Metric`, with `entries`, `navigationURL` and an id, posted by any
+  client, and `info` lines now reach production logs.
+- **Decision:** the route logs only `name`, `value`, `delta`, `rating` and `navigationType`, each checked against the
+  sets that `Metric` declares. Each enum carries `satisfies`, so a web-vitals bump that drops a value fails typecheck.
+  Other keys are dropped. A bad or non-JSON body logs `{ invalid: true }`. The answer stays 204, and
+  `requireSameOrigin` stays first.
+- **Consequences:** a name or navigation type that the library adds later logs the marker until the schema names it.
+  Production writes one info line per metric per page view, five validated fields each.
+- **Status:** in force.
+
+## Gate scripts cannot pass silently or race on ports
+
+2026-10 · in force · guards `scripts/is-entry-point.test.mjs`, `scripts/check-test-markers.test.mjs`, `scripts/gate-trace.test.mjs`, `scripts/docs-check.test.mjs`, `scripts/probe.test.mjs`, `scripts/check-gate-env.test.mjs`, `scripts/quiet-ports.test.mjs` · evidence: `.cursor/brain/VERIFICATION.md` § Ports, `scripts/is-entry-point.mjs`, `scripts/quiet-ports.mjs`
+
+- **Context:** each case was reproduced before the fix. (1) The entry check
+  `import.meta.url === new URL('file://' + process.argv[1]).href`, in 20 scripts (18 spelled it so, two with
+  `pathToFileURL`, which a symlink also defeats), was false through a symlink or for a path with `#` or `%`: the
+  script then skipped its check and exited 0, and `check-test-markers` passed a focused test under such a folder.
+  (2) `gate-trace` trimmed the front of `git status --porcelain`, so the first line of an unstaged edit (` M path`)
+  lost its space, the path parse shifted by one character and a `.cursor/` file counted as code. (3) A helper named
+  `fit` or `xit` that the file declares itself was reported as a focused or skipped test. (4) The probe could measure
+  a server it did not start, and it left its own server alive on a signal. (5) The preflight called a port busy on
+  one look: 7 of 100 runs went red against a port that flaps. (6) Tests bound fixed ports, and `listen(0)` ports
+  inside the ephemeral range.
+- **Decision:** (1) `scripts/is-entry-point.mjs` (real path, encoded) in every script that runs only when started;
+  `is-entry-point.test.mjs` fails a hand-written guard. (2) `gate-trace` trims only the end of the status text
+  (`trimEnd`). (3) A name the file declares itself is its own helper. (4) The probe takes the next free port, runs its
+  server detached, signals the whole group on every way out, and refuses a measurement once its own server has
+  exited. (5) Busy means two looks 150 ms apart (0 of 100 runs red). (6) Test ports come from `scripts/quiet-ports.mjs`:
+  10000-19999, one hashed window of 100 per checkout, one lane per test file.
+- **Consequences:** a new port-binding test file adds a lane to `LANES`. Two probes started within a second or two can
+  still pick the same port; the server that loses it dies and its probe stops without measuring. Rejected:
+  `import.meta.main` (Node 24.2 and later, experimental): a script run by an older Node reads `undefined` and skips its
+  check, which is the fail-open class this decision closes. These scripts now differ from the sibling templates until
+  the same edit lands there.
 - **Status:** in force.
 
 ## The Node floor is computed from the lockfile, not written by hand
@@ -582,8 +687,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
   HTTP status codes; `*.config.{ts,js,mjs}` and test files are exempt. Naming twenty status codes would move an
   HTTP table into our vocabulary and buy nothing.
 - **Consequences:** five real values survived and were named, because the bare number hid intent: the CSP report
-  field truncation, the nonce byte length, the rate-limit key prefix that reaches a log line, and the user-agent
-  slice in the anonymous rate-limit key (it bounds bucket cardinality against a spoofed user agent).
+  field truncation, the nonce byte length, the digest length of the rate-limit key hint that reaches a log line, and
+  the user-agent slice in the anonymous rate-limit key (it bounds bucket cardinality against a spoofed user agent).
 - **Status:** in force.
 
 ## Constants only for a second call site or an external contract
@@ -706,8 +811,9 @@ Why things are the way they are, one entry per decision. History lives in `git l
 2026-04 · in force · guard `shared/lib/rateLimitCore.test.ts`, `proxy.test.ts` · evidence: `shared/lib/rateLimit.ts`
 
 - **Context:** `server-only` does not run in the proxy bundle or in Vitest.
-- **Decision:** the limiter applies to `config.matcher` paths when the request is `/api/**` or carries
-  `next-action`, so document-route Server Actions are covered. The default is the in-memory `rateLimitCore`
+- **Decision:** the limiter applies to `config.matcher` paths when the request is `/api/**` or is a POST that Next
+  runs as a Server Action (a `next-action` header, or a form content type), so document-route Server Actions are
+  covered however they are posted. The default is the in-memory `rateLimitCore`
   (prune plus cap); with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` set it is the distributed
   `shared/lib/upstashRateLimit.ts`. `rateLimit.ts` re-exports the core behind `import 'server-only'` for Node
   imports; `proxy.ts` and Vitest import `rateLimitCore.ts` directly; `shared/lib/index.ts` does not re-export the

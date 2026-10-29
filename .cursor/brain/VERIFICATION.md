@@ -22,9 +22,11 @@ gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeate
       imports it, so the chain runs it by name (0.85 s alone) and a new top-level layer fails here, not at the push;
     - the ESLint cache follows the Tailwind stylesheet. Both Tailwind rule families open `app/globals.css`
       themselves and the cache keys on the file and the resolved config only, so `eslint.config.js` puts a
-      fingerprint of that stylesheet and the local files it `@import`s into `settings` for `**/*.tsx`
-      (`scripts/css-fingerprint.mjs`). A stylesheet edit re-lints those files and nothing else. A package it
-      imports (`tailwindcss`) is not part of the fingerprint: after upgrading one, delete `.eslintcache` once;
+      fingerprint of that stylesheet, the local files it `@import`s and the installed version of each package
+      it imports (`tailwindcss`, `tw-animate-css`; read from the nearest `node_modules` above the importing
+      file) into `settings` for `**/*.tsx` (`scripts/css-fingerprint.mjs`). A stylesheet edit or a package
+      upgrade re-lints those files and nothing else, so there is no `.eslintcache` to delete by hand. The
+      package's files are not hashed: a patched copy with the same version is not seen;
     - generated route types that name a deleted or renamed route are dropped before `tsc` (a file that
       imports a module that is gone; the declaration files `next-env.d.ts` imports stay), because Next
       rewrites them only while `next dev` or a build runs;
@@ -122,6 +124,8 @@ the base port and exports `PORT` + `PLAYWRIGHT_BASE_URL`; Playwright tears down 
 started. `playwright.config.ts` derives its base URL from `PORT`, so a hand run moved with `PORT=3100`
 alone is consistent; `PLAYWRIGHT_BASE_URL`, when set, wins. The push gate's preflight takes `--kill-port` (SIGTERM, re-probe, refuse if it will not
 die). `--kill-port` finds the holder of the port through `lsof`, so `lsof` must be installed (macOS ships it; Debian/Ubuntu: `apt-get install lsof`); when it cannot run, the preflight says so and names the install line instead of reading the port as free. Stray hunting by hand: `lsof -nP -iTCP:3000-3020 -sTCP:LISTEN`.
+
+`npm run probe` takes its server's port the same way (`findFreePort`: `PORT` or 3000 for `--dev`, 3100 for a build, the next free one when something answers), spawns the server detached in its own process group and signals the whole group on every way out (return, error, SIGINT, SIGTERM, SIGHUP, process exit); it refuses a measurement once its own server has exited, because whatever answers on that port is then somebody else's. The preflight calls a port busy only when two looks 150 ms apart both find it busy: `run-on-free-port` binds every port it walks for a millisecond, and one look cannot tell that from a server. Tests that bind real sockets take their ports from `scripts/quiet-ports.mjs` (10000-19999, one hashed window per checkout, one lane per test file), never from `listen(0)`.
 
 ---
 

@@ -16,9 +16,10 @@
  *
  * Usage (from the repository root): node scripts/drop-stale-route-types.mjs
  */
-import { existsSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+
+import { isEntryPoint } from './is-entry-point.mjs';
 
 // The output folders tsconfig.json includes (`.next-dev` is the dev smoke's), and where each keeps types.
 const DIST_DIRS = ['.next', '.next-dev'];
@@ -76,11 +77,7 @@ const main = () => {
     }
 };
 
-// Entry point only. Resolving the real path and encoding it keeps the check true through a symlink and
-// for a path with `#` or `%` in it, where a plain string comparison skipped `main` and exited 0.
-if (
-    process.argv[1] !== undefined &&
-    import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
-) {
+// Guarded so importing this module for a test does not remove generated files.
+if (isEntryPoint(import.meta.url)) {
     main();
 }

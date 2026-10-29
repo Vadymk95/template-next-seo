@@ -13,10 +13,10 @@
  * Usage (from the repository root): node scripts/lint-changed.mjs
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+
+import { isEntryPoint } from './is-entry-point.mjs';
 
 // The extensions ESLint lints in this repository (the default patterns plus the Next preset's).
 const LINTABLE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
@@ -100,12 +100,8 @@ const main = () => {
     process.exit(result.status ?? 1);
 };
 
-// Entry point only. Resolving the real path and encoding it keeps the check true through a symlink and
-// for a path with `#` or `%` in it, where a plain string comparison skipped `main` and exited 0.
-if (
-    process.argv[1] !== undefined &&
-    import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
-) {
+// Guarded so importing this module for a test does not lint the working tree.
+if (isEntryPoint(import.meta.url)) {
     try {
         main();
     } catch (error) {

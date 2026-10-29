@@ -228,6 +228,11 @@ describe('dropStaleRouteTypes', () => {
             const folder = path.join(makeRoot({}), 'odd #1 %20');
             mkdirSync(folder);
             copyFileSync(SCRIPT, path.join(folder, 'drop-stale-route-types.mjs'));
+            // The copy imports the entry guard from beside itself.
+            copyFileSync(
+                path.join(path.dirname(SCRIPT), 'is-entry-point.mjs'),
+                path.join(folder, 'is-entry-point.mjs')
+            );
 
             runScript(root, path.join(folder, 'drop-stale-route-types.mjs'));
 
