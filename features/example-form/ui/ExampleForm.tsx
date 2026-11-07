@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 // Template scaffolding: canonical lucide-react usage example (pending/idle submit button).
 // See .cursor/brain/SKELETONS.md → "Template scaffolding".
 import { Loader2, Send } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState, type FunctionComponent } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -13,6 +13,7 @@ import { exampleFormSchema, type ExampleFormSchema } from '@/features/example-fo
 import { Button, Input } from '@/shared/ui';
 
 export const ExampleForm: FunctionComponent = () => {
+    const locale = useLocale();
     const tCommon = useTranslations('common');
     const tErrors = useTranslations('errors');
     const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -33,6 +34,8 @@ export const ExampleForm: FunctionComponent = () => {
         const formData = new FormData();
         formData.append('name', data.name);
         formData.append('email', data.email);
+        // A Server Action cannot read the locale from the request, so the form sends it.
+        formData.append('locale', locale);
 
         const result = await exampleFormAction(formData);
 

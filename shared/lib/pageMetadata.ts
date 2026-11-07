@@ -34,6 +34,11 @@ export const buildPageMetadata = async ({
     const root = await getTranslations({ locale, namespace: 'meta.root' });
     const url = `/${locale}${path}`;
     const title = t('title');
+    // The locale layout defines `title.template`, and Next applies a template to the segments below
+    // the one that defines it, never to that segment's own page. The page at the locale root is that
+    // page, so it states the whole title; a page below the root stays bare and gets the template.
+    const documentTitle =
+        path === '' ? { absolute: root('titleTemplate').replaceAll('%s', () => title) } : title;
     const description = t('description');
     const languages = Object.fromEntries(routing.locales.map((l) => [l, `/${l}${path}`])) as Record<
         string,
@@ -41,7 +46,7 @@ export const buildPageMetadata = async ({
     >;
 
     return {
-        title,
+        title: documentTitle,
         description,
         alternates: { canonical: url, languages },
         openGraph: {

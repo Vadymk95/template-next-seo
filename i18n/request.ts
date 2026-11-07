@@ -1,11 +1,13 @@
+import { locale as rootLocale } from 'next/root-params';
 import { hasLocale } from 'next-intl';
 import { getRequestConfig } from 'next-intl/server';
 
 import { routing } from './routing';
 
-// eslint-disable-next-line @typescript-eslint/no-deprecated -- the request-config hook of the current next-intl routing; moving to next/root-params is a routing migration, not a lint fix
-export default getRequestConfig(async ({ requestLocale }) => {
-    const requested = await requestLocale;
+export default getRequestConfig(async ({ locale: explicitLocale }) => {
+    // Next throws when a Server Action or a metadata image reads root params, so a caller that knows
+    // its locale passes it (`getTranslations({ locale })`) and the request is left alone.
+    const requested = explicitLocale ?? (await rootLocale());
     const locale = hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
 
     const messages = (

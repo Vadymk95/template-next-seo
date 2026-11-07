@@ -26,7 +26,7 @@ The template ships a Zod boundary around `fetch` (`shared/lib/api/safeFetch.ts`)
 ### 1a. Upstream URL: server-only, not the public constant
 
 **Trigger:** the first call to a backend that is not the app itself.
-**Plug in:** `API_BASE_URL` in `shared/constants/index.ts` reads `NEXT_PUBLIC_API_URL`, and a `NEXT_PUBLIC_` value is inlined into the client bundle. That is fine for a public API and wrong for an internal host or anything credentialed. Put server-only variables in their own fork-created module (for example a `serverEnv.ts` beside `shared/lib/env.ts`) that starts with `import 'server-only'` and parses them with a Zod schema inside the accessor, so a missing value throws a named error on first use (at build for a prerendered route, otherwise on the first request). Do not add `server-only` to `shared/lib/env.ts` itself: `app/sitemap.ts`, `app/robots.ts` and `app/layout.tsx` import it, and `app/sitemap.test.ts` (through `app/sitemap.ts`) would start throwing (see the test note below). Declare the variable in `.env.example`.
+**Plug in:** `API_BASE_URL` in `shared/constants/index.ts` reads `NEXT_PUBLIC_API_URL`, and a `NEXT_PUBLIC_` value is inlined into the client bundle. That is fine for a public API and wrong for an internal host or anything credentialed. Put server-only variables in their own fork-created module (for example a `serverEnv.ts` beside `shared/lib/env.ts`) that starts with `import 'server-only'` and parses them with a Zod schema inside the accessor, so a missing value throws a named error on first use (at build for a prerendered route, otherwise on the first request). Do not add `server-only` to `shared/lib/env.ts` itself: `app/sitemap.ts`, `app/robots.ts` and `app/[locale]/layout.tsx` import it, and `app/sitemap.test.ts` (through `app/sitemap.ts`) would start throwing (see the test note below). Declare the variable in `.env.example`.
 
 **Testing a `server-only` module.** The package's default export throws ("This module cannot be imported from a Client Component module"); only the `react-server` export condition, which Next sets and Vitest does not, resolves to an empty file (`node_modules/server-only/package.json`). Every Vitest file that imports such a module, directly or through a getter, starts with `vi.mock('server-only', () => ({}))`, or mocks the whole module the way `proxy.test.ts` mocks `@/shared/lib/upstashRateLimit`.
 **Do not:** build a URL from user input. Fix the origin in env, `encodeURIComponent` every path segment, and never forward a user-supplied host.
@@ -457,7 +457,7 @@ Production documents use the static policy (`'self' 'unsafe-inline'` for scripts
 - **`script-src`:** add `https://www.googletagmanager.com` to the production value in `buildStaticContentSecurityPolicy`.
 - **`connect-src`:** add `https://www.googletagmanager.com https://*.google-analytics.com https://*.google.com` in `baseCspDirectives` (Google tag platform CSP guide, which lists `script-src-elem`, `img-src` and `connect-src`; `img-src` already allows `https:` here). The guide was read through a summarising fetch, so re-check the host list against the page before shipping.
 - **Nonce policy:** leave it alone. `/api` and `/dev` render no analytics, and a nonce plus `'strict-dynamic'` policy ignores host allowlists in browsers that support it (CSP spec, **training data**).
-- **Layout preconnect:** `app/layout.tsx` carries no connection hint, and `e2e/smoke.spec.ts` fails a page that gains a `preconnect` or `dns-prefetch` to another origin. A hint to the vendor opens a connection to Google on every page view, before any consent (**inference**), so add it only inside the consent-gated branch, and allow that origin in the smoke test next to the grant.
+- **Layout preconnect:** `app/[locale]/layout.tsx` carries no connection hint, and `e2e/smoke.spec.ts` fails a page that gains a `preconnect` or `dns-prefetch` to another origin. A hint to the vendor opens a connection to Google on every page view, before any consent (**inference**), so add it only inside the consent-gated branch, and allow that origin in the smoke test next to the grant.
 
 ### 4c. Core Web Vitals to the vendor (ask-first)
 
@@ -506,31 +506,18 @@ describe('message parity', () => {
 
 Also extend `app/sitemap.test.ts` so that, with two locales, every entry's `alternates.languages` lists both. Optional: next-intl can generate a typed message declaration from `messages/en.json` through the plugin's `createMessagesDeclaration` option, which its docs mark `experimental`; this repo does not use it.
 
-### 5b. The `<html lang>` attribute (structural, ask-first)
+### 5b. The `<html lang>` attribute and the root layout (done; what a second locale adds)
 
-**Finding first:** `app/layout.tsx` hard-codes `<html lang="en">` and `app/global-error.tsx` does the same, so a `de` page would still declare English to screen readers and browsers' translation prompts. Setting it per locale needs the locale in the layout that renders `<html>`. The documented route: Next.js allows root layouts under a dynamic segment ("useful for implementing internationalization", `layout` file convention docs). `app/[locale]/layout.tsx` already narrows the locale from `params` with `requireLocale` and calls `setRequestLocale`; it keeps doing both and only starts rendering `<html>`:
+**State:** `app/[locale]/layout.tsx` is the root layout and renders `<html lang={locale}>`, so a `de` page declares German to screen readers and browsers' translation prompts. There is no layout file directly under `app/`: Next.js lets a root layout sit under a dynamic segment ("useful for implementing internationalization", `layout` file convention docs), and the dynamic segments above the root layout are root parameters that `next/root-params` exports. `i18n/request.ts` reads `locale` from there, which is why no page or layout calls `setRequestLocale` any more (next-intl marks it and `requestLocale` deprecated in favour of this). The decision and its trade-offs: `DECISIONS.md` § "The locale layout is the root layout".
 
-```tsx
-// app/[locale]/layout.tsx becomes the root layout: it renders html and body
-const LocaleLayout = async ({ children, params }: LocaleLayoutProps): Promise<ReactElement> => {
-    const locale = requireLocale((await params).locale);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
-    setRequestLocale(locale);
-    return (
-        <html lang={locale} /* dir={...} for right-to-left locales */ className={...}>
-            <body>{/* the providers the old app/layout.tsx rendered */}</body>
-        </html>
-    );
-};
-```
+What a fork adding a second locale does here:
 
-What moves, and what to watch:
-
-- Delete `app/layout.tsx` and move its fonts, `metadata`, `WebVitalsReporter`, `Providers` and the globals import into the locale layout. Metadata exports in the old file become `generateMetadata`, merged with the existing one there.
-- **The title cascade breaks.** `title.template` (`'%s | ...'` in `app/layout.tsx` today) does not apply to a `page` in the segment that defines it (Next.js `generate-metadata` docs, `title.template`), and `app/[locale]/page.tsx` sits in the same segment as the new root layout, so the home page loses its suffix. That is exactly what the `AGENTS.md` i18n contract and the README "title.template cascade" caveat forbid. Give the home page `title: { absolute: ... }` with the brand written out, keep `title.default` and `title.template` in the locale layout for the deeper pages, and rewrite both docs in the same pull request. `e2e/smoke.spec.ts` asserts the suffixed home title, so it catches a miss; `app/[locale]/page.test.tsx` expects the bare title and changes with the page.
-- `app/dev/ui/` and any route outside `[locale]` need their own root layout (for example under a route group); navigating between two root layouts is a full page load (Next.js route groups docs). The dev pages are 404 in production, so this costs nothing there.
+- Add `dir={...}` to `<html>` in `app/[locale]/layout.tsx` for a right-to-left locale, next to `lang`.
 - `app/global-error.tsx` replaces the root layout when it renders, so it keeps its own `<html>` and cannot read the locale; leave it at `lang="en"` and accept that (**inference**; unverified).
-- Whether moving `<html>` into the locale layout keeps the two ISR routes static is **unverified**: build with two locales and confirm `/en` and `/de` still show as prerendered before merging. `setRequestLocale` stays in every layout and page, as today.
+- Build with two locales and confirm `/en` and `/de` still show as prerendered. With one locale the build shows `/en` and `/en/example-form` prerendered.
+- `app/dev/ui/` is the second root layout. Any other surface that renders HTML outside `[locale]` needs a root layout of its own too; navigating between two root layouts is a full page load (Next.js route groups docs). Do not add a pass-through layout directly under `app/`: it would become the root layout and `locale` would stop being a root param (next-intl's `next/root-params` article).
+- **The title template does not reach the locale root page.** `title.template` (read from `meta.root` in the messages) does not apply to a `page` in the segment that defines it (Next.js `generate-metadata` docs, `title.template`), and `app/[locale]/page.tsx` shares the segment of the root layout. `buildPageMetadata` therefore returns `title: { absolute }` for a page at the locale root; a new page at that level needs the same, and `e2e/smoke.spec.ts` asserts the suffixed home title.
+- Route Handlers, Server Actions and metadata images cannot read root params: they pass the locale to next-intl (`getTranslations({ locale })`). The example form sends a `locale` field and the action validates it with `hasLocale`; a new action that calls `getTranslations()` without a locale fails on its first call.
 
 ### 5c. Links, redirects and the locale cookie
 

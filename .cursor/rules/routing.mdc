@@ -14,22 +14,22 @@ alwaysApply: false
 ## Route Structure (real map)
 
 ```
-app/
-  ├── layout.tsx                # Root layout: fonts, WebVitalsReporter, Providers,
-  │                             #   title.default + title.template (NO Header/Footer here)
-  ├── global-error.tsx          # Root catastrophic error UI
+app/                            # no app/layout.tsx: the layouts below are the root layouts
+  ├── global-error.tsx          # Root catastrophic error UI (own <html>, fixed lang="en")
   ├── providers.tsx             # Client providers (analytics init on load/idle)
   ├── [locale]/
-  │   ├── layout.tsx            # requireLocale → setRequestLocale → getMessages →
+  │   ├── layout.tsx            # ROOT layout: <html lang>, fonts, WebVitalsReporter, Providers,
+  │   │                         #   title.default + title.template, requireLocale → getMessages →
   │   │                         #   NextIntlClientProvider wraps Header / main / Footer
   │   ├── page.tsx              # Route: /en (home)
   │   ├── error.tsx             # Locale-scoped error boundary
   │   ├── not-found.tsx         # Locale-scoped 404
+  │   ├── [...rest]/page.tsx    # Catch-all: notFound(), so an unmatched path gets that 404 in the layout
   │   └── example-form/
   │       └── page.tsx          # Route: /en/example-form
   ├── api/                      # Route handlers: health, vitals, csp-report, example-form
   ├── actions/                  # Server Actions (by domain)
-  ├── dev/ui/                   # Dev playground (production returns 404)
+  ├── dev/ui/                   # Dev playground, the second root layout (production returns 404)
   ├── sitemap.ts                # Dynamic sitemap with per-route hreflang entries
   └── robots.ts                 # robots.txt
 ```
@@ -48,13 +48,13 @@ gains slow data fetching.
 ## Adding a Localized Route (danger zone)
 
 Every `[locale]` page/layout entry MUST narrow the route param via
-`requireLocale()` and call `setRequestLocale(locale)` **before any client
-descendant renders** — a missing call swallows errors as `Error(void 0)` in
-prerender (SKELETONS "i18n"). Mirror `app/[locale]/page.tsx`:
+`requireLocale()`. The locale reaches `i18n/request.ts` through
+`next/root-params` (the `[locale]` segment sits above the root layout), so no
+entry pins it and there is no per-entry call to forget (SKELETONS "i18n").
+Mirror `app/[locale]/page.tsx`:
 
 ```typescript
 // app/[locale]/blog/[id]/page.tsx
-import { setRequestLocale } from 'next-intl/server';
 import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
@@ -66,17 +66,18 @@ interface Props {
 const BlogPost = async ({ params }: Props): Promise<ReactElement> => {
     const { locale: rawLocale, id } = await params;
     const locale = requireLocale(rawLocale); // notFound() on unknown locale
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
-    setRequestLocale(locale); // BEFORE any client descendant
     // ...
 };
 
 export default BlogPost;
 ```
 
-- **The `no-deprecated` disable stays in the recipe** — next-intl marks `setRequestLocale` `@deprecated`
-  (migrate to `next/root-params`), the call is still mandatory here, and the reason after `--` is required
-  (`@eslint-community/eslint-comments/require-description`); copy the line with the call
+- **A Server Action, a Route Handler and a metadata image cannot read root params** (Next throws there):
+  pass the locale, `getTranslations({ locale, namespace })`. A Server Action gets it from its caller (the
+  example form sends a `locale` field) and validates it with `hasLocale` before use, because it is client input
+- **`i18n/request.ts` is the one reader of `locale` from `next/root-params`** (Server Components only); it
+  validates the value against `routing.locales` and falls back to the default. Server Components get the
+  locale through next-intl (`useTranslations`, `getTranslations`), not by calling the getter again
 - **Dynamic segments** work as usual, nested under the locale:
   `app/[locale]/<segment>/[id]/page.tsx` → `/en/<segment>/:id`; catch-all `[...slug]`,
   optional catch-all `[[...slug]]`
@@ -106,17 +107,24 @@ export { default, size, contentType } from '@/app/[locale]/opengraph-image';
 ### title.template cascade (do not move)
 
 `title.template` does **not** apply to the segment that defines it — only to
-descendants. Root `app/layout.tsx` owns `title.default` + `title.template`;
-`app/[locale]/layout.tsx` sets **only** `description` / `openGraph` / `twitter`.
-Moving the template into `[locale]/layout.tsx` drops the brand suffix from page
-titles.
+the segments below it. `app/[locale]/layout.tsx` owns `title.default` +
+`title.template` (read from `meta.root` in the messages), and the page of that
+same segment, the home page, would lose the brand suffix. So `buildPageMetadata`
+returns `title: { absolute }` for the page at the locale root (`path: ''`) and a
+bare title for every page below it. A new page at the locale root states its
+whole title the same way; a page below it stays bare and the template wraps it.
 
-## Layouts: root vs [locale]
+## Layouts: two root layouts
 
-| Layout                    | Responsibilities                                                                                                                                                                            |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/layout.tsx` (root)   | `<html>`/`<body>`, fonts, `WebVitalsReporter`, `Providers`, `metadataBase`, `title.default` + `title.template`. **No Header/Footer, no i18n.**                                  |
-| `app/[locale]/layout.tsx` | `generateStaticParams` from `routing.locales`, `requireLocale` + `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wrapping `Header` / `main` / `Footer`; locale `description` / `openGraph` / `twitter`. |
+There is no layout file directly under `app/`: a layout with no layout above it is a root layout,
+and `next/root-params` exports the dynamic segments above the root layout (here
+`locale`). A new top-level surface that renders HTML outside `[locale]` needs a
+root layout of its own; moving between root layouts is a full page load.
+
+| Layout                      | Responsibilities                                                                                                                                                                                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/[locale]/layout.tsx`   | Root layout: `<html lang>`, `<body>`, fonts, `globals.css`, `WebVitalsReporter`, `Providers`, `generateStaticParams` from `routing.locales`, `requireLocale`, `getMessages` → `NextIntlClientProvider` wrapping `Header` / `main` / `Footer`; `generateMetadata` (`metadataBase`, title, SEO). |
+| `app/dev/ui/layout.tsx`     | Second root layout for the dev playground: `<html lang="en">`, `<body>`, the font and the dark theme; 404 in production.                                                                                                                                                             |
 
 The layout chrome (Header/Footer) MUST stay inside `NextIntlClientProvider` —
 it consumes translations and breaks (hydration mismatch / prerender failure)

@@ -41,8 +41,8 @@ discoverable there.
 Wait for approval by risk (the risk list: `.cursor/rules/workflow.mdc` § Approval & Brain — it names this
 repo's frozen security surface and the locale set). Trivial leaf edits proceed with a brief note.
 
-Two Next-specific traps that are invisible until the build fails: every `app/[locale]/*` entry must call
-`requireLocale()` then `setRequestLocale(locale)` **before** any client descendant renders, and the
+Two Next-specific traps that are invisible until the build fails: every `app/[locale]/*` entry must narrow the
+route param with `requireLocale()` (a Server Action passes its locale to next-intl, it cannot read it), and the
 `next.config.ts` import graph is alias-free — anything it reaches must use relative imports, because Next
 transpiles that graph before the `@/` alias exists.
 

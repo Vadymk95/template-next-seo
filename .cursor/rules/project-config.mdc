@@ -14,7 +14,7 @@ AI-generated UI has recognizable tells. For any UI work reject the generic defau
 - **Layout**: content-first and priority-driven (the H1 and copy carry ranking weight), not a decorative hero followed by a uniform grid of identical cards.
 - **Copy**: realistic strings from `messages/<locale>.json` (next-intl), never lorem-ipsum; real length surfaces wrapping, overflow and truncation during dev.
 - **Padding & shadows**: no shadow tokens exist in `@theme`; use `shadow-*` sparingly (or `border-border` separation) and the spacing scale, not blanket oversized padding.
-- **Dark mode only, in practice**: `app/layout.tsx` hardcodes `className="... dark"` on `<html>` and no theme toggle exists, so `.dark` is always applied and the `:root` (light) tokens never render. Verify new surfaces against the `.dark` values.
+- **Dark mode only, in practice**: `app/[locale]/layout.tsx` (and `app/dev/ui/layout.tsx`) hardcodes `className="... dark"` on `<html>` and no theme toggle exists, so `.dark` is always applied and the `:root` (light) tokens never render. Verify new surfaces against the `.dark` values.
 - **Baseline APIs only**: stick to Baseline "Widely available" (`:has()`, container queries, `<dialog>`, `scroll-snap`, view-transitions); a "Newly available" API (e.g. `scheduler.yield()`) needs a fallback.
 
 ## Interaction & base-layer states (binding)

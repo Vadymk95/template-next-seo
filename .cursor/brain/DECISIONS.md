@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| The locale layout is the root layout and the locale comes from `next/root-params` | 2026-11 | in force |
 | Gate checks refuse a value they cannot judge | 2026-11 | in force |
 | docs:check reads the tree as a clean checkout does | 2026-10 | in force |
 | The gate's strict flags are read from the commands | 2026-10 | in force |
@@ -961,9 +962,34 @@ Why things are the way they are, one entry per decision. History lives in `git l
   document routes live under `app/[locale]/`; `proxy.ts` composes the next-intl middleware with the nonce CSP and
   the rate limit. Server Actions translate through `getTranslations`. The single message source is
   `messages/<locale>.json`; the locale set is `['en']`, and a new locale needs `routing.locales` plus its file.
-- **Consequences:** Next applies `title.template` only to descendants, so the root `app/layout.tsx` owns
-  `title.default` and `title.template`, and `app/[locale]/layout.tsx` adds only `description`, `openGraph` and
-  `twitter`.
+- **Consequences:** the locale layout is the root layout, and where the title template lives follows from that:
+  see the next entry.
+- **Status:** in force.
+
+## The locale layout is the root layout and the locale comes from `next/root-params`
+
+2026-11 · in force · guard `i18n/request.test.ts`, `app/[locale]/layout.test.tsx`, `shared/lib/pageMetadata.test.ts`, `app/actions/example-form.test.ts` · evidence: `.cursor/brain/EXTENSIONS.md` § 5b, next-intl's article on `next/root-params`
+
+- **Context:** next-intl marks `requestLocale` (the request config) and `setRequestLocale` (static rendering)
+  deprecated ("Please migrate to `next/root-params`"), and `@typescript-eslint/no-deprecated` reports every use.
+  The template kept both behind a suppression, reading the move as a routing migration, not a lint fix; the cost
+  was a suppression at every use and a lint failure for any use that had none.
+- **Decision:** make the migration. The layout file directly under `app/` is deleted and `app/[locale]/layout.tsx` is the root layout
+  (`<html lang={locale}>`, fonts, `WebVitalsReporter`, `Providers`, `metadataBase`, title default and template).
+  `i18n/request.ts` reads `locale` from `next/root-params`, validates it with `hasLocale` and falls back to the
+  default; no page or layout calls `setRequestLocale`. `app/dev/ui` has a root layout of its own. The installed
+  Next needs no flag for the getter (its config warns that `experimental.rootParams` "is no longer needed"). The
+  type check generates the route types before it runs (the chain is in `scripts/gate-tiers.json`), because the
+  getter is typed only after generation and a fresh clone has no `.next`.
+- **Consequences:** `<html lang>` follows the locale (it was a fixed `en`). `title.template` does not reach the
+  page of its own segment, so `buildPageMetadata` states the home title in full (`title.absolute`) and the pages
+  below the locale root stay bare. A Server Action, a Route Handler and a metadata image cannot read root params
+  (Next throws there) and pass the locale: the example form sends it and the action validates it. Next serves
+  its built-in 404 for an unmatched URL in a default document (no `lang`, no theme) when the root layout sits
+  under a dynamic segment, so `app/[locale]/[...rest]/page.tsx` raises the 404 inside the layout. The server
+  response for that 404 is status 404 with `<html id="__next_error__">` and an empty body, and the localized 404
+  appears only after hydration; the old tree served Next's built-in 404 text inside `<html lang="en">` in the
+  server HTML.
 - **Status:** in force.
 
 ## Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe

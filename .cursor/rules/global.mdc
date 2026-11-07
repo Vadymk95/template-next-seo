@@ -34,7 +34,7 @@ Do-not-touch by default, with explicit approval first (`agent-pipeline.mdc` Anti
 
 - **Security surface** (CSP in `next.config.ts`, the nonce pipeline and middleware order in `proxy.ts`, the rate-limit matcher, COOP/CORP): never add a branch before the rate limiter, and keep the static and nonce CSP in sync. Any edit is a **security review**.
 - **Template scaffolding** (`lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, every `// Template scaffolding` site): never stripped in an "unused code" pass, only after the caller confirms "this is now my MVP".
-- **`app/[locale]/*`**: every page/layout entry calls `setRequestLocale(locale)` before any client descendant. **Locale set stays `['en']`** until the caller asks.
+- **`app/[locale]/*`**: `app/[locale]/layout.tsx` is the root layout and every page/layout entry narrows the route param with `requireLocale()`; the locale reaches `i18n/request.ts` through `next/root-params`. **Locale set stays `['en']`** until the caller asks.
 - **Production build is `npm run build` (`next build --webpack`)**: custom `splitChunks` are ignored under Turbopack, so the default build tool does not change.
 
 ## Intelligence & Context

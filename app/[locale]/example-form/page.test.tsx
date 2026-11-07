@@ -10,10 +10,10 @@ import ExampleFormPage, { generateMetadata, revalidate } from './page';
 /*
  * `next-intl/server` reads the request context Next.js builds per render; jsdom has none. The
  * subject is the page contract (metadata from the messages, the form page as the body), so the
- * server helpers are replaced with the same messages the provider uses.
+ * server helpers are replaced with the same messages the provider uses. The page pins no request
+ * locale of its own, so the stand-in offers no `setRequestLocale`: a call to it fails the test.
  */
 vi.mock('next-intl/server', () => ({
-    setRequestLocale: vi.fn(),
     getTranslations: ({ namespace }: { namespace: string }) =>
         Promise.resolve((key: string): string => {
             const [, name] = namespace.split('.');
@@ -35,8 +35,6 @@ vi.mock('@/shared/ui/common/SmartLink', () => ({
         <a {...props}>{children}</a>
     )
 }));
-
-const { setRequestLocale } = await import('next-intl/server');
 
 const params = Promise.resolve({ locale: 'en' });
 const unknownLocale = Promise.resolve({ locale: 'xx' });
@@ -77,10 +75,12 @@ describe('example form page entry', () => {
         expect(screen.getByLabelText(messages.common.form.email)).toBeInTheDocument();
     });
 
-    it('pins the request locale for static rendering', async () => {
-        await ExampleFormPage({ params });
+    // The title is the bare page title: this page sits one segment below the locale layout, so the
+    // layout's `title.template` wraps it.
+    it('leaves the document title bare for the layout template to wrap', async () => {
+        const metadata = await generateMetadata({ params });
 
-        expect(setRequestLocale).toHaveBeenCalledWith('en');
+        expect(metadata.title).toBe(messages.meta.exampleForm.title);
     });
 
     it('answers 404 for a locale the routing does not serve', async () => {

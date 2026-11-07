@@ -11,7 +11,7 @@ it, replace every spot below — grep the old strings afterwards to be sure none
 missed (a missed brand string in `<title>` or the dev banner is the usual slip):
 
 - `package.json` **and** `package-lock.json` — `name`
-- `app/layout.tsx` — `title.default`, `title.template`, `keywords`, `authors`, `creator`
+- `app/[locale]/layout.tsx` — `keywords`, `authors`, `creator` in `generateMetadata`
 - `messages/<locale>.json` — `home.title` / `home.description`, and `meta.root.*`
   (`titleDefault`, `titleTemplate`, `description`, `siteName`) + `meta.home.description`
 - `app/[locale]/opengraph-image.tsx` — the social preview card (a plain site-name card); the
@@ -111,6 +111,10 @@ npm install
 # Install git hooks once (lifecycle scripts are disabled via .npmrc)
 npm run prepare
 
+# Run the type check once before the first commit: it writes the route types ESLint reads for
+# next/root-params, and until then a commit that stages a file importing it fails lint (no-unsafe-*)
+npm run typecheck
+
 # Create .env.local: the production build requires NEXT_PUBLIC_APP_URL, and the example sets it
 cp .env.example .env.local
 
@@ -147,14 +151,15 @@ app/                    # Next.js App Router (routing layer)
   │   └── health/
   ├── actions/          # Server Actions (by domain)
   │   └── example-form.ts
-  ├── [locale]/         # Locale segment (next-intl SSR)
-  │   ├── layout.tsx   # setRequestLocale + NextIntlClientProvider (Header/Footer)
+  ├── [locale]/         # Locale segment (next-intl SSR), the root layout's folder
+  │   ├── layout.tsx   # Root layout: <html lang>, fonts, title template, NextIntlClientProvider (Header/Footer)
   │   ├── page.tsx     # Home; localized generateMetadata (buildPageMetadata)
   │   ├── opengraph-image.tsx # Social preview card (og:image / twitter:image)
   │   ├── error.tsx    # Locale error boundary
   │   ├── not-found.tsx # Locale-scoped 404
+  │   ├── [...rest]/    # Catch-all page: notFound(), so an unmatched path renders the 404 inside the layout
   │   └── example-form/
-  ├── layout.tsx        # Root layout (fonts, title.default + title.template cascade)
+  ├── dev/ui/           # Dev playground: the second root layout (404 in production)
   ├── providers.tsx     # Client providers (analytics)
   ├── global-error.tsx  # Root catastrophic-error boundary
   ├── sitemap.ts        # Sitemap with per-route xhtml:link hreflang entries
@@ -162,7 +167,7 @@ app/                    # Next.js App Router (routing layer)
 
 i18n/                   # next-intl configuration
   ├── routing.ts        # defineRouting({ locales, defaultLocale })
-  ├── request.ts        # getRequestConfig (messages loader)
+  ├── request.ts        # getRequestConfig (locale from next/root-params, messages loader)
   └── navigation.ts     # createNavigation (typed Link / redirect / hooks)
 
 messages/               # Translation sources (single source of truth)
@@ -191,12 +196,13 @@ features/               # Features (isolated)
 
 ### Layouts in Next.js App Router
 
-**Root Layout (`app/layout.tsx`):**
+**Root Layout (`app/[locale]/layout.tsx`):**
 
-- Wraps ALL pages automatically
-- Contains Header and Footer (shared across all pages)
-- Perfect for common UI elements
+- A layout with no layout above it is a root layout; this template has no layout file directly under `app/`, so the locale layout renders `<html lang>` and `<body>`
+- Wraps all localized pages and contains Header and Footer (shared across them)
+- Sits under the `[locale]` segment, so `next/root-params` can hand the locale to `i18n/request.ts`
 - Not re-rendered on navigation (unlike SPA)
+- `app/dev/ui/layout.tsx` is a second root layout (the dev playground); moving between root layouts is a full page load
 
 **Nested Layouts:**
 
@@ -204,10 +210,11 @@ features/               # Features (isolated)
 - Useful for different sections (marketing, dashboard, etc.)
 
 ```typescript
-// app/layout.tsx - Root layout (applies to all pages)
-export default function RootLayout({ children }) {
+// app/[locale]/layout.tsx - Root layout (applies to all localized pages)
+export default async function RootLayout({ children, params }) {
+    const { locale } = await params;
     return (
-        <html>
+        <html lang={locale}>
             <body>
                 <Header />      {/* Shared header */}
                 <main>{children}</main>
@@ -246,7 +253,7 @@ npm run size:check       # first-load JS budget over an existing build (scripts/
 # Checks: drill-downs on a specific failure, none of them is a moment
 npm run lint             # the lint pass over the repo, warnings denied
 npm run lint:oxlint      # the Oxc pass alone
-npm run typecheck        # the type check; drops stale generated route types first (`type-check` is an alias)
+npm run typecheck        # the type check; drops stale generated route types and writes the current ones first (`type-check` is an alias)
 npm run format           # Prettier write
 npm run format:check     # Prettier check
 npm test                 # unit tests (the gate uses test:coverage)
@@ -374,7 +381,7 @@ messages/
   en.json           # Flat namespace tree: common, errors, home, meta, ...
 
 app/[locale]/
-  layout.tsx        # setRequestLocale + NextIntlClientProvider
+  layout.tsx        # root layout: <html lang>, NextIntlClientProvider
   page.tsx          # localized generateMetadata (buildPageMetadata: alternates.languages, openGraph, twitter)
 ```
 
@@ -407,12 +414,20 @@ export const Component = () => {
 
 ### Usage — Server Actions
 
+A Server Action cannot read the locale from the request (`next/root-params` throws there), so the caller sends it and the action validates it before use:
+
 ```typescript
 'use server';
+import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 
-export async function exampleAction() {
-    const t = await getTranslations('common.form');
+import { routing } from '@/i18n/routing';
+
+export async function exampleAction(formData: FormData) {
+    const sent = formData.get('locale');
+    const locale =
+        typeof sent === 'string' && hasLocale(routing.locales, sent) ? sent : routing.defaultLocale;
+    const t = await getTranslations({ locale, namespace: 'common.form' });
     return { success: true, message: t('submittedSuccessfully') };
 }
 ```
@@ -425,7 +440,7 @@ export async function exampleAction() {
 
 ### Caveat — title.template cascade
 
-Next.js does **not** apply `title.template` to the segment that defines it — only to descendants. The brand chrome (`title.default` + `title.template`) lives in root `app/layout.tsx`; `app/[locale]/layout.tsx` sets only `description` / `openGraph` / `twitter`. Do not move the template into `[locale]/layout.tsx` — the home page title will lose the suffix.
+Next.js does **not** apply `title.template` to the segment that defines it — only to the segments below it. The brand chrome (`title.default` + `title.template`, read from `meta.root` in the messages) lives in the root layout `app/[locale]/layout.tsx`, so the home page, which sits in that same segment, would lose the suffix. `buildPageMetadata` therefore states the home title in full (`title.absolute`) and leaves every page below the locale root bare for the template to wrap. A new page at the locale root needs the same treatment.
 
 ### Caveat — a page's `openGraph` replaces the layout's
 
@@ -618,7 +633,7 @@ npm start
 ### Environment Setup
 
 1. Set environment variables
-2. Configure domain in `app/layout.tsx` metadata
+2. Configure the domain through `NEXT_PUBLIC_APP_URL` (it feeds `metadataBase` in `app/[locale]/layout.tsx`)
 3. Update `app/sitemap.ts` and `app/robots.ts` URLs
 
 ### Performance Checklist

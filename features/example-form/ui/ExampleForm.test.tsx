@@ -22,7 +22,38 @@ vi.mock('@/shared/ui/common/SmartLink', () => ({
     )
 }));
 
+// The form reads the locale it renders in from next-intl; the provider in these tests only offers
+// the one declared locale, so a second one is stubbed to tell the two sources apart.
+vi.mock('next-intl', async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    useLocale: (): string => 'de'
+}));
+
 describe('ExampleForm', () => {
+    // A Server Action cannot read the locale from the request (`next/root-params` throws there), so
+    // the form sends the locale it renders in.
+    it('tells the action which locale the page is rendered in', async () => {
+        vi.mocked(exampleFormAction).mockResolvedValue({
+            success: true,
+            message: messages.common.form.submittedSuccessfully,
+            data: { name: 'Ada Lovelace', email: 'ada@example.com' }
+        });
+        renderWithProviders(<ExampleForm />);
+
+        fireEvent.change(screen.getByLabelText(messages.common.form.name), {
+            target: { value: 'Ada Lovelace' }
+        });
+        fireEvent.change(screen.getByLabelText(messages.common.form.email), {
+            target: { value: 'ada@example.com' }
+        });
+        fireEvent.click(screen.getByRole('button', { name: messages.common.button.submit }));
+        await screen.findByRole('status');
+
+        expect(exampleFormAction).toHaveBeenCalledOnce();
+        const sent = vi.mocked(exampleFormAction).mock.calls[0]?.[0];
+        expect(sent?.get('locale')).toBe('de');
+    });
+
     it('announces a successful submit through a status region that appears only after it', async () => {
         const name = 'Ada Lovelace';
         const email = 'ada@example.com';

@@ -54,6 +54,36 @@ describe('buildPageMetadata', () => {
     });
 
     /*
+     * The locale layout owns `title.template`, and Next applies a template to the segments below the
+     * one that defines it, never to that segment's own page. The page at the locale root is that
+     * page, so it states the whole title; a page below it stays bare for the template to wrap.
+     */
+    it('states the title of the locale root page in full, with the layout template applied', async () => {
+        const metadata = await buildPageMetadata({ locale: 'en', page: 'home', path: '' });
+
+        expect(metadata.title).toEqual({
+            absolute: messages.meta.root.titleTemplate.replace('%s', messages.meta.home.title)
+        });
+    });
+
+    it('keeps the social titles of the locale root page bare', async () => {
+        const metadata = await buildPageMetadata({ locale: 'en', page: 'home', path: '' });
+
+        expect(metadata.openGraph).toMatchObject({ title: messages.meta.home.title });
+        expect(metadata.twitter).toMatchObject({ title: messages.meta.home.title });
+    });
+
+    it('leaves the title of a page below the locale root bare', async () => {
+        const metadata = await buildPageMetadata({
+            locale: 'en',
+            page: 'exampleForm',
+            path: '/example-form'
+        });
+
+        expect(metadata.title).toBe(messages.meta.exampleForm.title);
+    });
+
+    /*
      * Next merges metadata one key deep: a page that exports `openGraph` replaces the locale layout's
      * whole object, so a page that does not export it shows the layout's preview, the same on every
      * route. These pin that each page states its own, and carries what the layout would have given.
