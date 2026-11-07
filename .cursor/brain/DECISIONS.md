@@ -544,7 +544,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
 - **Context:** measured in a product forked from this template: 22 of 60 pushes went red and a red push ran up
   to 21 minutes against about 5 for a green one, because every failing test waited out its own timeout.
 - **Decision:** `playwright.config.ts` caps `maxFailures` at 10 when `isCI || isProdServer`; the desk run against
-  `next dev` stays uncapped. Each config writes its own `outputDir` (`test-results/e2e`, `test-results/dev`) so
+  `next dev` stays uncapped. `playwright.dev.config.ts` caps the same 10 when `isCI` (it has no production-server
+  mode). Each config writes its own `outputDir` (`test-results/e2e`, `test-results/dev`) so
   `--last-failed` never reads the wrong suite's record. 10 beat 5 on one measured break (21 s vs 15 s, twice the
   failing neighbours reported).
 - **Consequences:** the cap can stop short of tests it never reached; the push re-runs the whole gate.

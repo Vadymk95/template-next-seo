@@ -1,9 +1,9 @@
 // @vitest-environment node
 //
 // Guards three properties of the Playwright configs: a red run must stop after a capped
-// number of failures instead of running every remaining test into its timeouts (the gate run and
-// CI only — the desk run against `next dev` stays uncapped), the gate config and the dev
-// config must write `.last-run.json` to two different folders, or the second suite in the push
+// number of failures instead of running every remaining test into its timeouts (the gate config on
+// the gate run and in CI, the dev config in CI; the desk run against `next dev` stays uncapped),
+// the gate config and the dev config must write `.last-run.json` to two different folders, or the second suite in the push
 // chain overwrites the first's last-failed record and `--last-failed` selects the wrong tests,
 // and in CI a test that passes only on a retry fails the run instead of reporting green.
 //
@@ -59,6 +59,21 @@ describe('playwright.config.ts maxFailures', () => {
 
     it('stays uncapped on the desk run against next dev (neither flag set)', async () => {
         const config = await importGateConfig();
+        expect(config.maxFailures).toBeUndefined();
+    });
+});
+
+describe('playwright.dev.config.ts maxFailures', () => {
+    // The Turbopack dev smoke runs in two CI jobs and in verify:full, so a red run there pays the same
+    // per-failure timeouts as the gate suite. It has no production-server mode: only CI caps it.
+    it('caps at 10 when CI is set', async () => {
+        process.env.CI = 'true';
+        const config = await importDevConfig();
+        expect(config.maxFailures).toBe(10);
+    });
+
+    it('stays uncapped off CI, the desk run of the dev smoke', async () => {
+        const config = await importDevConfig();
         expect(config.maxFailures).toBeUndefined();
     });
 });

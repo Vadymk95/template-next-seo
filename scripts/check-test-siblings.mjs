@@ -6,7 +6,8 @@
 //
 // Where it looks matters as much as what it checks:
 //   - staged mode reads the git INDEX, not the disk: a sibling test that exists only as an
-//     untracked file is not part of the commit, so it does not count. A repository with no
+//     untracked file, or only as an intent-to-add entry (`git add -N`), is not part of the commit,
+//     so it does not count. A repository with no
 //     commit yet is not judged: a fork's first commit is the whole template, and nothing
 //     earlier exists to compare with (range mode leaves that commit alone for the same reason).
 //   - range mode is the same rule over a pull request: every source file the range adds or
@@ -205,7 +206,7 @@ const report = (missing, scope) => {
 
 const checkStaged = () => {
     // The index is the truth: a sibling that is only on disk is not in the commit.
-    const tracked = new Set(paths(['ls-files']));
+    const listed = paths(['ls-files']);
     const staged = paths(['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
 
     // No HEAD means no commit yet: everything staged is new, and a fork's first commit carries the
@@ -216,6 +217,26 @@ const checkStaged = () => {
         console.log('TDD-gate: no commit yet (the first commit), nothing to check.');
         return;
     }
+
+    // `ls-files` also lists an intent-to-add entry (`git add -N`): a path with no staged content,
+    // which a commit leaves out. What the commit carries is what HEAD already holds plus the staged
+    // additions minus the staged deletions, whatever the working tree looks like (`add -N` on a path
+    // HEAD has reads as a deletion). `--no-renames` keeps a staged rename's new path in the additions
+    // instead of pairing it with the old one.
+    const carried = new Set([
+        ...paths(['ls-tree', '-r', '--name-only', 'HEAD']),
+        ...paths(['diff', '--cached', '--no-renames', '--name-only', '--diff-filter=A'])
+    ]);
+    for (const file of paths([
+        'diff',
+        '--cached',
+        '--no-renames',
+        '--name-only',
+        '--diff-filter=D'
+    ])) {
+        carried.delete(file);
+    }
+    const tracked = new Set(listed.filter((file) => carried.has(file)));
 
     const missing = findMissingSiblings(staged, (file) => tracked.has(file));
     if (missing.length > 0) {
