@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.11](https://github.com/Vadymk95/template-next-seo/compare/v1.2.10...v1.2.11) (2026-11-07)
+
+
+### Maintenance
+
+* **deps:** bump the minor-and-patch group across 1 directory with 25 updates ([#131](https://github.com/Vadymk95/template-next-seo/issues/131)) ([7bea106](https://github.com/Vadymk95/template-next-seo/commit/7bea106728e4ad1d5da206a6a95ecce30efb6b0b))
+
+
+### Refactoring
+
+* **i18n:** read the locale from next/root-params, locale layout is the root layout ([#136](https://github.com/Vadymk95/template-next-seo/issues/136)) ([7cfefa3](https://github.com/Vadymk95/template-next-seo/commit/7cfefa3fa20410b9fab400bd36461e78d13696ed))
+
 ## [1.2.10](https://github.com/Vadymk95/template-next-seo/compare/v1.2.9...v1.2.10) (2026-11-07)
 
 
