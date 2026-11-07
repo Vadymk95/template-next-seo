@@ -39,6 +39,6 @@ Do-not-touch by default, with explicit approval first (`agent-pipeline.mdc` Anti
 
 ## Intelligence & Context
 
-- **Reasoning**: `sequential-thinking` (if available) for multi-step work; `context7` for library docs.
+- **Reasoning**: for multi-step work, write the plan in the reply and run one adversarial pass over it before the first edit; `context7` for library docs.
 - **Quality**: minimal diff; no magic strings (constants or i18n); `@/*` imports over `../../` (files reachable from `next.config.ts` stay RELATIVE, see the `fsd-architecture.mdc` carve-out). AI metadata and specs live under **`.cursor/`**, not the project root.
 - **Git**: Conventional Commits, subject ≤ 96 characters, English, imperative mood (`workflow.mdc` § Git Commits and Pushes).

@@ -37,6 +37,11 @@ export default defineConfig({
     // time: with this flag a test that passes only on a retry still fails the CI run, so the flake
     // is fixed or quarantined with a reason instead of staying green. Off CI there are no retries.
     failOnFlakyTests: isCI,
+    // Same cap as playwright.config.ts, same reason: without it every failing test waits out its own
+    // timeout, and CI's retries pay for each failure three times over. This suite has no
+    // production-server mode, so only CI caps it. Spread, not `maxFailures: undefined`:
+    // `exactOptionalPropertyTypes` rejects an explicit `undefined` on an optional property.
+    ...(isCI ? { maxFailures: 10 } : {}),
     reporter: [['html', { open: 'never' }], ['list']],
     use: {
         baseURL,

@@ -257,6 +257,104 @@ describe('the CLI against a real git repository', () => {
             expect(verdict.output).toContain(SOURCE);
         });
 
+        // `git add -N` puts the path in the index (ls-files prints it) but stages no content, so the
+        // commit leaves the sibling out.
+        it('fails when the sibling is only an intent-to-add entry', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            git(root, ['add', SOURCE]);
+            git(root, ['add', '--intent-to-add', SIBLING]);
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+        });
+
+        it('fails for an intent-to-add sibling even when a deleted file looks like its rename source', () => {
+            const root = baseline();
+            const identical = 'export const unrelated = 1;\n';
+            write(root, 'shared/lib/unrelated.test.ts', identical);
+            commit(root, 'an earlier test');
+            rmSync(path.join(root, 'shared/lib/unrelated.test.ts'));
+            write(root, SOURCE);
+            write(root, SIBLING, identical);
+            git(root, ['add', SOURCE]);
+            git(root, ['add', '--intent-to-add', SIBLING]);
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+        });
+
+        it('passes once an intent-to-add sibling is staged for real', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            git(root, ['add', '--intent-to-add', SIBLING]);
+            git(root, ['add', SOURCE, SIBLING]);
+
+            expect(run(root).code).toBe(0);
+        });
+
+        it('fails when the sibling is intent-to-add and then deleted from the disk', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            git(root, ['add', SOURCE]);
+            git(root, ['add', '--intent-to-add', SIBLING]);
+            rmSync(path.join(root, SIBLING));
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+        });
+
+        // HEAD holds the spec and `ls-files` lists it again, yet the staged diff reports it deleted: the
+        // commit removes it, so it is no sibling.
+        it('fails when a committed sibling was removed from the index and re-marked with intent-to-add', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            commit(root, 'logic with its test');
+            write(root, SOURCE, 'export const value = 2;\n');
+            git(root, ['add', SOURCE]);
+            git(root, ['rm', '--cached', '--quiet', SIBLING]);
+            git(root, ['add', '--intent-to-add', SIBLING]);
+
+            const verdict = run(root);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+        });
+
+        // A plain staged diff shows the move as `R`, so only a listing with rename detection off sees
+        // the new path as an addition the commit carries.
+        it('passes when the sibling arrives as a staged rename of a committed file', () => {
+            const root = baseline();
+            write(root, 'shared/lib/older.test.ts', 'export const older = 1;\n');
+            commit(root, 'an earlier test');
+            write(root, SOURCE);
+            git(root, ['mv', 'shared/lib/older.test.ts', SIBLING]);
+            git(root, ['add', SOURCE]);
+
+            expect(run(root).code).toBe(0);
+        });
+
+        it('passes when the staged sibling was deleted from the working tree afterwards', () => {
+            // The commit carries what the index holds, so the missing file on disk does not matter.
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            git(root, ['add', SOURCE, SIBLING]);
+            rmSync(path.join(root, SIBLING));
+
+            expect(run(root).code).toBe(0);
+        });
+
         it('fails for a renamed source whose sibling stayed behind under the old name', () => {
             const root = baseline();
             write(root, SOURCE);

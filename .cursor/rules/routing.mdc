@@ -159,6 +159,6 @@ export const Navigation = (): ReactElement => {
 
 - **New document route = new folder under `app/[locale]/`** — never at `app/` root
 - **Route groups** `(group)/` still work under `[locale]` for organization without affecting URLs
-- **Keep pages thin** - the RSC entry does locale narrowing + metadata; interactivity lives in a `*PageClient.tsx` client island (see `HomePageClient.tsx`)
+- **Keep pages thin** - the RSC entry does locale narrowing + metadata; interactivity lives in a `*PageClient.tsx` client island (see `app/[locale]/example-form/ExampleFormPageClient.tsx`)
 - **Locale set stays `['en']`** until the caller explicitly asks to expand it (`i18n/routing.ts` + `messages/<locale>.json`)
 - **Lazy load** heavy client components with `next/dynamic`
