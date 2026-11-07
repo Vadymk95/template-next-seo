@@ -59,7 +59,7 @@
         "bench:verify": "node scripts/bench-verify.mjs",
         "prepare": "husky",
         "test:e2e:prod": "PLAYWRIGHT_PROD_SERVER=1 playwright test",
-        "typecheck": "node scripts/drop-stale-route-types.mjs && tsc --noEmit",
+        "typecheck": "node scripts/drop-stale-route-types.mjs && next typegen && tsc --noEmit",
         "fix": "oxlint --config .oxlintrc.json --fix . && eslint . --fix --cache --cache-location .eslintcache && prettier --write .",
         "audit:gate": "node scripts/audit-gate.mjs",
         "lock:age": "node scripts/check-lock-age.mjs",

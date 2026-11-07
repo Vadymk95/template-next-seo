@@ -29,7 +29,11 @@ gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeate
       package's files are not hashed: a patched copy with the same version is not seen;
     - generated route types that name a deleted or renamed route are dropped before `tsc` (a file that
       imports a module that is gone; the declaration files `next-env.d.ts` imports stay), because Next
-      rewrites them only while `next dev` or a build runs;
+      rewrites them only while `next dev` or a build runs; `next typegen` then writes the current ones, which
+      is what types `next/root-params` in a clone that has no `.next` yet. The staged-file autofix of a commit
+      reads the same generated types and runs before the repo-wide pass, so in a clone that never ran
+      `typecheck`, `dev` or a build, the first commit that stages a file importing `next/root-params` fails with
+      `no-unsafe-*` errors until `npm run typecheck` has run once;
     - `.cursor/` is ignored by both linters: it is tracked for rules and templates, and an agent's scratch
       script there would otherwise red the chain.
 

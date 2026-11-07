@@ -1,9 +1,11 @@
 'use server';
 
+import { hasLocale } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 
 import { exampleFormSchema } from '@/features/example-form/model/schema';
+import { routing } from '@/i18n/routing';
 import { logger } from '@/shared/lib/logger';
 
 /**
@@ -37,8 +39,15 @@ export type ExampleFormActionSuccess = Extract<ExampleFormActionResult, { succes
 export type ExampleFormActionFailure = Extract<ExampleFormActionResult, { success: false }>;
 
 export async function exampleFormAction(formData: FormData): Promise<ExampleFormActionResult> {
-    const tCommon = await getTranslations('common.form');
-    const tErrors = await getTranslations('errors.page');
+    // Next throws when a Server Action reads root params, so the form sends the locale it renders in.
+    // It is client input: only a locale the routing declares is used.
+    const sentLocale = formData.get('locale');
+    const locale =
+        typeof sentLocale === 'string' && hasLocale(routing.locales, sentLocale)
+            ? sentLocale
+            : routing.defaultLocale;
+    const tCommon = await getTranslations({ locale, namespace: 'common.form' });
+    const tErrors = await getTranslations({ locale, namespace: 'errors.page' });
 
     const rawData = {
         name: formData.get('name'),

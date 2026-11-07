@@ -3,7 +3,8 @@
 // consistent and silent. Three were once missing, each for a reason that is easy to forget:
 //   - ESLint on the changed files: oxlint has no types, so type-aware findings reached the commit hook first;
 //   - the layer-scope test by name: it reads configs as text, nothing imports it, `--changed` never selects it;
-//   - `typecheck` going through the stale-route-types step, which the commit hook reaches by calling the script.
+//   - `typecheck` going through the stale-route-types step and the type generation, which the commit hook
+//     reaches by calling the script.
 import { existsSync, readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -27,8 +28,11 @@ describe('the iterate chain', () => {
         expect(existsSync(scope)).toBe(true);
     });
 
-    it('type-checks through the step that drops stale route types, the commit hook included', () => {
-        expect(scripts.typecheck).toBe('node scripts/drop-stale-route-types.mjs && tsc --noEmit');
+    // `next typegen` writes the types `next/root-params` needs, and a fresh clone has no `.next` yet.
+    it('type-checks through the steps that drop stale route types and generate the current ones, the commit hook included', () => {
+        expect(scripts.typecheck).toBe(
+            'node scripts/drop-stale-route-types.mjs && next typegen && tsc --noEmit'
+        );
         expect(iterateSteps).toContain('npm run typecheck');
         // The pre-commit hook type-checks the whole repository through the script, not through tsc.
         expect(readFileSync('.husky/pre-commit', 'utf8')).toMatch(/^\s*npm run typecheck\b/m);

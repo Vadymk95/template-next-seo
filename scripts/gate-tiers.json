@@ -52,8 +52,8 @@
         },
         "typecheck": {
             "class": "code",
-            "description": "the type check; first it drops generated route type files that name a route which is gone",
-            "chain": "drop-stale-route-types -> tsc --noEmit"
+            "description": "the type check; first it drops generated route type files that name a route which is gone, then generates the route types (next/root-params exports only exist there)",
+            "chain": "drop-stale-route-types -> next typegen -> tsc --noEmit"
         },
         "test": {
             "class": "code",

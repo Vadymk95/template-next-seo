@@ -26,8 +26,8 @@ Why it exists: `AGENTS.md` § Pull requests, brain docs, replies.
 ## 3. About to add or change a route
 
 - `.cursor/brain/MAP.md` — WINS: the route table, including which entries are thin re-exports.
-- `.cursor/brain/SKELETONS.md` "i18n" — `setRequestLocale` before any client descendant, and the
-  title-template quirk.
+- `.cursor/brain/SKELETONS.md` "i18n" — the root layout and `next/root-params`, where root params are
+  not readable, and the title-template quirk.
 - `AGENTS.md` § Architecture and contracts › i18n — the mechanical procedure.
 - `.cursor/rules/project-config.mdc` § SEO and i18n usage — the typed-messages contract.
 

@@ -4,13 +4,14 @@
 
 | Route / file                    | Notes                                                              |
 | ------------------------------- | ------------------------------------------------------------------ |
-| `app/layout.tsx`                | Root layout: fonts (self-hosted by `next/font`, so no connection hints), `WebVitalsReporter`, `Providers`, static `title.default` + `title.template` (cascades to descendants); no Header/Footer here |
-| `app/[locale]/layout.tsx`       | Locale segment: `generateStaticParams` from `routing.locales`, `setRequestLocale`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets locale-specific `description` / `openGraph` / `twitter` only (title inherits from root) |
+| `app/[locale]/layout.tsx`       | Root layout (no layout file sits directly under `app/`): `<html lang>`, fonts (self-hosted by `next/font`, so no connection hints), `WebVitalsReporter`, `Providers`, `generateStaticParams` from `routing.locales`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets `metadataBase`, `title.default` + `title.template` (cascades to the pages below the locale root) and the locale `description` / `openGraph` / `twitter` |
+| `app/dev/ui/layout.tsx`         | Second root layout, for the dev playground: `<html lang="en">`, the font, the dark theme; `notFound()` in production |
 | `app/[locale]/page.tsx`         | Home (SEO-oriented); `generateMetadata` calls `buildPageMetadata` (title, description, canonical, `alternates.languages`, `openGraph`, `twitter`) |
 | `app/[locale]/StartPage.tsx`    | The start page, a server component: what is inside, how work flows, the agent commands, where to read, first steps — the seed a fork replaces with its first real route |
 | `app/[locale]/opengraph-image.tsx` | Social preview card (`ImageResponse`, 1200x630 PNG): site name and description; template placeholder, restyled on fork |
 | `app/WebVitalsReporter.tsx`     | Client Web Vitals → `POST /api/vitals`                            |
 | `app/[locale]/not-found.tsx`    | Locale-scoped 404                                                  |
+| `app/[locale]/[...rest]/page.tsx` | Catch-all for an unmatched path below the locale: `notFound()`, so the 404 renders inside the layout |
 | `app/[locale]/error.tsx`        | Locale error boundary                                              |
 | `app/global-error.tsx`          | Root catastrophic error UI                                         |
 | `proxy.ts` (repo root)          | Composed middleware: API/Server Action rate limit (in-memory or Upstash), prod `/dev` 404, nonce CSP for `/api` + `/dev`, next-intl middleware for document routes; matcher includes API/dev plus broad non-asset document paths |
@@ -19,9 +20,9 @@
 | `app/providers.tsx`             | Client providers (analytics init on load / requestIdleCallback; i18n moved to `NextIntlClientProvider` in `[locale]/layout`) |
 | `app/[locale]/example-form/`    | Example feature page + client shell; `generateMetadata` calls `buildPageMetadata`; `opengraph-image.tsx` re-exports the site card (a page's own `openGraph` hides the layout's image) |
 | `i18n/routing.ts`               | `defineRouting({ locales: ['en'], defaultLocale: 'en' })` — single source for locales |
-| `i18n/request.ts`               | `getRequestConfig` — validates locale, loads `messages/<locale>.json` |
+| `i18n/request.ts`               | `getRequestConfig` — takes the locale a caller passes, else reads it from `next/root-params`; validates it, loads `messages/<locale>.json` |
 | `i18n/navigation.ts`            | `createNavigation(routing)` — `Link`, `redirect`, `usePathname`, `useRouter` bound to locales |
-| `i18n/request-locale.ts`        | `requireLocale()` — narrows the route param to `Locale` (throws notFound on unknown); every `[locale]` page/layout entry calls it before `setRequestLocale` |
+| `i18n/request-locale.ts`        | `requireLocale()` — narrows the route param to `Locale` (throws notFound on unknown); every `[locale]` page/layout entry calls it |
 | `messages/en.json`              | Server + client translations (replaces `public/locales/en/*.json`) |
 | `app/dev/ui/`                   | Dev UI playground                                                  |
 | `app/api/health/route.ts`       | Health check                                                       |
@@ -47,7 +48,7 @@
 
 1. **Server**: RSC pages fetch or render static content; Server Actions / Route Handlers under `app/api`, `app/actions`.
 2. **Client**: `'use client'` islands; add TanStack Query only if the app introduces it (not in default `package.json`; the recipe is `.cursor/brain/EXTENSIONS.md` Phase 1d).
-3. **i18n**: next-intl SSR — `proxy.ts` composes next-intl middleware for document routes (locale redirect / rewrite), `[locale]` segment calls `setRequestLocale` + `getMessages`, server uses `getTranslations`, client islands use `useTranslations` inside `NextIntlClientProvider`. Single source: `messages/<locale>.json`.
+3. **i18n**: next-intl SSR — `proxy.ts` composes next-intl middleware for document routes (locale redirect / rewrite), `i18n/request.ts` reads the locale from `next/root-params` (the `[locale]` layout is the root layout) and the layout calls `getMessages`, server uses `getTranslations` (a Server Action or metadata image passes `{ locale }`), client islands use `useTranslations` inside `NextIntlClientProvider`. Single source: `messages/<locale>.json`.
 4. **Web Vitals**: Build-time attribution hints (`next.config` experimental) plus runtime ingestion by `fetch` with `keepalive` at `/api/vitals` from the root reporter; the route logs the page as a path, never the query.
 5. **Beyond the baseline**: a real backend, auth, error monitoring, analytics, a second locale, remote images and the deploy are not wired here; `.cursor/brain/EXTENSIONS.md` holds one recipe per integration and says where each plugs into the files above.
 

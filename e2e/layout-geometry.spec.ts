@@ -54,10 +54,10 @@ for (const width of VIEWPORT_WIDTHS) {
              */
             await page.goto(route.path, { waitUntil: 'load' });
             /*
-             * Readiness, not a landmark assertion. An unmatched path under `[locale]` is served by the
-             * ROOT `not-found`, which sits outside the locale layout and therefore has no `<main>` — so
-             * demanding the landmark here would fail on a page that is rendering correctly. The real
-             * guard against measuring an unrendered page is the non-empty measurement below.
+             * Readiness, not a landmark assertion. An unmatched path under `[locale]` reaches the
+             * catch-all page, which raises the 404 inside the locale layout, so the locale `not-found`
+             * renders there. A heading or a landmark proves the page rendered, and the real guard
+             * against measuring an unrendered page is the non-empty measurement below.
              */
             await expect(page.locator('main, h1').first()).toBeVisible();
 

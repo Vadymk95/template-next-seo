@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import type { ReactElement } from 'react';
 
 import { requireLocale } from '@/i18n/request-locale';
@@ -20,10 +19,9 @@ export const generateMetadata = async ({ params }: HomePageProps): Promise<Metad
 };
 
 const HomePage = async ({ params }: HomePageProps): Promise<ReactElement> => {
+    // A page renders beside its layout, not after it: it narrows the route param itself.
     const { locale: rawLocale } = await params;
-    const locale = requireLocale(rawLocale);
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the static-rendering call every localized entry keeps; moving to next/root-params is a routing migration, not a lint fix
-    setRequestLocale(locale);
+    requireLocale(rawLocale);
     return <StartPage />;
 };
 

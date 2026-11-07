@@ -37,8 +37,9 @@ finding.
 - `logger` from `shared/lib/logger.ts`, never `console.*`.
 - Every user-visible string goes through next-intl (`useTranslations` on the client, `getTranslations`
   on the server). New copy means new keys in `messages/<locale>.json` for every locale.
-- Every `app/[locale]/*` entry calls `requireLocale()` then `setRequestLocale(locale)` before any client
-  descendant renders. A missing call fails prerender with a swallowed `Error(void 0)`.
+- Every `app/[locale]/*` entry narrows the route param with `requireLocale()`. The locale layout is the
+  root layout and `i18n/request.ts` reads the locale from `next/root-params`; a Server Action or a metadata
+  image cannot, so it passes `{ locale }` to `getTranslations`.
 
 ## Correctness patterns worth checking every time
 

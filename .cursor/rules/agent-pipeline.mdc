@@ -93,7 +93,7 @@ End with: `Confidence: HIGH | MEDIUM | LOW — <one-line reason>`
 
 - Skipping Step 1, or finishing without the Brain sync declaration
 - Batches > 2 files without verification
-- Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause; the only exceptions are the reasoned disables the template already carries for documented invariants, e.g. `setRequestLocale` in the `routing.mdc` recipe)
+- Patching lint/types without root-cause analysis (and NEVER with `as any` / `eslint-disable` to silence the gate — fix the cause; the only exceptions are reasoned disables for a documented invariant)
 - `next build` / webpack behavior changes without updating **DECISIONS** / **SKELETONS**
 - **Touching the frozen security surface or stripping protected Template scaffolding** without the caller's explicit approval: `AGENTS.md` invariants 7 and 8 and § Danger zones are the rule, SKELETONS "`proxy` composition" and "Template scaffolding" the detail. A security edit is a **security review**, not a routine change.
 
