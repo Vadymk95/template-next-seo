@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.9](https://github.com/Vadymk95/template-next-seo/compare/v1.2.8...v1.2.9) (2026-11-07)
+
+
+### Bug fixes
+
+* **gate:** audit severity, intent-to-add siblings, dev-smoke cap, unjudgeable gate inputs ([#132](https://github.com/Vadymk95/template-next-seo/issues/132)) ([dcdd93f](https://github.com/Vadymk95/template-next-seo/commit/dcdd93f963246d375ed1b0f3e41411b631beff83))
+
 ## [1.2.8](https://github.com/Vadymk95/template-next-seo/compare/v1.2.7...v1.2.8) (2026-10-29)
 
 
