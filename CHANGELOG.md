@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.10](https://github.com/Vadymk95/template-next-seo/compare/v1.2.9...v1.2.10) (2026-11-07)
+
+
+### CI
+
+* **deps:** bump the actions group across 1 directory with 3 updates ([#115](https://github.com/Vadymk95/template-next-seo/issues/115)) ([3e09fff](https://github.com/Vadymk95/template-next-seo/commit/3e09fffea3f8367176880335807602a467864eed))
+* **workflows:** key the Playwright browser cache by the Ubuntu release ([#134](https://github.com/Vadymk95/template-next-seo/issues/134)) ([69d190f](https://github.com/Vadymk95/template-next-seo/commit/69d190fdf7bbd7868e6da5eee22cff1a589f7cb4))
+
 ## [1.2.9](https://github.com/Vadymk95/template-next-seo/compare/v1.2.8...v1.2.9) (2026-11-07)
 
 
