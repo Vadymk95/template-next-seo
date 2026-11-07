@@ -261,7 +261,7 @@ npm run test:e2e:install # one-time Chromium install for Playwright
 npm run smoke:dev        # Turbopack dev smoke on its own (e2e/dev/, port 3003)
 npm run audit:gate       # fail-closed audit with a self-expiring allowlist
 npm run lock:age         # a changed lockfile version younger than the .npmrc cooldown fails; allowances: scripts/lock-age-allowlist.json
-npm run gate:integrity   # lists the gate files and suppressions this branch changes vs origin/master (CI: PR base)
+npm run gate:integrity   # lists the gate files and suppressions this branch changes vs the default branch, origin/master else origin/main (CI: PR base)
 
 # The chain the push and CI run (not desk tools)
 npm run verify:enterprise  # the offline gate: every check CI runs except the network-bound ones (stages: scripts/gate-tiers.json)
