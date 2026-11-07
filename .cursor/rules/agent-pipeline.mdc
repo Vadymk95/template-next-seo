@@ -103,9 +103,10 @@ Green means nothing until you know the gate can go red.
 
 1. **Capture the exit code without a pipe**: `npm run verify:iter > /tmp/verify.log 2>&1; echo $?`.
    Piping to `tail` returns the PIPE's status, so a failed run reads as a pass. Same rule for any
-   stage you run. **And after a push: gate output present in the terminal is part of the contract —
+   stage you run. Write a re-run to its own numbered log (`/tmp/verify-2.log`), never over the first red
+   log, and quote that first red in the hand-back. **And after a push: gate output present in the terminal is part of the contract —
    silence is a failure, not a pass.**
-2. **Mutation-check the tests** in your head, not on disk: if reverting your change would leave the suite
+2. **Mutation-check the tests** in your head, not on disk (the implementer's check; the reviewer's step is in `.claude/commands/review.md`): if reverting your change would leave the suite
    green, the test is worthless. Writing a test is Step 3; proving it would have failed is this step. Do not
    edit the code, run the tests and restore it: a physical mutation is for a NEW gate only (item 3), and a
    pure file move needs none.
