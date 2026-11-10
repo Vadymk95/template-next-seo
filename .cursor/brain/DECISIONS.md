@@ -4,6 +4,8 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| A browser subscription started in an effect is released | 2026-11 | in force |
+| The commit hook formats every file the format check reads | 2026-11 | in force |
 | The locale layout is the root layout and the locale comes from `next/root-params` | 2026-11 | in force |
 | Gate checks refuse a value they cannot judge | 2026-11 | in force |
 | docs:check reads the tree as a clean checkout does | 2026-10 | in force |
@@ -60,6 +62,37 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## A browser subscription started in an effect is released
+
+2026-11 · in force · guard `eslint.config.js` · evidence: `scripts/lint-config.test.mjs`, `app/providers.test.tsx`
+
+- **Context:** types, unit tests and the other lint rules all pass on an effect that adds a listener, starts a timer,
+  an observer or a request and returns no cleanup. The leak shows only as work that keeps running after unmount and
+  holds the component's state. The first run found two in `app/providers.tsx`: a `load` listener and a timer.
+- **Decision:**
+  - Every `no-leaked-*` rule of `eslint-plugin-react-web-api` (pinned exactly; listener, fetch, IntersectionObserver,
+    interval, ResizeObserver, timeout) is an error over the files the React rules cover. Named rules, never a preset,
+    so a new rule in a release cannot change the gate.
+  - The guard cases in `scripts/lint-config.test.mjs` lint a leaking and a released form for each rule and fail when
+    one is dropped. They sit in that file because it already lints snippets with the options the real config resolves.
+  - A state value rebuilt from other values in an effect is reported by oxlint's `react/set-state-in-effect`, not by
+    ESLint: `eslint-plugin-oxlint` switches the ESLint twin off. A guard case runs the repository's oxlint config over
+    it, so no second effect plugin was added.
+- **Limits:** a state copy of a prop with no effect (`useState(props.value)`) is reported by no rule; the guard file
+  records it as a known gap.
+- **Status:** in force.
+
+## The commit hook formats every file the format check reads
+
+2026-11 · in force · guard `package.json` (`lint-staged`) · evidence: `scripts/lint-config.test.mjs`
+
+- **Context:** `format:check` reads every tracked file prettier can parse, but the `lint-staged` globs named only
+  five extensions, so a staged `.mjs` or `.css` file passed the hook unformatted and failed at the push.
+- **Decision:** `.mjs` and `.cjs` join the code glob (ESLint and oxlint both lint them); `.css` joins the
+  prettier-only glob. A test takes every tracked file prettier checks and asserts that a `lint-staged` glob matches it,
+  using lint-staged's own matcher, so a new extension fails the test instead of the push.
+- **Status:** in force.
 
 ## Gate checks refuse a value they cannot judge
 
