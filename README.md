@@ -562,7 +562,7 @@ Key optimizations in `next.config.ts`:
 
 GitHub Actions (`.github/workflows/ci.yml`, Node 24.x, `npm ci --ignore-scripts`): `validate` is a
 single `npm run verify:ci` step (the whole CI chain — one step on purpose, so the
-workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit. `security.yml` runs gitleaks, CodeQL and zizmor over the workflows on push, PR and a
+workflow cannot drift from the script); `dev-smoke` runs the Turbopack dev smoke (`npm run smoke:dev`), the one path `validate` cannot see because `build` uses webpack; `cross-browser` re-runs the geometry specs on Firefox and WebKit in the official Playwright image, its tag read from the lock file by the `playwright-image` job (`.cursor/brain/DECISIONS.md` has the why). `security.yml` runs gitleaks, CodeQL and zizmor over the workflows on push, PR and a
 weekly cron; the zizmor job (`Workflow audit (zizmor)`) is a required check in `.github/ruleset.json` and
 fails on findings of medium severity or above. Reproduce it locally with `uvx zizmor@1.30.1 .github/workflows`:
 it is pinned to the version CI runs and reads the same `.github/zizmor.yml`, so it gives the CI verdict
