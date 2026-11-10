@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| Stryker runs the suite in the `forks` pool, the pool `vitest run` uses | 2026-11 | in force |
 | Cross-browser runs in the Playwright image | 2026-11 | in force |
 | A browser subscription started in an effect is released | 2026-11 | in force |
 | The commit hook formats every file the format check reads | 2026-11 | in force |
@@ -63,6 +64,30 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## Stryker runs the suite in the `forks` pool, the pool `vitest run` uses
+
+2026-11 · in force · guard `scripts/mutation-scope.test.mjs` · evidence: https://github.com/stryker-mutator/stryker-js/releases/tag/v10.1.0
+
+- **Context:** the weekly job went red on 2026-11-09 before it mutated anything: `next.config.test.ts: Module did not
+  self-register: '.../@parcel/watcher-linux-x64-glibc/watcher.node'`. `next.config.ts` imports `next-intl/plugin`,
+  which loads the `@parcel/watcher` addon; `shared/lib/logger.test.ts` imports `next.config` too. The Stryker vitest
+  runner defaults to the `threads` pool with one worker, so each test file gets its own worker thread. On Linux the
+  addon loads in the first thread and fails in a later one (Node alone: one worker loads, a second sequential worker
+  fails; macOS loads both). `vitest run` uses `forks`, a process per file, so the gate never saw it. Stryker 10.0.0
+  counted a test file that fails to load as no tests (275 tests ran, not 298, and the 23 of `next.config.test.ts` never
+  ran); 10.1.0 (2026-10-23) reports it, and the dependency bump of 2026-11-07 took 10.1.1.
+- **Decision:** `stryker.config.json` sets `vitest.pool` to `forks` (an option new in 10.1.0). Not mocking
+  `next-intl/plugin` in one test: two files load the addon, and a third would repeat the failure. Not excluding
+  `next.config.test.ts`: it is the only test that reads `API_PATHS.CSP_REPORT` (through the `Reporting-Endpoints`
+  header), so it kills mutants in `shared/constants` that no other test does.
+- **Guard:** `scripts/mutation-scope.test.mjs` fails when the pool Stryker names differs from the one `vitest.config.ts`
+  names (the vitest default, `forks`, when it names none). The dry run is the quick check on a Linux box:
+  `npx stryker run --dryRunOnly --concurrency 4`.
+- **Same cause, second symptom:** a failed Stryker run leaves `.stryker-tmp`, a full instrumented copy of the repository,
+  and `vitest run` collected its test files (measured with a probe file). `vitest.config.ts` `test.exclude` now lists
+  `**/.stryker-tmp/**`; the same test file holds it.
+- **Status:** in force.
 
 ## Cross-browser runs in the Playwright image
 
@@ -807,7 +832,8 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
 - **Consequences:** the score measures only the kill side; an over-strict test that rejects a legitimate
   implementation is for review. `.stryker-tmp` and `reports` are gitignored and `.env*` is in `ignorePatterns`
   (Stryker does not read `.gitignore`). The runner's tree is in the fail-closed audit; a high advisory there gets
-  an override floor with a major cap, not an allowlist entry. Why vitest is held: its own entry above.
+  an override floor with a major cap, not an allowlist entry. Why vitest is held, and why the runner uses the `forks`
+  pool: their own entries above.
 - **Status:** in force.
 
 ## The gate ladder: each tier is a superset of the one below

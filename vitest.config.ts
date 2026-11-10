@@ -43,6 +43,10 @@ export default defineConfig({
             '**/e2e/**/*.spec.ts',
             '.next/**',
             '.next-dev/**',
+            // A Stryker run that fails leaves its sandbox, a full instrumented copy of the repository,
+            // in the folder `tempDirName` names; the wildcard `include` below collected its test files as
+            // ours. Measured with a probe file under it: `vitest run` ran the file before this line.
+            '**/.stryker-tmp/**',
             // The `include` below is a wildcard, so an agent worktree under the repository root -
             // a full second checkout - is collected as if its tests were ours. Measured with a
             // probe file on 2026-09-13: without this line vitest collected it. The sibling repo
