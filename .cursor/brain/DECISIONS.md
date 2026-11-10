@@ -90,7 +90,11 @@ Why things are the way they are, one entry per decision. History lives in `git l
     font: in the image that is WenQuanYi Zen Hei for `sans-serif`.
 - **Status:** in force.
 
-Trial numbers: to be added from the pull request's measurement.
+Measured on pull request #141: three attempts on 2026-11-10, each paired with the old job on the same commit. The image
+job took a median 124 s (106 to 193 s), 26 to 32 s of it container setup; the old job 213 s (201 to 230 s), 34 to 51 s
+of it `install-deps`. Apt lines in the log: 0 against 188. Both ran 27 and 6 tests, all passed. At 390 and 1440 the
+built app has the same boxes, size and Chromium font (Inter) in both on Chromium and Firefox; WebKit renders production
+unstyled in both (https upgrade), so geometry specs skip it there. Fallback font: DejaVu Sans on the runner, WenQuanYi Zen Hei here.
 
 ## A browser subscription started in an effect is released
 
