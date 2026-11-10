@@ -98,3 +98,56 @@ describe('mutation scope mirrors the coverage scope', () => {
         }
     });
 });
+
+// The suite is one thing under two runners, and a native addon tells them apart. `next.config.ts`
+// imports `next-intl/plugin`, which loads the `@parcel/watcher` addon, and two test files import
+// `next.config.ts` (`next.config.test.ts`, `shared/lib/logger.test.ts`). On Linux the addon loads in
+// one worker thread and fails with "Module did not self-register" in the next one. `vitest run` uses
+// the `forks` pool (a process per test file), while Stryker's vitest runner defaults to `threads`,
+// so the same file passed the gate and failed the weekly job. Stryker 10.0 hid it - a test file that
+// fails to load counted as no tests at all - and 10.1 reports it, which turned the dry run red.
+// Naming the pool keeps both runners on one execution model; the vitest default is `forks`
+// (https://vitest.dev/config/pool).
+describe('mutation runs the suite in the pool `vitest run` uses', () => {
+    const STRYKER_DEFAULT_POOL = 'threads';
+    const VITEST_DEFAULT_POOL = 'forks';
+
+    const strykerPool =
+        JSON.parse(repoFile('stryker.config.json')).vitest?.pool ?? STRYKER_DEFAULT_POOL;
+    const vitestPool =
+        /\bpool:\s*['"](\w+)['"]/.exec(repoFile('vitest.config.ts'))?.[1] ?? VITEST_DEFAULT_POOL;
+
+    it('names the same pool as vitest.config.ts, or the vitest default when that names none', () => {
+        expect(
+            strykerPool,
+            `stryker \`vitest.pool\` is "${strykerPool}" but \`vitest run\` uses "${vitestPool}" - a native addon that loads in one process fails in a second worker thread, so set "vitest": { "pool": "${vitestPool}" } in stryker.config.json`
+        ).toBe(vitestPool);
+    });
+});
+
+// A Stryker run that fails (a red dry run, a crash) leaves its sandbox behind: a full second copy of the
+// repository, instrumented. `include` in `vitest.config.ts` is a wildcard, so `vitest run` collected the
+// copy's test files as if they were ours; the sandbox is already out of git, prettier and ESLint.
+describe('vitest leaves the Stryker sandbox out of the suite', () => {
+    const tempDirName = JSON.parse(repoFile('stryker.config.json')).tempDirName ?? '.stryker-tmp';
+    const testExcludeSource = /^ {8}exclude:\s*\[([\s\S]*?)^ {8}\]/m.exec(
+        repoFile('vitest.config.ts')
+    )?.[1];
+    const testExclude = [
+        ...(testExcludeSource ?? '').replace(/\/\/.*$/gm, '').matchAll(/'([^']+)'/g)
+    ].map((match) => match[1]);
+
+    it('parses `test.exclude`, fail-closed', () => {
+        expect(
+            testExclude.length,
+            'could not parse `test.exclude` out of vitest.config.ts - update the extraction in this test'
+        ).toBeGreaterThan(0);
+    });
+
+    it('excludes the directory `tempDirName` names', () => {
+        expect(
+            testExclude,
+            `vitest \`test.exclude\` must list "**/${tempDirName}/**" - a failed Stryker run leaves that directory behind and \`vitest run\` would collect the copy`
+        ).toContain(`**/${tempDirName}/**`);
+    });
+});
