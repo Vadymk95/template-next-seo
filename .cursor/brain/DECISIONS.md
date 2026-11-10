@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| Cross-browser runs in the Playwright image | 2026-11 | in force |
 | A browser subscription started in an effect is released | 2026-11 | in force |
 | The commit hook formats every file the format check reads | 2026-11 | in force |
 | The locale layout is the root layout and the locale comes from `next/root-params` | 2026-11 | in force |
@@ -62,6 +63,34 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## Cross-browser runs in the Playwright image
+
+2026-11 · in force · guard `scripts/ci-cross-browser-image.test.mjs` · evidence: `.github/workflows/ci.yml`
+
+- **Context:** `playwright install-deps` on the runner's apt stalled: 12 of 152 steps took over 150 s or went red, on 3
+  of 13 days from 2026-10-16 to 2026-11-10. A loop of three tries could not outlast a slow mirror, and one master run
+  went red after 9 minutes.
+- **Decision:** the `cross-browser` job runs in `mcr.microsoft.com/playwright:v<version>-resolute`, which ships the
+  browsers and the libraries they link against, so the job installs nothing from apt. The `playwright-image` job reads
+  `<version>` from `package-lock.json`.
+- **Consequences:**
+  - One source for the version: the npm update that moves `@playwright/test` moves the image. Dependabot does not bump a
+    tag inside a workflow file, so a literal tag would lag every update.
+  - `cross-browser` needs `playwright-image` and runs on `if: ${{ !cancelled() }}`. A job skipped because a job it
+    needs failed reports success, and `cross-browser` is a required check; run instead, an empty version fails
+    container setup.
+  - `-resolute` is Ubuntu 26.04, the release of `ubuntu-latest` when the job moved, so the per-release Firefox and
+    WebKit builds and the font packages stayed the same. `--user 1001` is the runner's uid, Playwright's documented
+    setting.
+  - Node still comes from setup-node (24.x); the image's own Node is not relied on.
+  - A version with no published image fails at container setup, red, naming the tag.
+  - `next/font/google` (`app/[locale]/layout.tsx`) self-hosts Inter at build, so Latin text renders in Inter on every engine
+    wherever the job runs. Only glyphs Inter lacks, and text drawn before Inter loads, use the machine's fallback
+    font: in the image that is WenQuanYi Zen Hei for `sans-serif`.
+- **Status:** in force.
+
+Trial numbers: to be added from the pull request's measurement.
 
 ## A browser subscription started in an effect is released
 
