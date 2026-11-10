@@ -8,9 +8,11 @@
 // `css-fingerprint.test.mjs` covers the hash. Then one rule option that must stay on, linted through
 // the real config. The last block: both linters leave `.cursor/` alone, so an agent's scratch script
 // there cannot red the iterate chain. And the commit hook: every tracked file the format check reads
-// is matched by a `lint-staged` glob, so the hook formats what the push gate checks.
+// is matched by a `lint-staged` glob, so the hook formats what the push gate checks, and a commit that
+// stages only files the linters ignore still passes the hook.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -21,6 +23,9 @@ import tseslint from 'typescript-eslint';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { cssFingerprint } from './css-fingerprint.mjs';
+
+// Not a direct dependency: load the copy `lint-staged` itself resolves, the matcher it uses.
+const picomatch = createRequire(import.meta.resolve('lint-staged'))('picomatch');
 
 // Loading ESLint and, below, the whole repository config is the cost; the full suite runs these next to
 // sixty other files, so the default 5 s limit measured machine load, not the code (10 s seen once).
@@ -261,6 +266,105 @@ describe('the commit hook formats every file the format check reads', { timeout:
 
         expect(files.length, 'the check must see files').toBeGreaterThan(0);
         expect(unmatched, 'files prettier checks but no lint-staged glob matches').toEqual([]);
+    });
+
+    // oxlint exits 1 with "No files found to lint" when every file it is given is ignored, and ESLint
+    // warns "File ignored because of a matching ignore pattern". A commit that stages only such files
+    // (a declaration file, a config file) must still pass the hook, so the configured commands carry the
+    // flags that turn both into a quiet success. One tracked file per ignore pattern keeps the case
+    // from depending on a file that may be renamed.
+    describe('a commit that stages only files the linters ignore', () => {
+        const NO_ERROR_FLAG = '--no-error-on-unmatched-pattern';
+        const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
+
+        const run = (tool, argv, files) =>
+            spawnSync(path.resolve('node_modules/.bin', tool), [...argv, ...files], {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'pipe']
+            });
+
+        // The command, exactly as lint-staged starts it: its argv plus the staged paths.
+        const commandsOf = (tool) => {
+            const { 'lint-staged': globs } = JSON.parse(readFileSync('package.json', 'utf8'));
+
+            return Object.entries(globs).flatMap(([glob, commands]) =>
+                [commands]
+                    .flat()
+                    .map((command) => command.split(/\s+/))
+                    .filter(([name]) => name === tool)
+                    .map(([, ...argv]) => ({ glob, argv }))
+            );
+        };
+
+        // One tracked file per ignore pattern, among the files the glob hands the command.
+        const ignoredFilesFor = async ({ glob }) => {
+            const { matchFiles } = await import(
+                pathToFileURL(path.resolve('node_modules/lint-staged/lib/matchFiles.js')).href
+            );
+            const { ignorePatterns } = JSON.parse(readFileSync('.oxlintrc.json', 'utf8'));
+            const staged = matchFiles(
+                trackedFiles().map((filepath) => ({ filepath })),
+                glob
+            ).map(({ filepath }) => filepath);
+
+            // A matcher takes (path, returnObject): wrap it so `find` does not pass its index along.
+            return ignorePatterns
+                .map((pattern) => {
+                    const isIgnored = picomatch(pattern, { dot: true });
+
+                    return staged.find((file) => isIgnored(file));
+                })
+                .filter((file) => file !== undefined);
+        };
+
+        it('exits 0 from oxlint, which exits 1 on the same files without the flag', async () => {
+            const commands = commandsOf('oxlint');
+
+            expect(commands.length, 'a lint-staged glob must run oxlint').toBeGreaterThan(0);
+
+            for (const command of commands) {
+                const files = await ignoredFilesFor(command);
+
+                expect(
+                    files.length,
+                    `a tracked file oxlint ignores in ${command.glob}`
+                ).toBeGreaterThan(0);
+
+                const without = run(
+                    'oxlint',
+                    command.argv.filter((arg) => arg !== NO_ERROR_FLAG),
+                    files
+                );
+                expect(without.status, 'the files must really be ignored').toBe(1);
+                expect(without.stdout + without.stderr).toContain('No files found to lint');
+
+                const configured = run('oxlint', command.argv, files);
+                expect(configured.status, configured.stdout + configured.stderr).toBe(0);
+            }
+        });
+
+        it('prints no ignore warning from ESLint, which warns on the same file without the flag', async () => {
+            const [command] = commandsOf('eslint');
+            // ESLint's own ignore list, not oxlint's: only a file ESLint ignores gets the warning.
+            const eslint = new ESLint({ cwd: process.cwd() });
+            let probe;
+            for (const file of trackedFiles()) {
+                if (CODE_FILE.test(file) && (await eslint.isPathIgnored(file))) {
+                    probe = file;
+                    break;
+                }
+            }
+
+            expect(probe, 'a tracked code file ESLint ignores').toBeDefined();
+
+            // `warnIgnored` is ESLint's default and what `--no-warn-ignored` turns off.
+            const [result] = await eslint.lintFiles([probe]);
+            expect(result.messages[0]?.message).toContain('File ignored because of a matching');
+
+            const configured = run('eslint', command.argv, [probe]);
+            expect(configured.status, configured.stdout + configured.stderr).toBe(0);
+            expect(configured.stdout + configured.stderr).not.toContain('File ignored');
+        });
     });
 });
 
