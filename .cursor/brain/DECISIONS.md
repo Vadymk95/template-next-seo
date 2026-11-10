@@ -91,7 +91,11 @@ Why things are the way they are, one entry per decision. History lives in `git l
   five extensions, so a staged `.mjs` or `.css` file passed the hook unformatted and failed at the push.
 - **Decision:** `.mjs` and `.cjs` join the code glob (ESLint and oxlint both lint them); `.css` joins the
   prettier-only glob. A test takes every tracked file prettier checks and asserts that a `lint-staged` glob matches it,
-  using lint-staged's own matcher, so a new extension fails the test instead of the push.
+  using lint-staged's own matcher, so a new extension fails the test instead of the push. A commit that stages only
+  files a linter ignores (a declaration file, `postcss.config.mjs`) must pass too: oxlint exits 1 with "No files found
+  to lint" when every file it is given is ignored, and ESLint warns about an ignored file. So the oxlint command carries
+  `--no-error-on-unmatched-pattern` and the ESLint command `--no-warn-ignored`; the same test runs both commands on
+  one ignored tracked file per pattern, after proving the files fail or warn without the flag.
 - **Status:** in force.
 
 ## Gate checks refuse a value they cannot judge
