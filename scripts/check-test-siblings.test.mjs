@@ -15,7 +15,14 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { findMissingSiblings, isSrcLogic } from './check-test-siblings.mjs';
+import {
+    FALLBACK_BASE,
+    findMissingSiblings,
+    isCi,
+    isSrcLogic,
+    makeGit,
+    resolveBase
+} from './check-test-siblings.mjs';
 
 const nothingExists = () => false;
 
@@ -757,5 +764,56 @@ describe('the CLI against a real git repository', () => {
                 expect(verdict.output).toMatch(/cannot be combined/);
             }
         });
+    });
+});
+
+describe('the base a caller can resolve with its own git', () => {
+    // `makeGit` hands back stdout as git printed it, with its trailing newline; a stub that answers by command.
+    const stubGit = (answers) => (args) => answers[args.join(' ')] ?? null;
+    const VERIFY = (ref) => `rev-parse --verify --quiet ${ref}^{commit}`;
+
+    it('takes the merge base with the remote branch, newline and all', () => {
+        const git = stubGit({
+            'merge-base HEAD origin/master': 'abc123\n',
+            [VERIFY('abc123')]: 'abc123\n'
+        });
+
+        expect(resolveBase({ git, env: {} })).toEqual({ ref: 'abc123' });
+    });
+
+    it('falls back to the parent commit when no remote branch gives a merge base', () => {
+        const git = stubGit({ [VERIFY(FALLBACK_BASE)]: 'def456\n' });
+
+        expect(resolveBase({ git, env: {} })).toEqual({ ref: FALLBACK_BASE });
+        expect(FALLBACK_BASE).toBe('HEAD~1');
+    });
+
+    it('asks the git it was given, not the process cwd, when a base is named', () => {
+        const git = stubGit({ [VERIFY('main~3')]: 'aaa\n' });
+
+        expect(resolveBase({ git, env: {}, baseRef: 'main~3' })).toEqual({ ref: 'main~3' });
+        expect(resolveBase({ git, env: {}, baseRef: 'nope' })).toEqual({
+            error: '--base nope is not a commit in this repository'
+        });
+    });
+
+    it('recognises CI by either variable', () => {
+        expect(isCi({ CI: 'true' })).toBe(true);
+        expect(isCi({ GITHUB_ACTIONS: 'true' })).toBe(true);
+        expect(isCi({ CI: '1' })).toBe(false);
+        expect(isCi({})).toBe(false);
+    });
+
+    it('makeGit runs in the given folder and answers null for a failing command', () => {
+        const root = mkdtempSync(path.join(tmpdir(), 'siblings-makegit-'));
+        try {
+            const run = makeGit(root);
+
+            expect(run(['rev-parse', '--is-inside-work-tree'])).toBe(null);
+            git(root, ['init', '--quiet']);
+            expect(run(['rev-parse', '--is-inside-work-tree'])).toBe('true\n');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
     });
 });

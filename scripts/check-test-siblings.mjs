@@ -131,33 +131,57 @@ const paths = (args) =>
         .filter(Boolean);
 
 const BASE_CANDIDATES = ['origin/master', 'origin/main'];
+/** The base when no remote branch gives a merge base: a caller that needs the remote's can tell it by this. */
+export const FALLBACK_BASE = 'HEAD~1';
 
-const isCi = (env) => env.CI === 'true' || env.GITHUB_ACTIONS === 'true';
+export const isCi = (env) => env.CI === 'true' || env.GITHUB_ACTIONS === 'true';
+
+/** Runs git in `cwd`; returns stdout, or null when the command fails. */
+export const makeGit = (cwd) => (args) => {
+    try {
+        return execFileSync('git', args, {
+            cwd,
+            env: gitEnvironment(),
+            encoding: 'utf8',
+            maxBuffer: 64 * 1024 * 1024,
+            stdio: ['ignore', 'pipe', 'ignore']
+        });
+    } catch {
+        return null;
+    }
+};
 
 const isCommit = (ref) => tryGit(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]) !== null;
 
-/** { ref } to compare with, { root: true } when there is no earlier commit, or { error }. */
-export const resolveBase = ({ baseRef, env }) => {
+/**
+ * { ref } to compare with, { root: true } when there is no earlier commit, or { error }.
+ * `git(args)` returns stdout or null when the command fails; it defaults to git in this process's cwd.
+ */
+export const resolveBase = ({ baseRef, env, git: run = tryGit }) => {
+    const answer = (args) => run(args)?.trim() || null;
+    const isCommitIn = (ref) =>
+        answer(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]) !== null;
+
     let ref = null;
     if (baseRef) {
-        if (!isCommit(baseRef))
+        if (!isCommitIn(baseRef))
             return { error: `--base ${baseRef} is not a commit in this repository` };
         ref = baseRef;
     } else if (isCi(env)) {
-        ref = isCommit('HEAD~1') ? 'HEAD~1' : null;
+        ref = isCommitIn('HEAD~1') ? 'HEAD~1' : null;
     } else {
         for (const candidate of BASE_CANDIDATES) {
-            const mergeBase = tryGit(['merge-base', 'HEAD', candidate]);
-            if (mergeBase && isCommit(mergeBase)) {
+            const mergeBase = answer(['merge-base', 'HEAD', candidate]);
+            if (mergeBase && isCommitIn(mergeBase)) {
                 ref = mergeBase;
                 break;
             }
         }
-        if (!ref && isCommit('HEAD~1')) ref = 'HEAD~1';
+        if (!ref && isCommitIn(FALLBACK_BASE)) ref = FALLBACK_BASE;
     }
 
     if (ref) return { ref };
-    if (tryGit(['rev-parse', '--is-shallow-repository']) === 'true') {
+    if (answer(['rev-parse', '--is-shallow-repository']) === 'true') {
         return {
             error: 'shallow clone with no parent commit to compare with: check out with `fetch-depth: 2` (actions/checkout) or run `git fetch --deepen=1`'
         };

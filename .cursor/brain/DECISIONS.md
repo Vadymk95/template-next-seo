@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| A push that changes no harness file leaves out the harness tests that read only the harness | 2026-11 | in force |
 | Stryker runs the suite in the `forks` pool, the pool `vitest run` uses | 2026-11 | in force |
 | Cross-browser runs in the Playwright image | 2026-11 | in force |
 | A browser subscription started in an effect is released | 2026-11 | in force |
@@ -64,6 +65,32 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## A push that changes no harness file leaves out the harness tests that read only the harness
+
+2026-11 · in force · guard `scripts/gate-tiers.self-tests.test.mjs` · evidence: `scripts/verify-push.self-tests.test.mjs`, `scripts/check-coverage.test.mjs`
+
+- **Context:** the push gate ran every harness test on every push, so a fork that only writes app code paid for them
+  too. Measured on master (same worker cap, no coverage): the unit step took 41 s over 83 files and 2,497 tests, and
+  17 s over 74 files and 1,815 tests without the nine harness test files that read no repository file outside
+  `scripts/` (a trace of each showed only temp folders, the tools some of them load from `node_modules`, and one
+  check that a system tool exists). Only a change to the harness can change their result.
+- **Decision:** `selfTests.files` in `scripts/gate-tiers.json` lists those files (nine, plus the test of this
+  decision, which takes 11 s alone and shows no other read in a trace). A push whose commits, since the merge base with
+  `origin/master` or `origin/main`, change no path of `scripts/gate-files.json`, none under `scripts/`, no
+  `package.json` and no lockfile leaves exactly those out of the `test:coverage` stage, in either phase, and prints
+  how many and why. Everything runs when `CI` is set, under `npm test` and `npm run verify`, with
+  `GATE_SELF_TESTS=all git push`, and whenever the change cannot be told: no remote branch, no merge base, a git
+  failure, an unreadable manifest, an empty list, a package below the repository root. Any other non-empty value of
+  `GATE_SELF_TESTS` stops the push. Coverage leaves `scripts/**` out (`vitest.config.ts`), so no number moves.
+- **Not listed:** a test that reads any app file, config or `package.json` (`check-gate-env.test.mjs` runs the
+  build-env check, which loads the real `.env*` files), and `fork-init.test.mjs`, which `fork:init` deletes. A file
+  joins the list in a pull request (the list is a gate file), and the guard fails a name that is missing,
+  duplicated, or not a test under `scripts/`. The guard does not name `fork-init.test.mjs`: the guard stays in a
+  fork, and the test of `fork:init` requires that no file a fork keeps names the command. A case in
+  `fork-init.test.mjs` itself fails a list that names it, and goes with the file.
+- **Reversed by:** a red master run from a left-out test that the push would have caught.
+- **Status:** in force.
 
 ## Stryker runs the suite in the `forks` pool, the pool `vitest run` uses
 

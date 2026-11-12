@@ -46,7 +46,8 @@ gate script runs: `scripts/gate-tiers.json` (`checks.<name>.chain`), not repeate
   It deliberately runs no lint/types/tests: measuring is not verifying.
 - **Commit — the pre-commit hook**: staged autofix, the TDD sibling gate, then the repo-wide
   cheap checks (the list is `.husky/pre-commit`). Nothing to run by hand.
-- **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below.
+- **Push — `npm run verify:push` (the pre-push hook runs it)**: PHASE-AWARE, see the table below. A push
+  that changes no harness file also leaves out the listed harness tests (the paragraph after Phases).
 - The full chains (the offline gate, the CI gate and the full tier) belong to the push hook and CI — they
   are not desk tools and are never run by hand.
 
@@ -86,6 +87,13 @@ and `vitest.config.ts` sets `allowOnly: false` so the runner itself refuses a fo
 `scripts/gate-tiers.json` `"phase"` decides; `scripts/verify-push.mjs` dispatches; the skip is
 printed on every phase-0 push. `GATE_PHASE=full` overrides per run (how gate machinery itself is
 pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
+
+A push that changes no harness file (no path of `scripts/gate-files.json`, none under `scripts/`, no
+`package.json`, no lockfile, between the merge base with `origin/master` or `origin/main` and HEAD) also
+leaves out the harness tests listed under `selfTests` in `gate-tiers.json`, in either phase:
+`scripts/verify-push.mjs` decides and prints which way it went on every push, `scripts/check-coverage.mjs`
+applies it. A push whose change cannot be told (a package below the repository root too), CI, `npm test`,
+`npm run verify` and `GATE_SELF_TESTS=all git push` run them all.
 
 | Check | Runs at phase 0 (scaffold) | Added when (the trigger) |
 | --- | --- | --- |
