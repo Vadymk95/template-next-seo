@@ -58,6 +58,17 @@ export const UNBROKEN_TOKEN = 'Xx'.repeat(UNBROKEN_TOKEN_PAIRS);
 /** One character, not the empty string: a label nothing can read is a content bug, not a layout one. */
 export const MINIMAL_TEXT = 'x';
 
+/**
+ * Real authored copy, never lorem-ipsum: the template's start-page copy, word for word, so TYPICAL is a
+ * real heading and a real sentence and LONG is that sentence tripled. Held here, not read from the
+ * `home` namespace: a fork replaces the start page and its namespace, and the measurement must not go
+ * with them.
+ */
+export const AUTHORED_COPY = {
+    heading: 'A Next.js foundation with the gate already wired',
+    text: 'Next.js App Router, next-intl, TypeScript strict, Tailwind v4, Vitest and Playwright — plus the hooks, CI and agent flow that keep a fork honest from the first commit.'
+} as const;
+
 const TYPICAL_ITEM_COUNT = 3;
 const MANY_ITEM_COUNT = 7;
 

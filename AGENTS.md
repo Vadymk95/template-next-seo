@@ -187,7 +187,7 @@ never invented.
 
 - **`next.config.ts`:** the custom webpack `splitChunks` breaks under `next build` without `--webpack`; its import graph is alias-free (Next loads the config before any `@/` alias exists, so use relative imports only, or the build fails with `Cannot find module`).
 - **`app/[locale]/*`:** `app/[locale]/layout.tsx` is the root layout. A layout placed above it (a layout file directly under `app/`) becomes the root layout instead, `locale` stops being a root param, and `i18n/request.ts` no longer resolves it.
-- **Template scaffolding** (`lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline; each site is marked `// Template scaffolding`) is load-bearing: strip it only when the caller says "this is now my MVP". Full list with mitigations: `.cursor/brain/SKELETONS.md`.
+- **Template scaffolding** (every site is marked `// Template scaffolding`; the list with mitigations: `.cursor/brain/SKELETONS.md` § "Template scaffolding") is load-bearing: strip it only when the caller says "this is now my MVP".
 - **Machine-agnostic configs:** no absolute local paths in committed configs (keep `i18next.i18nPaths` relative: `messages,i18n`), and no DURATION measured on one machine: the push budget in `scripts/gate-tiers.json` holds a ratio and a sample size, never seconds.
 
 ## Out of scope (ask before touching)
