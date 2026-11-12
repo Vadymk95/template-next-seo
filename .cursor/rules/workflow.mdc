@@ -11,8 +11,11 @@ alwaysApply: true
 
 ## Approval & Brain
 
-- **Threshold (by risk, not LOC)**: changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` root layout and `next/root-params`, rate-limit matcher, Template scaffolding), a **security-surface or contract change** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse need **explicit approval** before coding. **Trivial leaf edits**: a brief notification is enough (Step 2 gate).
-- **Above the chat gate**: for a task bigger than a one-sentence diff the approval is the non-author PR review of `SPEC.md` / `PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate for tasks below that size.
+- **Threshold (by risk, not LOC)**: changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` root layout and `next/root-params`, rate-limit matcher, Template scaffolding), a **change to an EXISTING contract or security surface** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse: present the plan, wait for **explicit approval**, then implement. **Trivial leaf edits** (no danger zone, no contract change): a brief notification is enough (Step 2 gate).
+- **One slice that only ADDS** (a new page, store, query, route handler or Server Action), no danger zone, no existing contract changed: proceed; the acceptance criteria open the pull request description.
+- **Two or more slices, or a new architecture or cross-cutting pattern**: `SPEC.md` + `PLAN.md`, approved as a pull-request review.
+- **FORBIDDEN**: changing an existing contract or entering a danger zone before approval.
+- **Above the chat gate**: for work of two or more slices the approval is the non-author PR review of `SPEC.md` / `PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate below that size.
 - **Brain**: after meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Step 5).
 
 ## Implementation Workflow

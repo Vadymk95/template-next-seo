@@ -46,9 +46,10 @@ route param with `requireLocale()` (a Server Action passes its locale to next-in
 `next.config.ts` import graph is alias-free — anything it reaches must use relative imports, because Next
 transpiles that graph before the `@/` alias exists.
 
-**Bigger than a one-sentence diff?** Then the scope lives in `.cursor/<feature-slug>/SPEC.md` and
+**Two or more slices, or a danger zone?** Then the scope lives in `.cursor/<feature-slug>/SPEC.md` and
 `PLAN.md` (templates in `.cursor/templates/`, law in `AGENTS.md` § Before code). Create or update them
 before §3; a plan is approved as a pull-request review, never as a chat reply.
+**One slice?** Write its acceptance criteria (Given / When / Then) at the top of the pull request description.
 
 ## 3. Build
 

@@ -2,6 +2,10 @@
 
 ## App Router
 
+A new page, route handler or Server Action inside this structure adds no row here: the code is the registry
+(the `page.tsx` files and the `route.ts` handlers under `app/`, the Server Actions in `app/actions/`). This
+table changes when the structure does: a root layout, the middleware in `proxy.ts`, the i18n wiring, a provider.
+
 | Route / file                    | Notes                                                              |
 | ------------------------------- | ------------------------------------------------------------------ |
 | `app/[locale]/layout.tsx`       | Root layout (no layout file sits directly under `app/`): `<html lang>`, fonts (self-hosted by `next/font`, so no connection hints), `WebVitalsReporter`, `Providers`, `generateStaticParams` from `routing.locales`, `getMessages` → `NextIntlClientProvider` wraps `Header` / `main` / `Footer`; `generateMetadata` sets `metadataBase`, `title.default` + `title.template` (cascades to the pages below the locale root) and the locale `description` / `openGraph` / `twitter` |

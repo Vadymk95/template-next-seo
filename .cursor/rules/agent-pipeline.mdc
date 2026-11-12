@@ -75,7 +75,7 @@ RSC vs client boundaries for touched files; SEO routes (`sitemap`, `robots`, met
 
 | File           | When to update                       |
 | -------------- | ------------------------------------ |
-| `MAP.md`       | Routes, actions, stores, major flows |
+| `MAP.md`       | A change of STRUCTURE (a new layer, entry point, data flow or state boundary); a new page, route or store inside the existing structure changes nothing here, the code is the registry |
 | `DECISIONS.md` | New pattern or intentional trade-off |
 | `SKELETONS.md` | New risk or mitigated zone           |
 
