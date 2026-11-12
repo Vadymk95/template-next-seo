@@ -6,35 +6,33 @@ Production-ready Next.js template optimized for SEO, performance, and developer 
 
 ## Forking this template — rename checklist
 
-This scaffold ships with placeholder branding. When you start a real project from
-it, replace every spot below — grep the old strings afterwards to be sure none are
-missed (a missed brand string in `<title>` or the dev banner is the usual slip):
+After cloning and `npm run prepare`, run one command from the repository root. It reads and writes files only: no install, no network, no `gh`, and git history is never touched.
 
-- `package.json` **and** `package-lock.json` — `name`
-- `app/[locale]/layout.tsx` — `keywords`, `authors`, `creator` in `generateMetadata`
-- `messages/<locale>.json` — `home.title` / `home.description`, and `meta.root.*`
-  (`titleDefault`, `titleTemplate`, `description`, `siteName`) + `meta.home.description`
-- `app/[locale]/opengraph-image.tsx` — the social preview card (a plain site-name card); the
-  one in `example-form/` re-exports it, so restyle the card once or give each page its own
-- `shared/ui/common/Footer` — copyright line
-- `scripts/startup.js` — dev-banner display name
-- `e2e/*.spec.ts` — expected document titles
-- `README.md` — heading + description
-- `.cursor/rules/global.mdc` — header; `project-config.mdc` — palette + locale assumptions
-- `.github/workflows/ci.yml` — the `NEXT_PUBLIC_APP_URL` build placeholder (`*.invalid`)
-- `NEXT_PUBLIC_APP_URL` — set to your real origin (drives `metadataBase`, sitemap, `hreflang`)
-- `LICENSE` — MIT is fine for an open project; for a **proprietary/commercial** app
-  remove `LICENSE` and set `package.json` `"license": "UNLICENSED"` (repo is already `private`)
-- Private repository only, `.github/workflows/security.yml` and `.github/ruleset.json` — code scanning is free
-  on a public repository; a private one needs a GitHub Code Security license (a GitHub Team or GitHub
-  Enterprise plan), and without it the `codeql` job fails with "Code scanning is not enabled for this
-  repository". Get the license, or delete the `codeql` job and its required check in one commit. Sources and
-  the exact check name: [CI/CD](#-cicd)
-- Repository layout, keep the app at the git root: `scripts/check-hooks.mjs` refuses to run from a subfolder of the
-  repository, because every gate script reads git paths relative to the repository root
+```bash
+npm run fork:init -- --name my-app --title "My App" [--holder "My Company Ltd"] [--private] [--dry-run]
+```
 
-Placeholder brands currently in the scaffold: `React Enterprise Foundation`
-(layout + messages) and `Next.js SEO Template` (README + banner).
+It refuses on a dirty working tree, on an invalid package name, an empty title or an unknown option, and on a second run (it writes `.template-origin.json`, and that file's presence is the refusal). A successful run also removes the command from your fork (the script, its test, the `package.json` entry and this description of it, leaving the list below) so your gate does not carry a test of a one-time tool; `docs:check` judges that final tree, and if it is red the command stays whole. What it does:
+
+- **Identity** — the `package.json` name and both root entries of `package-lock.json`; the product title in `messages/en.json` (`meta.root.titleDefault`, `titleTemplate`, `siteName` and the `meta.home.description` greeting), the footer copyright line, the title expectations of `app/[locale]/page.test.tsx` and `e2e/smoke.spec.ts`, the heading of this file and the dev banner in `scripts/startup.js`; the name in the title lines of `AGENTS.md`, `SECURITY_REQUIREMENTS.md`, `.cursor/rules/global.mdc` and the brain files, and in the rate-limit key prefix of `shared/lib/upstashRateLimit.ts`; the `LICENSE` copyright holder when `--holder` is given.
+- **Release start** — the version restarts at `0.1.0` in `package.json`, the lock file and `.release-please-manifest.json`; `CHANGELOG.md` restarts empty; `bootstrap-sha` in `release-please-config.json` becomes your repository's current commit, so the first release notes do not replay the template's history.
+- **Origin record** — `.template-origin.json` names the template, its version and its commit.
+- **Decision history** — `.cursor/brain/DECISIONS.md` starts with its header, an empty index and a pointer at the template's version; the pointers into the old entries in other docs become quoted entry names, which `docs:check` does not pin. The script runs `docs:check` at the end and exits 1 if it is red.
+- **`--private`** — for a private repository without a code-scanning licence: the `codeql` job in `.github/workflows/security.yml` and its required check in `.github/ruleset.json` leave together. Sources: [CI/CD](#-cicd).
+- **What is left** — printed at the end, in order, with the exact `gh` commands: enable Actions, the permission for Actions to open pull requests, the `gate-change` label, one pull request, then the ruleset ([why in this order](#what-your-fork-does-not-inherit)), and the settings that are only switches.
+
+What it does not do, and you decide:
+
+- **Site copy and metadata** — `keywords`, `authors` and `creator` in `generateMetadata` of `app/[locale]/layout.tsx`; `home.title`, `home.description`, `meta.root.description` and `meta.home.description` in `messages/<locale>.json`; the description under the heading of this file.
+- **Social preview card** — `app/[locale]/opengraph-image.tsx` is a plain site-name card; the one in `example-form/` re-exports it, so restyle the card once or give each page its own.
+- **Production origin** — set `NEXT_PUBLIC_APP_URL` to your real origin in each environment (it drives `metadataBase`, the sitemap and `hreflang`). The `*.invalid` build placeholder in `.env.example`, `.github/workflows/ci.yml` and `.husky/pre-push` stays: a package name is not a host name, and the placeholder never resolves.
+- **Rate-limit key prefix** — `PREFIX` in `shared/lib/upstashRateLimit.ts` carries the template name. Rename it when an Upstash Redis is shared with another app, with a test beside the file (the commit hook refuses a staged source file without one).
+- **Languages** — the locale set stays `['en']` until you decide ([Adding Languages](#adding-languages)).
+- **Palette and rule assumptions** — `.cursor/rules/project-config.mdc` and the theme tokens in `app/globals.css`.
+- **Licence** — MIT suits an open project; for a **proprietary/commercial** app remove `LICENSE` and set `package.json` `"license": "UNLICENSED"` (the repo is already `private`).
+- **Template scaffolding** — it stays: it is live code and gate fixtures. When you outgrow it, follow the restore playbook and `.cursor/brain/SKELETONS.md`.
+- **Repository layout** — keep the app at the git root: `scripts/check-hooks.mjs` refuses to run from a subfolder of the repository, because every gate script reads git paths relative to the repository root.
+- **Version holds** — keep `scripts/version-holds.json`: `verify` fails on a drift, and each hold is re-checked against your own Dependabot PRs, lifted when its condition is met.
 
 ## 🚀 Features
 
@@ -713,9 +711,8 @@ gh api repos/OWNER/REPO/rules/branches/master   # or main - whatever your defaul
 
 The order matters, and this one costs least: enable Actions, open one pull request and let every check report its name at least once, then post the ruleset. A required check that has never reported is Pending forever, so posting it first blocks every pull request with no error message anywhere - which is why the pull request comes first. The file targets `~DEFAULT_BRANCH` rather than a branch name, so it survives a rename; the check names inside it are the ones these workflows actually produce, so if you rename a CI job, update this file in the same commit.
 
-Three things in the files that a fork must handle on purpose:
+Two things in the files that a fork must handle on purpose (the decision history is not one of them: a fork starts its own `.cursor/brain/DECISIONS.md` on fork day, with a pointer at the template's history in this repository):
 
-- **Start your own decisions file.** `.cursor/brain/DECISIONS.md` records why the template is the way it is, not why your product is. Replace it with a short file of your own whose first line points at the template's history (`git log -p -- .cursor/brain/DECISIONS.md` in this repository), and add an entry only when you decide something.
 - **Keep `scripts/version-holds.json`.** It is the list of packages held below a major, with the reason and the lift condition, and `scripts/check-version-holds.mjs` fails the gate when `.github/dependabot.yml` and the list disagree. Delete a hold only in the commit that takes the major and removes its Dependabot ignore.
 - **Re-check each hold against your own Dependabot pull requests.** The holds are measured against this template's dependency set. If a fork adds a plugin, a test runner or a toolchain piece, the same hold can lift earlier or a new one can appear; the first Dependabot PR for a held package is the moment to test it.
 
