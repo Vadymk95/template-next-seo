@@ -23,6 +23,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 
 import {
+    AUTHORED_COPY,
     CONTENT_STRESS_CASES,
     CONTENT_STRESS_TOTAL,
     resolveItemCount,
@@ -129,15 +130,13 @@ const renderCase = ({
 
 export const ContentStressPage = async (): Promise<ReactElement> => {
     const locale = routing.defaultLocale;
-    const home = await getTranslations({ locale, namespace: 'home' });
     const errors = await getTranslations({ locale, namespace: 'errors' });
     const common = await getTranslations({ locale, namespace: 'common' });
 
-    // Real authored copy, never lorem-ipsum: the transform starts from a string the product ships, so
-    // the TYPICAL state is genuinely typical and the LONG state is a real string tripled.
-    const sourceText = home('description');
+    // Prose takes AUTHORED_COPY; chrome labels and messages stay in namespaces every fork keeps.
+    const sourceText = AUTHORED_COPY.text;
     const sourceLabel = common('button.submit');
-    const sourceHeading = home('title');
+    const sourceHeading = AUTHORED_COPY.heading;
     const sourceMessage = errors('validation.maxLength');
     const iconLabel = common('button.submit');
 

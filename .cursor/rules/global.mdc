@@ -33,7 +33,7 @@ Do **NOT** rely on Cursor to auto-attach every glob-scoped rule: `alwaysApply: f
 Do-not-touch by default, with explicit approval first (`agent-pipeline.mdc` Anti-patterns + Step 2 gate). The rule is `AGENTS.md` invariants 7 and 8 and § Danger zones; read `.cursor/brain/SKELETONS.md` before any edit here.
 
 - **Security surface** (CSP in `next.config.ts`, the nonce pipeline and middleware order in `proxy.ts`, the rate-limit matcher, COOP/CORP): never add a branch before the rate limiter, and keep the static and nonce CSP in sync. Any edit is a **security review**.
-- **Template scaffolding** (`lucide-react`, `shared/constants/index.ts`, `features/example-form/**`, the Web Vitals pipeline, every `// Template scaffolding` site): never stripped in an "unused code" pass, only after the caller confirms "this is now my MVP".
+- **Template scaffolding** (every `// Template scaffolding` site; the list: `.cursor/brain/SKELETONS.md` § "Template scaffolding"): never stripped in an "unused code" pass, only after the caller confirms "this is now my MVP".
 - **`app/[locale]/*`**: `app/[locale]/layout.tsx` is the root layout and every page/layout entry narrows the route param with `requireLocale()`; the locale reaches `i18n/request.ts` through `next/root-params`. **Locale set stays `['en']`** until the caller asks.
 - **Production build is `npm run build` (`next build --webpack`)**: custom `splitChunks` are ignored under Turbopack, so the default build tool does not change.
 

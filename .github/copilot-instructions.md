@@ -18,8 +18,8 @@ finding.
 - No secrets, keys or endpoints in committed files. `.env.example` carries placeholders; real values
   live in the host's environment. This holds for values that look harmless.
 - Template scaffolding marked by inline `// Template scaffolding` comments and listed in
-  `.cursor/brain/SKELETONS.md` (`features/example-form/**`, the Web Vitals pipeline, `lucide-react`
-  wiring, `shared/constants`) is reference material. Removing it as "dead code" is a finding.
+  `.cursor/brain/SKELETONS.md` § "Template scaffolding" is reference material. Removing it as "dead
+  code" is a finding.
 
 ## Conventions the linter enforces — flag attempts to work around them
 
