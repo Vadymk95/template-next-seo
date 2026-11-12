@@ -599,4 +599,163 @@ describe('the CLI against a real git repository', () => {
             expect(run(root, [SOURCE]).code).toBe(0);
         });
     });
+
+    // The iterate chain runs this mode: it judges the working tree against HEAD, so a missing test is
+    // found before `git add`, not at the commit hook. A sibling counts when it is on disk, because at
+    // this moment nothing is staged yet; the commit hook still wants it in the index.
+    describe('changed mode (--changed)', () => {
+        /** A repository whose HEAD holds a tested logic file and `legacy.ts`, a logic file with no test. */
+        const withCommittedLogic = () => {
+            const root = baseline();
+            write(root, 'shared/lib/ok.ts');
+            write(root, 'shared/lib/ok.test.ts');
+            write(root, 'shared/lib/legacy.ts');
+            commit(root, 'logic');
+            return root;
+        };
+
+        it('passes on a clean tree, even when HEAD holds a file with no test', () => {
+            expect(run(withCommittedLogic(), ['--changed']).code).toBe(0);
+        });
+
+        it('refuses an untracked logic file with no test and names the file and the remedy', () => {
+            const root = baseline();
+            write(root, SOURCE);
+
+            const verdict = run(root, ['--changed']);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+            expect(verdict.output).toContain(`add ${SIBLING}`);
+            expect(verdict.output).toContain('git add');
+        });
+
+        it('accepts an untracked logic file with an untracked test beside it', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('refuses a staged-only logic file with no test', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            git(root, ['add', SOURCE]);
+
+            const verdict = run(root, ['--changed']);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain(SOURCE);
+        });
+
+        it('accepts a staged logic file whose test is staged too', () => {
+            const root = baseline();
+            write(root, SOURCE);
+            write(root, SIBLING);
+            git(root, ['add', '-A']);
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('refuses an unstaged edit of a tracked logic file that has no test', () => {
+            const root = withCommittedLogic();
+            write(root, 'shared/lib/legacy.ts', 'export const changed = 1;\n');
+
+            const verdict = run(root, ['--changed']);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('shared/lib/legacy.ts');
+        });
+
+        it('accepts an unstaged edit of a tracked logic file whose test is committed', () => {
+            const root = withCommittedLogic();
+            write(root, 'shared/lib/ok.ts', 'export const changed = 1;\n');
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('applies the exempt list of the commit hook', () => {
+            const root = baseline();
+            write(root, 'shared/lib/constants.ts');
+            write(root, 'features/example-form/index.ts');
+            write(root, 'shared/ui/button.tsx');
+            write(root, 'app/[locale]/layout.tsx');
+            write(root, 'shared/lib/api/_exampleQuery.ts');
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('ignores a changed file outside the logic layers', () => {
+            const root = baseline();
+            write(root, 'scripts/tool.mjs');
+            write(root, 'e2e/home.spec.ts');
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('does not judge a deleted logic file', () => {
+            const root = withCommittedLogic();
+            rmSync(path.join(root, 'shared/lib/legacy.ts'));
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('judges a renamed logic file at its new path', () => {
+            const root = withCommittedLogic();
+            git(root, ['mv', 'shared/lib/ok.ts', 'shared/lib/renamed.ts']);
+
+            const verdict = run(root, ['--changed']);
+
+            // `ok.test.ts` stayed behind: the old name had a test, the new one has none.
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('shared/lib/renamed.ts');
+            expect(verdict.output).not.toContain('shared/lib/ok.ts');
+        });
+
+        it('accepts a renamed logic file that moved with its test', () => {
+            const root = withCommittedLogic();
+            git(root, ['mv', 'shared/lib/ok.ts', 'shared/lib/renamed.ts']);
+            git(root, ['mv', 'shared/lib/ok.test.ts', 'shared/lib/renamed.test.ts']);
+
+            expect(run(root, ['--changed']).code).toBe(0);
+        });
+
+        it('reports every offender, not only the first', () => {
+            const root = baseline();
+            write(root, 'shared/lib/a.ts');
+            write(root, 'shared/lib/b.tsx');
+
+            const verdict = run(root, ['--changed']);
+
+            expect(verdict.code).toBe(1);
+            expect(verdict.output).toContain('shared/lib/a.ts');
+            expect(verdict.output).toContain('shared/lib/b.tsx');
+        });
+
+        it('fails, rather than judging nothing, in a repository with no commit', () => {
+            const root = makeRepo();
+            write(root, SOURCE);
+
+            const verdict = run(root, ['--changed']);
+
+            expect(verdict.code).toBe(2);
+            expect(verdict.output).toMatch(/no commit/);
+        });
+
+        it('refuses to combine with a range or with named files', () => {
+            const root = baseline();
+
+            for (const args of [
+                ['--changed', '--range'],
+                ['--changed', '--base', 'HEAD'],
+                ['--changed', SOURCE]
+            ]) {
+                const verdict = run(root, args);
+
+                expect(verdict.code, args.join(' ')).toBe(2);
+                expect(verdict.output).toMatch(/cannot be combined/);
+            }
+        });
+    });
 });

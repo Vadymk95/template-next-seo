@@ -14,11 +14,16 @@
 //     changes needs a sibling tracked at head. It runs inside `verify` and `verify:scaffold`, so
 //     CI and the push in either phase reach it, because a hook can be skipped and a commit made
 //     elsewhere never passed one.
+//   - changed mode is the iterate chain's: the working tree against HEAD (staged, unstaged and
+//     untracked files, deleted ones left out), so a missing test is found before `git add`. Nothing
+//     is staged yet while the author works, so a sibling on disk counts there; the commit hook then
+//     asks for it in the index.
 //
 // Usage:
 //   node scripts/check-test-siblings.mjs                 # staged files, siblings from the index (pre-commit)
 //   node scripts/check-test-siblings.mjs --range [--base <ref>] [--head <ref>]
 //                                                        # base...head, siblings from head (CI, push)
+//   node scripts/check-test-siblings.mjs --changed       # working tree vs HEAD, siblings from the disk (iterate chain)
 //   node scripts/check-test-siblings.mjs <file> [file…]  # given files, siblings from the disk (for tests)
 // Range base: --base, else HEAD~1 when CI is set (a pull request's merge commit has the base tip
 // as its first parent; the checkout needs fetch-depth 2), else the merge-base of HEAD with
@@ -27,8 +32,10 @@
 // Exit codes: 0 clear, 1 a source file without a sibling, 2 the check could not run.
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 import { isEntryPoint } from './is-entry-point.mjs';
+import { changedFiles } from './lint-changed.mjs';
 
 // Exempt: tests themselves, type decls, barrels, declaration-only registries, the
 // shadcn primitives, test utils, and the Next.js special files that are framework
@@ -160,13 +167,15 @@ export const resolveBase = ({ baseRef, env }) => {
 
 /* ------------------------------------------------------------------------ arguments */
 
-/** { files, range, base, head } or { error }. */
+/** { files, range, base, head, changed } or { error }. */
 export const parseArguments = (argv) => {
-    const parsed = { files: [], range: false, base: null, head: null };
+    const parsed = { files: [], range: false, base: null, head: null, changed: false };
     for (let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];
         if (argument === '--range') {
             parsed.range = true;
+        } else if (argument === '--changed') {
+            parsed.changed = true;
         } else if (argument === '--base' || argument === '--head') {
             const value = argv[index + 1];
             if (!value || value.startsWith('--')) return { error: `${argument} needs a value` };
@@ -178,6 +187,9 @@ export const parseArguments = (argv) => {
         } else {
             parsed.files.push(argument);
         }
+    }
+    if (parsed.changed && (parsed.range || parsed.files.length > 0)) {
+        return { error: '--changed cannot be combined with --range or with file names' };
     }
     if (parsed.range && parsed.files.length > 0) {
         return { error: 'give either files or a range, not both' };
@@ -192,14 +204,14 @@ const fail = (message) => {
     process.exit(2);
 };
 
-const report = (missing, scope) => {
+const report = (missing, scope, note = '') => {
     console.error(`\n✖ TDD-gate: ${scope} source files with no co-located *.test.* sibling:`);
     for (const file of missing) {
         const ext = file.endsWith('.tsx') ? 'tsx' : 'ts';
         console.error(`  - ${file}  → add ${file.replace(/\.(ts|tsx)$/, `.test.${ext}`)}`);
     }
     console.error(
-        '\nTests must exist alongside source. Add the test, or if genuinely exempt extend EXEMPT in scripts/check-test-siblings.mjs.\n'
+        `\nTests must exist alongside source. Add the test, or if genuinely exempt extend EXEMPT in scripts/check-test-siblings.mjs.${note}\n`
     );
     process.exit(1);
 };
@@ -265,6 +277,17 @@ const checkRange = ({ base: baseRef, head: headRef }) => {
     }
 };
 
+const checkChanged = () => {
+    // Paths come back relative to the repository root, the form `isSrcLogic` expects.
+    const top = git(['rev-parse', '--show-toplevel']).trim();
+    const missing = findMissingSiblings(changedFiles({ cwd: top }), (file) =>
+        existsSync(path.join(top, file))
+    );
+    if (missing.length > 0) {
+        report(missing, 'changed', ' The commit hook also wants the test `git add`ed.');
+    }
+};
+
 const main = () => {
     const parsed = parseArguments(process.argv.slice(2));
     if (parsed.error) fail(parsed.error);
@@ -273,6 +296,8 @@ const main = () => {
         if (parsed.files.length > 0) {
             const missing = findMissingSiblings(parsed.files, existsSync);
             if (missing.length > 0) report(missing, 'given');
+        } else if (parsed.changed) {
+            checkChanged();
         } else if (parsed.range) {
             checkRange(parsed);
         } else {

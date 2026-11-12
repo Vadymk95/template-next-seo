@@ -625,8 +625,9 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
     `emitModeWarningOnce` (`shared/lib/middlewareRequest.ts`), covered by its unit test.
   - `scrollbar-gutter: stable` regression: asserted per width in `e2e/layout-geometry.spec.ts`.
   - `catch {}` passed every check: `no-empty` with `allowEmptyCatch: false` in `eslint.config.js`.
-  - Pre-commit missed the checker's own files: `.husky/pre-commit` triggers `docs:check` on
-    `scripts/docs-check.*` and `package.json` too.
+  - Pre-commit missed the checker's own files: the `docs:check` trigger (`DOCS_TRIGGER` in
+    `scripts/docs-trigger.mjs`, which the commit hook and the iterate chain both run; an inline `grep -qE` in
+    `.husky/pre-commit` before that) matches `scripts/docs-check.*` and `package.json` too.
   - A CI `run:` step outside the gate (the 2026-07 "gate lied" class): `docs:check` `ciSteps` against
     `ci.allowedRunSteps` in `scripts/gate-tiers.json`, read per line, block scalars included.
   - A required ruleset context no job produces: `docs:check` `rulesetContexts` against `.github/ruleset.json`; a
