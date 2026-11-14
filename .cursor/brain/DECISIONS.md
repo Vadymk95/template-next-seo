@@ -1050,8 +1050,9 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
 - **React Doctor as a `lint-staged` PR gate:** a project-level scan is not a staged-file linter. Reopen when it
   ships 1.0 AND a fork has a dated bug it would have caught, as an ad hoc `npm run doctor` plus a SHA-pinned
   action in `--offline` comment-only mode, never blocking.
-- **Zstd compression:** Safari support landed in 26.3 but global support was 45 of 100 (caniuse, 2026-05). Brotli
-  stays mandatory. Reopen at 80 of 100 AND when Next exposes per-route encoding negotiation.
+- **Zstd compression:** Safari support landed in 26.3; global support was 79 of 100 in 2026-05 and 84 of 100 on
+  2026-11-14 (caniuse usage share). Brotli stays mandatory. Reopen at 80 of 100 (met on 2026-11-14) AND when
+  Next exposes per-route encoding negotiation.
 - **Not applicable to web:** memlab, why-did-you-render, `react-native-flipper`, `vite-plugin-bundlesize`
   (reasons in `template-rn`'s register; `size:check` covers the bundle here).
 - **Status:** in force.

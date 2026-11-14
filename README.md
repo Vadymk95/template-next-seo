@@ -661,7 +661,7 @@ Seeing old errors, old strings, or stale UI in a normal tab while incognito look
 - **`.next/cache/` drift after config or route changes.** When you change `next.config.ts`, i18n messages, or segment metadata, the incremental cache can serve the old tree. Run `npm run clean` to wipe `.next` and rebuild from scratch.
 - **Chrome memory/back-forward cache in the tab.** Hard-reload (`Cmd+Shift+R`) or close the tab; don't just reload.
 - **Do NOT enable DevTools → Network → "Disable cache"** for day-to-day dev. Per [Vercel's guidance](https://vercel.com/guides/why-is-my-nextjs-code-not-updating) this masks real caching bugs and makes dev slower. Rely on Next defaults (`no-cache` in dev, `immutable` on hashed chunks in prod).
-- **Do NOT add `Cache-Control: no-store` on HTML.** It disables bfcache and tanks back-nav UX.
+- **Do NOT add `Cache-Control: no-store` on HTML.** It keeps the page out of bfcache (Chrome restores a `no-store` page only when it judges that safe) and tanks back-nav UX.
 
 Quick commands:
 
