@@ -49,20 +49,22 @@ import Image from 'next/image';
     alt="Description"
     width={800}
     height={600}
-    priority // For above-the-fold images
+    preload // Only the one above-the-fold LCP image
 />
 ```
 
 ### Rendering & loading priority
 
-- **LCP hero image**: give the above-the-fold hero `priority` (`next/image` emits
-  `fetchpriority="high"` + a `<link rel="preload">`); never `loading="lazy"` it.
+- **LCP hero image**: give the one above-the-fold hero `preload` (`next/image` inserts a preload
+  `<link>` in the `<head>`) or `fetchPriority="high"`; `priority` is deprecated in this major. Never `loading="lazy"` it.
 - **Below-the-fold sections**: apply `content-visibility: auto` (with a
   `contain-intrinsic-size` hint) to skip rendering/layout work until scrolled into view.
+  Baseline "Newly available" (Widely from 2028-03-15); an engine without it ignores the property.
 - **Long lists (≥ 50 rows)**: virtualize with TanStack Virtual / `react-window`
   instead of rendering every row.
-- Stay on Baseline "Widely available" APIs — do **not** use `scheduler.yield()` to
-  break up long tasks; prefer chunking work or `requestIdleCallback`.
+- Stay on Baseline "Widely available" APIs — do **not** use `scheduler.yield()` (no Safari) to
+  break up long tasks; prefer chunking work, or `requestIdleCallback` behind a feature test with a
+  `setTimeout` fallback (no Safari either; `app/providers.tsx` shows the pattern).
 
 ### Static Generation
 
