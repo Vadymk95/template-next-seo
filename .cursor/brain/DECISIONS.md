@@ -1052,7 +1052,10 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
   action in `--offline` comment-only mode, never blocking.
 - **Zstd compression:** Safari support landed in 26.3; global support was 79 of 100 in 2026-05 and 84 of 100 on
   2026-11-14 (caniuse usage share). Brotli stays mandatory. Reopen at 80 of 100 (met on 2026-11-14) AND when
-  Next exposes per-route encoding negotiation.
+  Next exposes per-route encoding negotiation (not met on 2026-11-14: `next start` compresses with gzip only,
+  https://nextjs.org/docs/app/api-reference/config/next-config-js/compress). Recorded 2026-11-14 on the static
+  JS and CSS of a production build (57 files, 1,200,327 bytes): Brotli 11 gives 331,858 bytes, zstd 19 gives
+  355,422 (7% more) and gzip 9 gives 379,415, so zstd would not shrink the static payload.
 - **Not applicable to web:** memlab, why-did-you-render, `react-native-flipper`, `vite-plugin-bundlesize`
   (reasons in `template-rn`'s register; `size:check` covers the bundle here).
 - **Status:** in force.
@@ -1135,7 +1138,7 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
 
 ## Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks
 
-2026-03 · in force · evidence: `package.json` `build`, `outputFileTracingRoot` in `next.config.ts`, `app/globals.css`
+2026-03 · in force · evidence: `package.json` `build` and `browserslist`, `outputFileTracingRoot` in `next.config.ts`, `app/globals.css`
 
 - **Webpack build.** `next build` defaults to Turbopack in Next 16, but this repo has a custom `webpack()` hook for
   vendor chunking and the bundle analyzer, so `build` and `build:analyze` run `next build --webpack`. `build:turbo`
@@ -1144,7 +1147,9 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
   `common`) so a dependency upgrade does not reshuffle critical vendors into anonymous chunks.
 - **Tailwind v4.** Configuration lives in `app/globals.css` (`@import 'tailwindcss'`, `@theme inline`, tokens);
   there is no `tailwind.config.ts`. PostCSS runs `@tailwindcss/postcss` only, and `tw-animate-css` replaces
-  `tailwindcss-animate`.
+  `tailwindcss-animate`. Its core depends on Chrome 111, Safari 16.4 and Firefox 128
+  (https://tailwindcss.com/docs/compatibility), so `browserslist.production` in `package.json` is Next's
+  default list with Firefox raised from 111 to 128.
 - **Parent lockfile.** Under a parent folder with another lockfile Next can pick the wrong workspace root, so
   `next.config.ts` sets `outputFileTracingRoot` and `turbopack.root` to the package directory.
 - **Lint.** Next 16 removed `next lint`, so `npm run lint` calls the linters directly.
