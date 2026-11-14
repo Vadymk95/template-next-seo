@@ -1,5 +1,52 @@
 # Changelog
 
+## [1.3.0](https://github.com/Vadymk95/template-next-seo/compare/v1.2.11...v1.3.0) (2026-11-14)
+
+
+### Features
+
+* **gate:** a push that changes no harness file leaves out the pure harness tests ([#151](https://github.com/Vadymk95/template-next-seo/issues/151)) ([a7d0513](https://github.com/Vadymk95/template-next-seo/commit/a7d0513750fa2a4c7d1323813bd3457c04ac4d69))
+* **gate:** iterate runs the commit hook's checks; phase 0 names every skipped stage ([#143](https://github.com/Vadymk95/template-next-seo/issues/143)) ([be834ab](https://github.com/Vadymk95/template-next-seo/commit/be834ab207bbb04471f365beb91e018b576a6a39))
+* **lint:** fail on leaking effects, fix two in providers, format .mjs, .cjs, .css at commit ([#138](https://github.com/Vadymk95/template-next-seo/issues/138)) ([ee0cc84](https://github.com/Vadymk95/template-next-seo/commit/ee0cc84cfb28aea15b6fced4516f8bd4b7d7755f))
+* **scripts:** add fork:init, the local part of fork day in one command ([#148](https://github.com/Vadymk95/template-next-seo/issues/148)) ([656ae22](https://github.com/Vadymk95/template-next-seo/commit/656ae22585395ce38b002fc7c0fb2cc279e0ab1c))
+
+
+### Bug fixes
+
+* **fork-day:** scaffolding rules point at the registry; the stress page owns its copy ([#150](https://github.com/Vadymk95/template-next-seo/issues/150)) ([49a2a93](https://github.com/Vadymk95/template-next-seo/commit/49a2a93cd3eb1abb23169298074ca2859ba359bd))
+* **hooks,ci:** pass commits of linter-ignored files; read gate labels when the job runs ([#140](https://github.com/Vadymk95/template-next-seo/issues/140)) ([c921f6f](https://github.com/Vadymk95/template-next-seo/commit/c921f6fa1dffd222eba516134eadf30adf2bb100))
+* **hooks:** the hooks check refuses when a hook file is missing or not executable ([#155](https://github.com/Vadymk95/template-next-seo/issues/155)) ([ca520b5](https://github.com/Vadymk95/template-next-seo/commit/ca520b50143230386b93c747ac74846668f7f4c3))
+* **mutation:** run Stryker in the forks pool so a native addon loads as under vitest run ([#142](https://github.com/Vadymk95/template-next-seo/issues/142)) ([2f1fb98](https://github.com/Vadymk95/template-next-seo/commit/2f1fb98d6820dc601f2780c86deb0f75abbf3a21))
+
+
+### Build and dependencies
+
+* **deps:** move oxlint and eslint-plugin-oxlint together to 1.93.0 ([#153](https://github.com/Vadymk95/template-next-seo/issues/153)) ([f5031b7](https://github.com/Vadymk95/template-next-seo/commit/f5031b7f6cf8758d93378b32e70e29b21c6d44fe))
+
+
+### Maintenance
+
+* **config:** state Firefox 128 in browserslist and date the zstd reopen check ([#157](https://github.com/Vadymk95/template-next-seo/issues/157)) ([b032635](https://github.com/Vadymk95/template-next-seo/commit/b032635e44f5e65622a048a70569892b5dca7eca))
+* **deps:** bump the minor-and-patch group across 1 directory with 10 updates ([#154](https://github.com/Vadymk95/template-next-seo/issues/154)) ([c1798b1](https://github.com/Vadymk95/template-next-seo/commit/c1798b15111b182d8ba160dd1d960d391eb96ea8))
+
+
+### Documentation
+
+* **agents:** spec and plan from two slices; one slice carries its criteria in the PR ([#144](https://github.com/Vadymk95/template-next-seo/issues/144)) ([1dd1f54](https://github.com/Vadymk95/template-next-seo/commit/1dd1f54da087878e858ad26afcbb55a0a5bfa154))
+* **rules:** correct Baseline tier labels and replace the deprecated image priority prop ([#156](https://github.com/Vadymk95/template-next-seo/issues/156)) ([10fe1ee](https://github.com/Vadymk95/template-next-seo/commit/10fe1eefcc5629ffdba4b3eec39b123d396266fb))
+
+
+### Tests
+
+* **scripts:** give the auto-merge script cases their own time budget ([#152](https://github.com/Vadymk95/template-next-seo/issues/152)) ([985833d](https://github.com/Vadymk95/template-next-seo/commit/985833d3a766c6f9482c449d58d7a75222b54e34))
+* **scripts:** give the lock-age command-line cases their own time budget ([#149](https://github.com/Vadymk95/template-next-seo/issues/149)) ([180b77c](https://github.com/Vadymk95/template-next-seo/commit/180b77c6115fa34388341e5f9a8d9e34051e174a))
+
+
+### CI
+
+* **cross-browser:** run in the official Playwright image, its tag read from the lock file ([#141](https://github.com/Vadymk95/template-next-seo/issues/141)) ([c9ac843](https://github.com/Vadymk95/template-next-seo/commit/c9ac843924791cbc90d2c0b8a4ac5c4f4f67aaec))
+* **deps:** auto-merge Dependabot patch and minor updates after the required checks ([#145](https://github.com/Vadymk95/template-next-seo/issues/145)) ([3db4b1e](https://github.com/Vadymk95/template-next-seo/commit/3db4b1e9998bbb9b20e270a78d5daa184ddeb4b9))
+
 ## [1.2.11](https://github.com/Vadymk95/template-next-seo/compare/v1.2.10...v1.2.11) (2026-11-07)
 
 
