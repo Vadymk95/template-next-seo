@@ -523,8 +523,10 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
 - **Consequences:** a lockfile or manifest outside a held range, a hold without its Dependabot ignore, or a hold on
   an absent package fails `verify`. A hold is lifted by the event named in its `lift` field, in one commit with
   its Dependabot ignore.
-- **Status:** in force. `scripts/audit-allowlist.json` is empty since GitHub withdrew the `braces` advisory on
-  2026-10-23; a new allowance goes there with its reason and expiry.
+- **Status:** in force. `scripts/audit-allowlist.json` was empty from 2026-10-23, when GitHub withdrew the `braces`
+  advisory, until 2026-11-18, then took one dated entry (picomatch `GHSA-fc5q-39xc-vjpf`, to 2026-12-02); see
+  "Advisory exceptions are data; an allowance is the last resort". A new allowance goes there with its reason and
+  expiry.
 
 ## `agentRules: false` keeps `next dev` out of `AGENTS.md`
 
@@ -925,7 +927,10 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
   are one commit: the stale check fails the gate the moment the override lands.
 - **Consequences:** security floors in `package.json` `overrides` are written `">=fixed <next-major"`, never
   uncapped (an uncapped one aged into its own advisory's vulnerable range). Do not remove a floor to quiet npm.
-- **Status:** in force; the allowlist was empty at this entry.
+- **Status:** in force; the allowlist was empty at this entry. Since 2026-11-18 it holds one dated entry, to
+  2026-12-02: `GHSA-fc5q-39xc-vjpf` (picomatch, high). GitHub widened its range to `<= 4.0.7` on 2026-11-17 with no
+  patched release (4.0.7 is the newest); the paths are tooling, and the one that installs in production
+  (`next-intl` -> `@parcel/watcher`) never builds a pattern from user input. The entry names the re-check.
 
 ## The gate runs from a clean clone: `check-build-env`
 
