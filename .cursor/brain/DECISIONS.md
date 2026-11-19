@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| A trace row names its commit and the red step | 2026-11 | in force |
 | The push runs its steps through one runner that names the red one | 2026-11 | in force |
 | A log keeps four coverage totals and a command's first and last lines | 2026-11 | in force |
 | A script reads a child's whole output and a full phase says its caches | 2026-11 | in force |
@@ -68,6 +69,18 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## A trace row names its commit and the red step
+
+2026-11 · in force · guard `scripts/gate-trace.test.mjs`, `scripts/trace-report.test.mjs`, `scripts/docs-check.test.mjs` · evidence: `scripts/gate-trace.mjs`, `scripts/trace-report.mjs`, `scripts/docs-check.mjs`
+
+- **Context:** a red push left a row with an exit code and nothing else: the step that failed and the commit that was
+  pushed had to be dug out of the terminal.
+- **Decision:** a row has two more columns, `head` (the full sha of HEAD when the run started, empty when git cannot
+  say) and `failedStep` (the label the runner writes to the file named by `GATE_TRACE_STEP_FILE`). `gate-trace.mjs`
+  gives each traced command a fresh temp folder for that file, reads it after the command exits and removes it; the
+  column is empty on a pass or when nothing was written, and the exit code is the command's own either way.
+  `trace:report` and `docs:check` read 8, 9 and 11 fields, so an old log still parses.
 
 ## The push runs its steps through one runner that names the red one
 
