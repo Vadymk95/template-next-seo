@@ -29,7 +29,7 @@ npm run e2e:one -- <spec>   # one Playwright spec on a FREE port, through the tr
 npm run test:one -- <file>  # one unit test file, through the tracer (not around it)
 npm run probe -- <route> [widths]  # LOOK: render, screenshot per width, print measured quantities
 npm run verify:push         # what pre-push runs: phase-aware (see gate-tiers.json / invariant 3)
-npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees)
+npm run trace:report        # findings from .gate-trace.log (forbidden moments, budgets, worktrees), then the last 20 pushes
 npm run docs:check          # mechanical doc drift: paths against the files git lists, line pointers, the DECISIONS shape, the gate chain view with its strict flags, any retelling or composition of it (pre-commit when docs are staged and inside verify; weekly CI adds --weekly)
 npm run fix                 # the one remedy: repo-wide autofix, then format
 npm run verify              # THE offline gate (alias of verify:enterprise): the push/CI chain, not a desk tool
@@ -78,9 +78,9 @@ variants, a production build or a browser suite by hand: the full chain belongs 
 result an agent cannot act on is not worth its minutes. A review round gets the diff plus `verify:iter`;
 acceptance does not re-run the gate, the push does. Parallel lanes never run heavy stages (one machine,
 shared caches): heavy work serialises at the push. Individual scripts (`typecheck`, `test`, `fix`)
-are drill-downs on a specific failure; none of them is a moment. Every test command an agent runs names a worker cap (`--maxWorkers`, `--workers` or
-`--test-concurrency`), and a lane starts nothing heavy while the 1-minute load average is at or above the core
-count (`sysctl -n hw.ncpu` or `nproc`).
+are drill-downs on a specific failure; none of them is a moment. Every test command an agent runs names
+a worker cap (`--maxWorkers`, `--workers` or `--test-concurrency`), and a lane starts nothing heavy while
+the 1-minute load average is at or above the core count (`sysctl -n hw.ncpu` or `nproc`).
 
 **A red push costs one fix, not another round of the whole gate.** Where the repo has a browser suite, it
 stops after a capped number of failures on the gate run and in CI (`maxFailures`) instead of running every
