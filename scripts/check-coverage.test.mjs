@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -129,5 +129,15 @@ describe('coverageArguments: the self-tests a push may leave out', () => {
         expect(coverageArguments({ env, cwd: path.join(tmpdir(), 'no-such-folder-here') })).toEqual(
             BASE
         );
+    });
+});
+
+describe('the coverage reporter', () => {
+    // The `text` reporter prints a row per file into every coverage log and nothing reads it; the summary
+    // prints the four totals, and a missed threshold is still named.
+    it('prints the four totals in the terminal, not a row per file', () => {
+        const config = readFileSync(path.join(process.cwd(), 'vitest.config.ts'), 'utf8');
+
+        expect(config).toMatch(/^\s*reporter:\s*\['text-summary',/m);
     });
 });

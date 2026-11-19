@@ -272,7 +272,7 @@ npm run gate:integrity   # lists the gate files and suppressions this branch cha
 npm run verify:enterprise  # the offline gate: every check CI runs except the network-bound ones (stages: scripts/gate-tiers.json)
 npm run verify:ci          # the CI gate: phase-1 pre-push and the CI validate job
 npm run verify:full        # predicts the whole CI pipeline, the dev-smoke job included
-npm run bench:verify       # time each stage of the verify chain
+npm run bench:verify       # time each stage of the verify chain; `-- --run <script>` runs a script's steps as the push does
 ```
 
 ## Releases

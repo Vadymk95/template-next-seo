@@ -134,6 +134,13 @@ budgets and classes are DATA in `scripts/gate-tiers.json`; the analyser names no
 discipline changes by editing that JSON. Telemetry sees WHO ran WHAT and HOW LONG; whether a check
 CAN fail is mutation-proving's job, not the tracer's.
 
+The push runs its steps through the runner in `scripts/bench-verify.mjs`: wrappers and `npm run` hops are followed, so
+a push writes one row, `verify:push`. It prints one line per step and a verdict naming the step that failed.
+`npm run bench:verify -- --run <script>` runs any script's steps the same way.
+
+The coverage step prints the four totals (the `text-summary` reporter), not a row per file; a missed threshold is still
+named. The per-file table, on demand: `npx --no-install vitest run --coverage --coverage.reporter=text <test file>`.
+
 ## Ports — the mechanics
 
 `e2e:one` and `verify:measure` route through `scripts/run-on-free-port.mjs`, which probes up from

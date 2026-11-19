@@ -60,7 +60,8 @@ export default defineConfig({
         forceRerunTriggers: forceRerunTriggersFor(import.meta.dirname),
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'json'],
+            // text-summary: the four totals in the terminal, not a row per file
+            reporter: ['text-summary', 'json'],
             // `scripts/` is gate tooling, not application code. Its DECISION logic
             // is unit-tested (`audit-gate.test.mjs`, `ensure-playwright.test.mjs`);
             // what stays uncovered is the `main()` I/O that spawns npm and writes to

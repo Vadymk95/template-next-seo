@@ -55,6 +55,7 @@
             "Edit(/CLAUDE.md)",
             "Edit(/e2e/support/**)",
             "Edit(/scripts/mutation-scope.test.mjs)",
+            "Edit(/scripts/bench-verify.mjs)",
             "Edit(/scripts/bench-verify.test.mjs)"
         ]
     }
