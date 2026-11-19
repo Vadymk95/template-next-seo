@@ -23,6 +23,7 @@ import { connect, createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { OUTPUT_LIMIT_BYTES } from './child-output.mjs';
 import { isEntryPoint } from './is-entry-point.mjs';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -47,7 +48,8 @@ const sleep = (ms) =>
  */
 const listeningPids = (port) => {
     const result = spawnSync('lsof', ['-ti', `tcp:${String(port)}`, '-sTCP:LISTEN'], {
-        encoding: 'utf8'
+        encoding: 'utf8',
+        maxBuffer: OUTPUT_LIMIT_BYTES
     });
     if (result.error) {
         return { pids: [], lookupError: result.error };
@@ -146,7 +148,8 @@ const main = async () => {
     const problems = [];
 
     const buildEnv = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-build-env.mjs')], {
-        encoding: 'utf8'
+        encoding: 'utf8',
+        maxBuffer: OUTPUT_LIMIT_BYTES
     });
     if (buildEnv.status !== 0) {
         problems.push(`${buildEnv.stdout ?? ''}${buildEnv.stderr ?? ''}`.trim());

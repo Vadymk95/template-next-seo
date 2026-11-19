@@ -47,8 +47,8 @@
         },
         "lint": {
             "class": "code",
-            "description": "the lint pass, eslint cached",
-            "chain": "lint:oxlint -> eslint . --max-warnings 0 --cache --cache-location .eslintcache"
+            "description": "the lint pass, eslint",
+            "chain": "lint:oxlint -> eslint . --max-warnings 0"
         },
         "typecheck": {
             "class": "code",
@@ -100,7 +100,8 @@
             "scripts/lint-changed.test.mjs",
             "scripts/check-lock-age.test.mjs",
             "scripts/format-changed.test.mjs",
-            "scripts/verify-push.self-tests.test.mjs"
+            "scripts/verify-push.self-tests.test.mjs",
+            "scripts/output-limits.test.mjs"
         ]
     },
     "ci": {
