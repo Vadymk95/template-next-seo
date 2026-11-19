@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| The report lists the last pushes and a guard keeps the moments map whole | 2026-11 | in force |
 | A trace row names its commit and the red step | 2026-11 | in force |
 | The push runs its steps through one runner that names the red one | 2026-11 | in force |
 | A log keeps four coverage totals and a command's first and last lines | 2026-11 | in force |
@@ -69,6 +70,17 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## The report lists the last pushes and a guard keeps the moments map whole
+
+2026-11 · in force · guard `scripts/trace-report.test.mjs`, `scripts/docs-check.test.mjs` · evidence: `scripts/trace-report.mjs`, `scripts/docs-check.mjs`
+
+- **Context:** the map from traced label to moment is kept by hand, and a label that no moment names is never judged,
+  whatever it costs. A push row had to be found among the rows by eye.
+- **Decision:** `trace:report` ends with the push ledger: the last 20 rows under the push moment's `expected` label,
+  each with its time, verdict, failed step, duration and head; a row from before a column shows `-` there.
+  `docs:check` fails when a label traced in `package.json` or a hook is on no moment's `expected` or `forbidden` list,
+  and skips that check when `gate-tiers.json` has no `moments`.
 
 ## A trace row names its commit and the red step
 
