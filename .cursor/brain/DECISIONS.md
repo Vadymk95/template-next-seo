@@ -4,6 +4,7 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| A script reads a child's whole output and a full phase says its caches | 2026-11 | in force |
 | A push that changes no harness file leaves out the harness tests that read only the harness | 2026-11 | in force |
 | Stryker runs the suite in the `forks` pool, the pool `vitest run` uses | 2026-11 | in force |
 | Cross-browser runs in the Playwright image | 2026-11 | in force |
@@ -65,6 +66,30 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | i18n is next-intl SSR with a `[locale]` segment | 2026-04 | in force |
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
+
+## A script reads a child's whole output and a full phase says its caches
+
+2026-11 · in force · guard `scripts/output-limits.test.mjs` · evidence: `scripts/child-output.mjs`, `scripts/child-output.test.mjs`, `scripts/verify-push.test.mjs`
+
+- **Context:** a sync child call (`spawnSync`, `execSync`, `execFileSync`) keeps stdout and stderr together up to
+  `maxBuffer`, 1 MiB by default; past it the child is killed (`ENOBUFS`, status null) and a check that reads only
+  `status` fails with no reason. Measured (Node 24.10.0, macOS): 600 KiB on stdout plus 600 KiB on stderr ends in
+  `ENOBUFS`, and with 64 MiB the same call ends in status 0. A script that echoes a captured output and then calls
+  `process.exit()` loses its tail on a pipe: 65,536 of 1,048,576 bytes arrive, while `process.exitCode` and a return
+  deliver all of them. `GATE_PHASE=full` was documented as "the full chain"; it runs every stage, but Prettier still reads `.prettiercache` (no workflow restores it, so CI starts without) and the
+  harness self-tests stay left out when no harness file changed.
+- **Decision:** every capture in `scripts/*.mjs` passes `maxBuffer: OUTPUT_LIMIT_BYTES` (256 MiB,
+  `scripts/child-output.mjs`); `check-coverage` and `audit-gate` print one line naming the limit when `ENOBUFS` stops a
+  child, and fail. A script that echoes a child's output sets `process.exitCode` and returns. The guard fails both a
+  capture with no limit and an echo followed by `process.exit(`. A full `GATE_PHASE` (`full` or `1`) prints one line:
+  every stage runs, the Prettier cache still applies, and
+  `rm -f .prettiercache && GATE_PHASE=full GATE_SELF_TESTS=all git push` skips nothing. The push's `lint` also runs
+  ESLint uncached (no `--cache` in `package.json`): a cached run replays an old verdict of a type-aware rule
+  (typescript-eslint FAQ, "Can I use ESLint's `--cache` with typescript-eslint?": "it will only work reliably for
+  untyped rules -- and even then, not always", https://typescript-eslint.io/troubleshooting/faqs/eslint/). Measured
+  2026-11-19, median of 3 runs per mode on the maintainer's Mac, one file changed: 3.6 s cached, 11.3 s uncached.
+  `fix`, the staged pass and `lint-changed` keep their cache.
+- **Status:** in force.
 
 ## A push that changes no harness file leaves out the harness tests that read only the harness
 
@@ -308,9 +333,9 @@ unstyled in both (https upgrade), so geometry specs skip it there. Fallback font
 - **Decision:** (1) `forceRerunTriggers` are literal paths anchored at the config's folder, glob syntax escaped. (2) The
   ESLint config carries a fingerprint of the stylesheet, its local `@import`s and the installed version of each package
   it imports (`tailwindcss`, `tw-animate-css`; the nearest `node_modules` above the importing file) in `settings` for
-  `**/*.tsx`; ESLint hashes `settings` into every cache entry, so `lint`, `fix` and the staged pass follow it with no
+  `**/*.tsx`; ESLint hashes `settings` into every cache entry, so `fix` and the staged pass follow it with no
   second cache, and a package upgrade needs no manual `.eslintcache` delete. (3) `lint-changed` lints tracked changes
-  against HEAD plus untracked files with the `lint` flags and the same cache, and skips ignored paths quietly. (4) Both
+  against HEAD plus untracked files with the `lint` flags and the cache of `fix`, and skips ignored paths quietly. (4) Both
   linters ignore `.cursor/`. (5) `typecheck` drops a generated type file only when it imports a module that is gone.
   (6) The chain runs the scope test by name (0.85 s alone).
 - **Consequences:** a dirty `package.json` or vitest config costs the whole suite (~18 s, over the 15 s iterate budget,

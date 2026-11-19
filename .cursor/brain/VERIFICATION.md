@@ -86,7 +86,9 @@ and `vitest.config.ts` sets `allowOnly: false` so the runner itself refuses a fo
 
 `scripts/gate-tiers.json` `"phase"` decides; `scripts/verify-push.mjs` dispatches; the skip is
 printed on every phase-0 push. `GATE_PHASE=full` overrides per run (how gate machinery itself is
-pushed). CI always runs the full chain — the phase gates only the LOCAL hook.
+pushed): it runs every stage, but Prettier still reads `.prettiercache` and the
+harness self-tests below stay left out when no harness file changed, so it is not a clean run
+(`rm -f .prettiercache && GATE_PHASE=full GATE_SELF_TESTS=all git push` is; CI starts without the cache). CI always runs the full chain — the phase gates only the LOCAL hook.
 
 A push that changes no harness file (no path of `scripts/gate-files.json`, none under `scripts/`, no
 `package.json`, no lockfile, between the merge base with `origin/master` or `origin/main` and HEAD) also
