@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 /**
- * Preflight for the full gate: fail on the two things that make it fail LATER and unreadably.
+ * Preflight for the full gate: refuse to start a run that cannot succeed, and print the command
+ * that fixes it — a preflight that says "something is missing" has moved the puzzle, not solved it.
  *
- * A missing build variable does not report itself — the build dies minutes in with a Zod trace
- * under "Failed to collect configuration for /_not-found", which reads as a broken route. And an
- * occupied port makes the production e2e either hang or, worse, silently measure a dev server that
- * happens to be listening — the wrong thing measured rather than a failure.
+ * Out of the box one check, on purpose. A build that validates no required environment (a clean
+ * clone must pass the gate) has no env leg: a check that cannot fail would only claim coverage. What
+ * CAN kill the run late is the e2e port: the gate's Playwright starts `vite preview` on 4173 with
+ * `--strictPort` and `reuseExistingServer: false`, so anything already listening there fails the
+ * suite minutes in — or, before that rule, silently measured a preview from another branch.
  *
- * The remedy is printed as a command, not as advice: a preflight that says "something is missing"
- * has moved the puzzle, not solved it.
- *
- * The env leg delegates to check-build-env.mjs — the one place that loads `.env*` the way
- * `next build` does (@next/env). A second reader here would be a second opinion waiting to drift.
+ * A stack that differs says so in `scripts/gate-tiers.json` → `"gateEnv"`, all keys optional:
+ *   port            the port the gate's e2e server binds                          (4173)
+ *   portVariable    the variable that moves it for one run                        (GATE_PREFLIGHT_PORT)
+ *   buildEnvScript  a script, from the repository root, that checks the build's required
+ *                   environment; its output is the first problem when it fails    (none: no env leg)
+ *   busyReason      what follows "Port N is busy, and " when it is taken
+ *   busyHint        the line under it: the usual cause, or how to move the run
+ * Both problems, the env one and the port one, are reported in one run. A key of the wrong kind, an
+ * unknown key or a script that is not there exits 2 and names the key.
  *
  * Detection never needs a tool: a port is busy when something answers on a loopback or the bind
  * fails. `lsof` is used for one thing only, finding the pids to kill under `--kill-port`, and a host
@@ -19,8 +25,9 @@
  * install line, instead of being told the port "could not be cleared".
  */
 import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { connect, createServer } from 'node:net';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { OUTPUT_LIMIT_BYTES } from './child-output.mjs';
@@ -28,12 +35,73 @@ import { isEntryPoint } from './is-entry-point.mjs';
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 
+/* The preview port the gate's Playwright run binds (playwright.config.ts). GATE_PREFLIGHT_PORT is a
+   test seam only: the suite points the preflight at a port of its own so it never touches the
+   machine's real 4173 — a suite that binds the gate's own port races every other lane for it. */
+const DEFAULT_GATE_ENV = {
+    port: 4173,
+    portVariable: 'GATE_PREFLIGHT_PORT',
+    buildEnvScript: null,
+    busyReason: "the gate's `vite preview` needs it (strictPort).",
+    busyHint: 'A leftover preview from an earlier run is the common case.'
+};
+
+const GATE_ENV_STRINGS = ['portVariable', 'buildEnvScript', 'busyReason', 'busyHint'];
+
+/**
+ * The `gateEnv` key of the `gate-tiers.json` beside this script, over the defaults above: { config },
+ * or { error } for a file that is there but cannot be read, and for a key it cannot use. A missing
+ * file or key is the default; a wrong one is never read as the default.
+ */
+export const readGateEnvConfig = (scriptsDir = SCRIPTS_DIR) => {
+    const file = join(scriptsDir, 'gate-tiers.json');
+    let given;
+    if (existsSync(file)) {
+        try {
+            given = JSON.parse(readFileSync(file, 'utf8'))?.gateEnv;
+        } catch (error) {
+            return { error: `scripts/gate-tiers.json cannot be read: ${error.message}` };
+        }
+    }
+    if (given === undefined) return { config: DEFAULT_GATE_ENV };
+
+    const bad = (reason) => ({ error: `scripts/gate-tiers.json: gateEnv${reason}` });
+    if (typeof given !== 'object' || given === null || Array.isArray(given)) {
+        return bad(' must be an object');
+    }
+    const known = Object.keys(DEFAULT_GATE_ENV);
+    const unknown = Object.keys(given).find((key) => !known.includes(key) && !key.startsWith('_'));
+    if (unknown) return bad(` has the unknown key "${unknown}" (known: ${known.join(', ')})`);
+    if (
+        given.port !== undefined &&
+        !(Number.isInteger(given.port) && given.port > 0 && given.port < 65_536)
+    ) {
+        return bad('.port must be a port number');
+    }
+    for (const key of GATE_ENV_STRINGS) {
+        if (given[key] !== undefined && !(typeof given[key] === 'string' && given[key] !== '')) {
+            return bad(`.${key} must be a non-empty string`);
+        }
+    }
+    if (given.portVariable !== undefined && !/^[A-Za-z_]\w*$/.test(given.portVariable)) {
+        return bad('.portVariable must be an environment variable name');
+    }
+    const config = { ...DEFAULT_GATE_ENV, ...given };
+    if (
+        config.buildEnvScript !== null &&
+        !existsSync(resolve(scriptsDir, '..', config.buildEnvScript))
+    ) {
+        return bad(`.buildEnvScript names ${config.buildEnvScript}, which is not there`);
+    }
+    return { config };
+};
+
 /**
  * --kill-port: the PUSH GATE owns the machine while it runs — heavy stages are serialised at the
- * push by rule, so anything still listening on the gate's port is a stray from an earlier lane
- * (a dev server someone forgot). The gate clears it and says what it killed. Parallel agent
- * lanes do the OPPOSITE: they move to a free port (scripts/run-on-free-port.mjs) and never kill
- * a server they did not start. Without the flag this preflight only refuses, for manual runs.
+ * push by rule, so anything still listening on the gate's port is a stray from an earlier lane (a
+ * leftover preview). The gate clears it and says what it killed. Parallel agent lanes do the
+ * OPPOSITE: they move to a free port (scripts/run-on-free-port.mjs) and never kill a server they
+ * did not start. Without the flag this preflight only refuses, for manual runs.
  */
 const shouldKillPort = process.argv.includes('--kill-port');
 
@@ -97,10 +165,11 @@ const someoneAnswers = async (host, port) =>
     });
 
 /*
- * Both loopback families, then the bind. 127.0.0.1 alone misses a server bound on all interfaces;
- * a bind alone misses one bound on `[::1]` only, which is what a dev server run by hand often is —
- * and Playwright reaches ::1 first when it fetches `http://localhost:<port>`, so a bind-only probe
- * passes the preflight and the suite refuses minutes later. Measured on a sibling repo 2026-09-13.
+ * Both loopback families, then the bind — the same probe `run-on-free-port.mjs` uses, and for the
+ * same two reasons: 127.0.0.1 alone misses a server bound on all interfaces, and a bind alone misses
+ * one bound on `[::1]` only, which is what a dev server run by hand often is. Playwright reaches ::1
+ * first when it fetches `http://localhost:<port>`, so a bind-only probe passes the preflight and the
+ * suite then refuses minutes later.
  */
 const portIsFree = async (port) => {
     for (const host of ['127.0.0.1', '::1']) {
@@ -145,17 +214,26 @@ export const isPortBusy = async (
 };
 
 const main = async () => {
+    const loaded = readGateEnvConfig();
+    if (loaded.error) {
+        console.error(`✖ gate preflight: ${loaded.error}`);
+        process.exit(2);
+    }
+    const { config } = loaded;
+    const port = Number(process.env[config.portVariable] ?? config.port);
     const problems = [];
 
-    const buildEnv = spawnSync(process.execPath, [join(SCRIPTS_DIR, 'check-build-env.mjs')], {
-        encoding: 'utf8',
-        maxBuffer: OUTPUT_LIMIT_BYTES
-    });
-    if (buildEnv.status !== 0) {
-        problems.push(`${buildEnv.stdout ?? ''}${buildEnv.stderr ?? ''}`.trim());
+    if (config.buildEnvScript !== null) {
+        const buildEnv = spawnSync(
+            process.execPath,
+            [resolve(SCRIPTS_DIR, '..', config.buildEnvScript)],
+            { encoding: 'utf8', maxBuffer: OUTPUT_LIMIT_BYTES }
+        );
+        if (buildEnv.status !== 0) {
+            problems.push(`${buildEnv.stdout ?? ''}${buildEnv.stderr ?? ''}`.trim());
+        }
     }
 
-    const port = Number(process.env.PORT ?? 3000);
     if (await isPortBusy(port)) {
         let cleared = false;
         let lookupError = null;
@@ -180,10 +258,11 @@ const main = async () => {
                 }
             }
         }
+
         if (!cleared) {
             problems.push(
-                `Port ${String(port)} is busy, and the production e2e wants it.\n` +
-                    `      Another lane's server? Move this run: PORT=3100 npm run verify:ci\n` +
+                `Port ${String(port)} is busy, and ${config.busyReason}\n` +
+                    `      ${config.busyHint}\n` +
                     (lookupError
                         ? `      ${lsofUnavailableHint(port, lookupError)}`
                         : shouldKillPort

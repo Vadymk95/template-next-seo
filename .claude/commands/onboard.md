@@ -19,7 +19,7 @@ In this order, in full:
    subject the current task touches.
 
 In Cursor the process is already in context (always-applied rules). In Claude Code it is not: read
-`.cursor/rules/agent-pipeline.mdc` § 4.1a and `.cursor/rules/workflow.mdc` § Approval & Brain now —
+`.cursor/rules/agent-pipeline.mdc` § 4.1a and `.cursor/rules/workflow.mdc` § The Approval Law now —
 nothing beyond `AGENTS.md` is imported.
 
 Read the conditional `.cursor/rules/*.mdc` only when a task tells you which files it touches. Reading

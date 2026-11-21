@@ -38,8 +38,8 @@ If a blocking requirement is unclear, ask **one** question at a time and propose
 answer with it. Resolve from the codebase or the brain instead of asking whenever the answer is
 discoverable there.
 
-Wait for approval by risk (the risk list: `.cursor/rules/workflow.mdc` § Approval & Brain — it names this
-repo's frozen security surface and the locale set). Trivial leaf edits proceed with a brief note.
+Wait for approval by risk (the risk list: `.cursor/rules/workflow.mdc` § The Approval Law; this
+repo's frozen security surface and the locale set are in `AGENTS.md` § Danger zones and § Out of scope). Trivial leaf edits proceed with a brief note.
 
 Two Next-specific traps that are invisible until the build fails: every `app/[locale]/*` entry must narrow the
 route param with `requireLocale()` (a Server Action passes its locale to next-intl, it cannot read it), and the

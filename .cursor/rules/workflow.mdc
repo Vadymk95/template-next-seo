@@ -1,39 +1,49 @@
 ---
-description: 'Workflow, planning, and git commit guidelines'
+description: 'Workflow, The Approval Law, and git commit guidelines'
+globs: ['**/*']
 alwaysApply: true
+priority: 90
 ---
 
-## Workflow & Planning
+# Workflow & Approval Protocol
 
-- **Plan before implementing**: write the plan of changes first. The plan's shape is `.cursor/<feature-slug>/PLAN.md`, copied from `.cursor/templates/PLAN.md` (law: `AGENTS.md` › Before code).
-- **Confirm the plan when the repo gate requires it** (the threshold below), and implement only after that approval.
-- **Exception**: trivial leaf edits (self-contained, no danger-zone / contract surface) skip planning, but tell the user about the change.
+## The Approval Law
 
-## Approval & Brain
+Gate by **risk, not LOC** (surface, reasoning, reversibility: the highest axis sets the discipline):
 
-- **Threshold (by risk, not LOC)**: changes touching a **SKELETONS / danger zone** (`proxy.ts`, `next.config.ts` CSP / webpack splits, `app/[locale]/*` root layout and `next/root-params`, rate-limit matcher, Template scaffolding), a **change to an EXISTING contract or security surface** (CSP, headers, Zustand store shape, Server Action / API route payload, App Router route structure, i18n locale set), or anything otherwise hard to reverse: present the plan, wait for **explicit approval**, then implement. **Trivial leaf edits** (no danger zone, no contract change): a brief notification is enough (Step 2 gate).
-- **One slice that only ADDS** (a new page, store, query, route handler or Server Action), no danger zone, no existing contract changed: proceed; the acceptance criteria open the pull request description.
-- **Two or more slices, or a new architecture or cross-cutting pattern**: `SPEC.md` + `PLAN.md`, approved as a pull-request review.
-- **FORBIDDEN**: changing an existing contract or entering a danger zone before approval.
-- **Above the chat gate**: for work of two or more slices the approval is the non-author PR review of `SPEC.md` / `PLAN.md` (`AGENTS.md` › Before code); the threshold above is the chat-level gate below that size.
-- **Brain**: after meaningful architecture or risk changes, update `.cursor/brain/` or declare `Brain sync: none needed` (Step 5).
+| Task risk                                                                                                                                                                         | Protocol                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Trivial leaf edit: self-contained, reversible, no danger zone, no contract or state impact                                                                                        | Proceed with brief notification                                    |
+| One slice that only ADDS (a new page, screen, store, query, route handler), no danger zone, no existing contract changed                                                          | Proceed; the acceptance criteria open the pull request description |
+| Changes an EXISTING contract (a store or domain-state shape, an API or payload contract, a route others link to, the router topology, environment or build configuration, a public export) or touches a SKELETONS danger zone or a security surface, or is otherwise hard to reverse | Present plan → wait for approval → implement                       |
+| Two or more slices, or a new architecture or cross-cutting pattern                                                                                                                | `SPEC.md` + `PLAN.md`, approved as a pull-request review           |
+
+**FORBIDDEN**: changing an existing contract or entering a danger zone before approval. In autonomous agent sessions this means a written plan and an explicit user approval checkpoint before implementation, never skipping straight to code.
+
+For work of two or more slices the approval is the non-author PR review of `SPEC.md` / `PLAN.md` (`AGENTS.md` › Before code); the table is the chat-level gate below that size. A plan is `.cursor/<feature-slug>/PLAN.md`, copied from `.cursor/templates/PLAN.md`; plan before implementing, and confirm it when the table requires it.
 
 ## Implementation Workflow
 
-The steps are `agent-pipeline.mdc` (Discover → Simulate → Execute → Verify → Brain Sync → Confidence); the Approve step sits between Simulate and Execute and is § Approval & Brain above. Test-first inside Execute: `test-driven-development.mdc` (strict TDD for logic, hybrid for UI).
+The steps are in `agent-pipeline.mdc` (Discover → Simulate → Execute → Verify → Brain Sync → Confidence); the Approve step sits between Simulate and Execute and is § The Approval Law above. Test-first inside Execute: `test-driven-development.mdc` (strict TDD for logic, hybrid for UI).
 
-## Code Quality Checks (MANDATORY)
+## Scope Discipline
 
-After every change run `agent-pipeline.mdc` § 4.1 (the iteration tier) and fix what it finds before the next batch. Never commit code with linter or formatting errors, or code that violates FSD architecture.
+- **Flag unrequested work the MOMENT it appears**, not in the final write-up. A padding fix that arrives with a new animation, a new class name and a new test is scope creep even when each piece is defensible. The resolution is often to move the idea onto an existing primitive rather than revert it, but the flag is not optional and not late.
+- **A review finding must sit on a line the diff touches.** Discovered debt gets its own issue, never this diff.
+- **Brain**: after a meaningful architecture or risk change, update `.cursor/brain/` or declare `Brain sync: none needed` (`agent-pipeline.mdc` Step 5).
 
-## Hook vs Utility Extraction Policy (MANDATORY)
+## Post-Edit Verification
 
-- **Hook** when logic needs the React runtime: `useEffect` orchestration, subscriptions, timers, browser/DOM APIs, store mutations/selectors, router navigation, async UI state in event handlers.
-- **Utility** when logic is pure and deterministic: mapping, filtering, sorting, formatting, parsing, validation, transformation.
-- **Split rule**: a hook that contains pure computation extracts it to a utility first and stays a thin orchestration layer. Pure business computation never stays in a hook when it can be unit-tested as a utility.
+After every change run `agent-pipeline.mdc` § 4.1 (the iterate command) and fix what it finds before the next batch; `agent-pipeline.mdc` § 4.1a is the integrity checklist. Never commit code with lint, type or formatting errors, or code that violates the repo's layer rules.
+
+## Runtime orchestration versus pure computation (mandatory split)
+
+- **Runtime unit** (a hook in React): logic that needs the UI runtime: lifecycle and effect orchestration, subscriptions, timers, DOM or native APIs, store mutations and selectors, navigation, async UI state in event handlers.
+- **Utility**: logic that is pure and deterministic: mapping, filtering, sorting, formatting, parsing, validation, transformation.
+- **Split rule**: a runtime unit that contains pure computation extracts it to a utility first and stays a thin orchestration layer. Pure business computation never stays in a runtime unit when it can be unit-tested as a utility. Unit-test the utility first.
 
 ## Git Commits and Pushes
 
-- **Before committing: `npm run verify:iter`.** The pre-commit hook enforces the commit moment (its steps: `.husky/pre-commit`); the pre-push hook owns the push moment, phase-aware. Do NOT run `verify`/`verify:enterprise` by hand — the tier law is `AGENTS.md` § Commands (exact) › _The tier law_, and it is not restated here. `npm run lint`, `npm test` and the other single scripts are drill-downs on a specific failure, none replace the tiers.
-- **Message**: conventional `type(scope): subject` (scope optional), header ≤ 96 characters, rules in `commitlint.config.mjs`. Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`, `build`, `ci`.
-- **Before pushing**: all checks pass, `git status` and `git diff` reviewed, and the message follows commitlint.
+- **Before committing: the iterate command, green.** The pre-commit hook enforces the commit moment; the pre-push hook owns the push moment, phase-aware. Do NOT run the gate command or a fuller variant by hand; the tier law is `AGENTS.md` § The tier law and is not restated here. Individual scripts (one stage, one test file) are drill-downs on a specific failure, and none replaces the tiers.
+- **Message**: `type(scope): description` (scope optional), header of at most 96 characters, English, imperative mood ("add", not "added"), no Co-authored-by tags. The types and the rules are the repo's commit-message config, which the commit-message hook enforces (the format is also in `AGENTS.md`).
+- **Before pushing**: all checks pass, `git status` and `git diff` reviewed for unintended changes, no `console.log` in production code, and the message follows the commit-message config.

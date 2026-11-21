@@ -1,51 +1,77 @@
 ---
-description: 'Test-Driven Development (TDD) patterns for writing tests before implementation'
-globs:
-    [
-        '**/*.test.tsx',
-        '**/*.test.ts',
-        '**/*.spec.tsx',
-        '**/*.spec.ts',
-        '**/entities/**/store/**/*.ts',
-        '**/features/**/model/**/*.ts',
-        '**/shared/lib/**/*.ts',
-        '**/app/actions/**/*.ts'
-    ]
+description: 'TDD protocol and testing standards: tests before implementation, and tests worth having'
+globs: ['**/*.{test,spec}.*']
 alwaysApply: false
+priority: 85
 ---
 
-## Test-Driven Development (TDD)
+# TDD Protocol
 
-Write the test before the implementation for business logic; use the hybrid approach for UI components. Test conventions (structure, Arrange-Act-Assert, independence, mocks, `renderWithProviders`) are `testing.mdc`; this file is only the order of work.
+This file is the order of work and the standard a test must meet. The runner, its mock API, its configuration and the test utilities are the repo's own (`AGENTS.md` and the command table; the single-test command runs one file).
 
-### When to Use Strict TDD (Test First)
+## 0. The hook enforces existence; you are responsible for worth
 
-- Business logic in entity stores (`entities/**/store/**/*.ts`)
-- Feature models and schemas (`features/**/model/**/*.ts`)
-- Shared utilities (`shared/lib/**/*.ts`)
-- API operations, data transformations and form validation schemas
-- State management logic (actions, reducers, selectors)
-- Server Actions
+The pre-commit hook runs the sibling gate: every **staged** logic file under the source tree that is not on the exemption list needs a co-located test sibling that is in the git **index** with content (in HEAD, or staged), or the commit is refused. A test left untracked on disk, or only marked with `git add -N`, does not count. The gate (so the push and CI) repeats the same rule over every file the branch changed (`--range`), so a commit made with the hook skipped is caught there. Both look at changed files only, so it ratchets: nothing in the tree breaks retroactively, but the next edit to an untested file demands a test. A missing test is a blocked commit, not a follow-up TODO; skipping the hook (`--no-verify`) is forbidden.
 
-The loop: state the requirement, write a failing test that describes the expected behavior, write the minimal code that passes it, refactor with the tests green, repeat for the next requirement.
+What the hook cannot check, and what actually matters:
 
-### Hybrid Approach for UI Components
+- **Mutation check.** Revert the behaviour the test guards and confirm the test goes red. A test that still passes with the fix reverted is characterisation, not coverage, and it is worse than no test because it reads as protection.
+- **Assertions that cannot fail**: a truthiness check on a value the test just built, a wait whose body cannot throw, asserting empty text where an emptiness matcher was meant.
+- The exemption list sits with its reasons in the sibling gate's configuration. Do not extend it to move a commit along.
 
-For components in `shared/ui/`, `features/**/ui/` or client entry files:
+## 1. Mandatory test-first (strict TDD)
 
-1. Extract runtime orchestration to a `useComponentName.ts` hook and pure computation to a utility (`workflow.mdc` § Hook vs Utility).
-2. Strict TDD for the hook and the utility.
-3. Create the component structure and write its integration tests (user interactions, not implementation details).
-4. Connect the component to the hook and finish the implementation.
+Write the failing test **before** the implementation, **always**, for:
 
-Components stay presentational; the logic worth a test-first loop lives in the hook or the utility.
+- global and domain state (stores, selectors, reducers) and their actions
+- hooks or runtime units with logic over 10 lines, or with non-trivial orchestration
+- utilities and transforms, including schemas and parsers (validate a schema before using it)
+- API operations, data transformations and form validation
+- server entry points (route handlers, server actions)
 
-### Test Requirements
+**Vertical slices, NOT horizontal (mandatory):** one test, then its implementation, then repeat. NEVER write all tests and then all code, and NEVER write the implementation first and backfill tests. Test behaviour through the public interface, not implementation details, so tests survive refactors.
 
-- Cover the happy path, the edge cases, the error paths (error codes) and, for stores, the state changes.
-- Regression-first for a fix: the new test must fail without the fix; for a lint-only residual the red is the lint run on the unfixed copy.
-- Cover async transitions (loading to loaded), entity switches (A to B) and boundaries (empty, full, partial).
+A fix whose only residual is a lint finding has no behaviour to assert: the red is the lint run on the unfixed copy (the rule name in the output). Say so in the report instead of inventing a test. For any other fix the regression test is written first and must fail without the fix.
 
-### Exceptions
+## 2. Hybrid UI approach
 
-Strict TDD can be skipped for very simple functions (under 10 lines, one responsibility), type-only files, configuration and constants, dev-only utilities (HMR hooks) and Server Components with simple data fetching (test the fetching separately). Add tests anyway when the function has complex logic, is critical to the business logic or is reused in several places.
+- **Runtime orchestration → runtime unit** (strict TDD for it).
+- **Pure computation → utility** (strict TDD for it).
+- **UI → component**: an integration test after the component is built, or once the screen's API stabilises; it drives user-visible behaviour (interactions, roles and labels users depend on), not implementation details.
+- **Rule**: if component logic exceeds 10 lines, extract it to a runtime unit and apply strict TDD to that unit. Components stay presentational.
+- A UI refactor that moves copy, routing or validation boundaries leaves at least one behaviour-level integration test proving the visible contract still holds.
+
+## 3. Implementation cycle
+
+1. **Requirements**: list the test cases explicitly before coding (in chat).
+2. **Red**: a failing test, BDD style (`describe` / `it`), Arrange-Act-Assert.
+3. **Green**: minimal code to pass.
+4. **Refactor**: clean up while staying green.
+
+## 4. Quality standards
+
+- **Isolation**: mock external APIs and modules; a test never hits the real network or native I/O (inject dependencies or mock at module boundaries). Whether the runner resets mocks between tests is its configuration; never rely on state set outside the test: a mock keeps only the implementation it was created with, so set a return value, a spy or a once-value inside the test or its setup hook, never once at module level, and reset what the test changed.
+- **Edge cases**: always cover error paths, empty state, boundaries (empty, one, many, full, partial), async transitions (loading to loaded), entity switches (A to B) and network failure.
+- **Behaviour over internals**: test the public API and user behaviour, not implementation details.
+- **Async is awaited**: a runner or library whose calls return promises is always awaited; an un-awaited call poisons the next test.
+- **BDD naming**: `describe('UserStore')` → `it('sets username and marks as logged in on setUser()')`.
+- **Return types**: helpers and fixtures in test files may be exempt from the linter's return-type rule where the repo's lint config says so.
+
+## 5. Test file location
+
+- Co-locate tests with the file: `userStore.ts` → `userStore.test.ts`; a component test sits next to the component.
+- No separate `__tests__` directories.
+- Import through the repo's alias in test files, as in source.
+
+## 6. Exceptions (TDD can be skipped for)
+
+- Type-only files (interfaces, declaration files), configuration and static constants.
+- Simple presentational components with no logic; very simple functions (under 10 lines, one responsibility).
+- Dev-only utilities (for example hot-reload hooks).
+- Server Components or entry points with simple data fetching (test the fetching separately).
+
+Add tests anyway when the function has complex logic, is critical to the business logic or is reused in several places.
+
+## 7. Commands
+
+The commands are in the command table of `AGENTS.md`: the single-test command for one file, the iterate command per change. A watch mode and a coverage report are the runner's own scripts, listed there.
