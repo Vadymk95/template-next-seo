@@ -66,6 +66,26 @@ sibling project two of five dispatched lanes returned "already done" after ~430k
 and both were answerable by five minutes of grep. **This entry is first in cost order even though it
 is last in the list.**
 
+## Rule routing
+
+Before planning or editing in a task area, read the matching rules in `.cursor/rules/` (`global.mdc` § 0.1 says why;
+`agent-pipeline.mdc` Step 1 asks for the Rule Receipt). The always-on core is `agent-pipeline`, `workflow` and
+`global`; everything else is conditional.
+
+- **React / UI / Server or Client Components / Metadata** → `react-patterns.mdc`, `performance.mdc`, `project-config.mdc` (design tokens, states, a11y, i18n usage)
+- **App Router routes / layouts / `sitemap` / `robots` / `generateMetadata`** → `routing.mdc`, `react-patterns.mdc`, `project-config.mdc`
+- **New behavioral component, changed behavior, tests, fixtures, mocks** → `testing.mdc` **before** implementation, `test-driven-development.mdc` (+ `shared/lib/test-utils`)
+- **API route handlers / Server Actions / payload contracts** → `routing.mdc`, `resilience.mdc`, `async-error-handling.mdc`, `typescript.mdc`
+- **Zustand stores / `createSelectors` / client-global state** → `state-management.mdc`, `typescript.mdc`
+- **Async / error handling / debugging** → `async-error-handling.mdc`, `resilience.mdc`
+- **Styling / render-perf / memo / list keys** → `performance.mdc`
+- **Constants / enums** → `constants.mdc`
+- **Types / interfaces / file-size discipline** → `typescript.mdc`, `engineering-standards.mdc`
+- **Commit flow** → `commit-command.mdc`
+- **Any `.ts` / `.tsx` / `.js` / `.jsx` edit (formatting, naming, file structure)** → `code-style.mdc`
+- **New module placement / cross-layer imports / what the shared pipeline leaves to this repo** → `fsd-architecture.mdc`
+- **A danger zone or the frozen security surface** → `.cursor/brain/SKELETONS.md` and `AGENTS.md` § Danger zones, § Out of scope (the approval threshold of `workflow.mdc` § The Approval Law names the same list)
+
 ## Keeping this honest
 
 Add a situation only after an agent was actually sent to the wrong file over it. When two files could

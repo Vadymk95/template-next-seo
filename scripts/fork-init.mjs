@@ -12,9 +12,8 @@
  *   identity   the package name (manifest and both root entries of the lockfile), the product title
  *              (the `meta.root` and `meta.home` copy in `messages/en.json`, the footer line, the
  *              title expectation of the home page test and of the smoke spec, the README heading, the
- *              dev banner), the name in the title line of the agent guide, the brain files, the
- *              global rule and the security requirements, the licence holder when `--holder` is
- *              given. The list lives in `identitySpots`; each spot must match exactly the number
+ *              dev banner), the name in the title line of the agent guide, the brain files and
+ *              the security requirements, the licence holder when `--holder` is given. The list lives in `identitySpots`; each spot must match exactly the number
  *              of times written there, or the run refuses before writing anything (a template that
  *              drifted from this script is a refusal, not a half rename).
  *   release    version `0.1.0` in the manifest, the lockfile root and the release manifest, an empty
@@ -282,7 +281,6 @@ const identitySpots = ({ old, next }) => {
         headingWithName('.cursor/brain/PROJECT_CONTEXT.md', 'project context title line'),
         headingWithName('.cursor/brain/MAP.md', 'map title line'),
         headingWithName('.cursor/brain/SKELETONS.md', 'danger zones title line'),
-        headingWithName('.cursor/rules/global.mdc', 'global rule title line'),
         headingWithName('SECURITY_REQUIREMENTS.md', 'security requirements title line')
     ];
     if (next.holder !== undefined) {

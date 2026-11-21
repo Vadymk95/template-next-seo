@@ -4,12 +4,12 @@ Why things are the way they are, one entry per decision. History lives in `git l
 
 | Decision | Date | Status |
 | --- | --- | --- |
+| The harness and its tests live in gatelaw, and a sync copies them | 2026-11 | in force |
 | The report lists the last pushes and a guard keeps the moments map whole | 2026-11 | in force |
 | A trace row names its commit and the red step | 2026-11 | in force |
 | The push runs its steps through one runner that names the red one | 2026-11 | in force |
 | A log keeps four coverage totals and a command's first and last lines | 2026-11 | in force |
 | A script reads a child's whole output and a full phase says its caches | 2026-11 | in force |
-| A push that changes no harness file leaves out the harness tests that read only the harness | 2026-11 | in force |
 | Stryker runs the suite in the `forks` pool, the pool `vitest run` uses | 2026-11 | in force |
 | Cross-browser runs in the Playwright image | 2026-11 | in force |
 | A browser subscription started in an effect is released | 2026-11 | in force |
@@ -71,6 +71,29 @@ Why things are the way they are, one entry per decision. History lives in `git l
 | Rate limiting runs in `proxy.ts`; the limiter core is Edge-safe | 2026-04 | in force |
 | Build and styling basics: webpack build, Tailwind v4, lockfile root, named vendor chunks | 2026-03 | in force |
 
+## The harness and its tests live in gatelaw, and a sync copies them
+
+2026-11 · in force · guard `scripts/docs-check.mjs` (the manifest check) · evidence: `.gatelaw.json`, `scripts/gate-files.json`
+
+- **Context:** each template carried its own copy of the gate scripts, their test files, the `.cursor/` templates,
+  commands and shared rules, and the shared block of `AGENTS.md`. The copies drifted, and a harness change cost one
+  pull request per template. This repository also kept a list of harness tests that a push leaves out when it
+  changes no harness file; that list and the code that applied it are gone, the push never shortens its gate.
+- **Decision:** gatelaw, a repository that is not a published package, holds the one copy. `gatelaw sync` writes the
+  listed files at the same paths for the profile named in `scripts/gate-tiers.json` (`next`), fills the block between
+  the `shared-harness` markers, removes the test files that moved out, and records each copy (sha256, mode), the
+  block and the removed tests in `.gatelaw.json`. A test file moves whole when it reads nothing of this repository,
+  stays when it reads only this repository, and splits when it does both: gatelaw keeps the half over fixtures, this
+  repository keeps the other as `<name>.repo.test.mjs`, which sync never touches. Three scanners that walk every
+  file under `scripts/` are synced as copies, so they still guard what is added here. The stack's own facts are
+  data in `scripts/gate-tiers.json` (`siblings`, `gateEnv`, `probe`, `measure`, `crossBrowser`), not code.
+- **How a hand edit is caught:** `docs:check` is red on a changed copy, a changed mode, a missing file, a manifest of
+  a `dirty` gatelaw tree and a missing manifest; the remedy is to edit the file in gatelaw and sync. A fork detaches
+  by deleting `.gatelaw.json`.
+- **Stays here:** `check-test-markers`, `drop-stale-route-types`, the build-env and bundle-budget checks and their
+  tests, and the guards over this repository's configs.
+- **Status:** in force.
+
 ## The report lists the last pushes and a guard keeps the moments map whole
 
 2026-11 · in force · guard `scripts/trace-report.test.mjs`, `scripts/docs-check.test.mjs` · evidence: `scripts/trace-report.mjs`, `scripts/docs-check.mjs`
@@ -130,45 +153,18 @@ Why things are the way they are, one entry per decision. History lives in `git l
   `status` fails with no reason. Measured (Node 24.10.0, macOS): 600 KiB on stdout plus 600 KiB on stderr ends in
   `ENOBUFS`, and with 64 MiB the same call ends in status 0. A script that echoes a captured output and then calls
   `process.exit()` loses its tail on a pipe: 65,536 of 1,048,576 bytes arrive, while `process.exitCode` and a return
-  deliver all of them. `GATE_PHASE=full` was documented as "the full chain"; it runs every stage, but Prettier still reads `.prettiercache` (no workflow restores it, so CI starts without) and the
-  harness self-tests stay left out when no harness file changed.
+  deliver all of them. `GATE_PHASE=full` was documented as "the full chain"; it runs every stage, but Prettier still reads `.prettiercache` (no workflow restores it, so CI starts without).
 - **Decision:** every capture in `scripts/*.mjs` passes `maxBuffer: OUTPUT_LIMIT_BYTES` (256 MiB,
   `scripts/child-output.mjs`); `check-coverage` and `audit-gate` print one line naming the limit when `ENOBUFS` stops a
   child, and fail. A script that echoes a child's output sets `process.exitCode` and returns. The guard fails both a
   capture with no limit and an echo followed by `process.exit(`. A full `GATE_PHASE` (`full` or `1`) prints one line:
   every stage runs, the Prettier cache still applies, and
-  `rm -f .prettiercache && GATE_PHASE=full GATE_SELF_TESTS=all git push` skips nothing. The push's `lint` also runs
+  `rm -f .prettiercache && GATE_PHASE=full git push` skips nothing. The push's `lint` also runs
   ESLint uncached (no `--cache` in `package.json`): a cached run replays an old verdict of a type-aware rule
   (typescript-eslint FAQ, "Can I use ESLint's `--cache` with typescript-eslint?": "it will only work reliably for
   untyped rules -- and even then, not always", https://typescript-eslint.io/troubleshooting/faqs/eslint/). Measured
   2026-11-19, median of 3 runs per mode on the maintainer's Mac, one file changed: 3.6 s cached, 11.3 s uncached.
   `fix`, the staged pass and `lint-changed` keep their cache.
-- **Status:** in force.
-
-## A push that changes no harness file leaves out the harness tests that read only the harness
-
-2026-11 · in force · guard `scripts/gate-tiers.self-tests.test.mjs` · evidence: `scripts/verify-push.self-tests.test.mjs`, `scripts/check-coverage.test.mjs`
-
-- **Context:** the push gate ran every harness test on every push, so a fork that only writes app code paid for them
-  too. Measured on master (same worker cap, no coverage): the unit step took 41 s over 83 files and 2,497 tests, and
-  17 s over 74 files and 1,815 tests without the nine harness test files that read no repository file outside
-  `scripts/` (a trace of each showed only temp folders, the tools some of them load from `node_modules`, and one
-  check that a system tool exists). Only a change to the harness can change their result.
-- **Decision:** `selfTests.files` in `scripts/gate-tiers.json` lists those files (nine, plus the test of this
-  decision, which takes 11 s alone and shows no other read in a trace). A push whose commits, since the merge base with
-  `origin/master` or `origin/main`, change no path of `scripts/gate-files.json`, none under `scripts/`, no
-  `package.json` and no lockfile leaves exactly those out of the `test:coverage` stage, in either phase, and prints
-  how many and why. Everything runs when `CI` is set, under `npm test` and `npm run verify`, with
-  `GATE_SELF_TESTS=all git push`, and whenever the change cannot be told: no remote branch, no merge base, a git
-  failure, an unreadable manifest, an empty list, a package below the repository root. Any other non-empty value of
-  `GATE_SELF_TESTS` stops the push. Coverage leaves `scripts/**` out (`vitest.config.ts`), so no number moves.
-- **Not listed:** a test that reads any app file, config or `package.json` (`check-gate-env.test.mjs` runs the
-  build-env check, which loads the real `.env*` files), and `fork-init.test.mjs`, which `fork:init` deletes. A file
-  joins the list in a pull request (the list is a gate file), and the guard fails a name that is missing,
-  duplicated, or not a test under `scripts/`. The guard does not name `fork-init.test.mjs`: the guard stays in a
-  fork, and the test of `fork:init` requires that no file a fork keeps names the command. A case in
-  `fork-init.test.mjs` itself fails a list that names it, and goes with the file.
-- **Reversed by:** a red master run from a left-out test that the push would have caught.
 - **Status:** in force.
 
 ## Stryker runs the suite in the `forks` pool, the pool `vitest run` uses

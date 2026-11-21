@@ -13,6 +13,7 @@ alwaysApply: false
 - **For business logic** (stores, hooks, utils): Write tests **BEFORE** implementation (strict TDD)
 - **For UI components**: Use hybrid approach - TDD for hooks, then component tests
 - **Always describe requirements** before writing tests
+- **Where strict TDD applies in this repo:** entity stores (`entities/**/store`), feature models and schemas (`features/**/model`), shared utilities (`shared/lib`), Server Actions (`app/actions`), API operations, data transformations and form validation; components in `shared/ui/` and `features/**/ui/` use the hybrid approach
 - **Use BDD-style** test structure with clear `describe` and `it` blocks
 
 ### Required Tests

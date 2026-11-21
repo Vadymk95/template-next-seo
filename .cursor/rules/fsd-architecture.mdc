@@ -125,3 +125,16 @@ npm run verify:iter   # per change: the seconds-long check
 The pre-commit hook enforces the commit moment; the full chain belongs to the push. The tier law
 lives in `AGENTS.md`, Invariants #3 — not restated here. `npm run lint`, `npm test` and the other single scripts
 remain useful as drill-downs on a specific failure.
+
+### What the shared pipeline leaves to this repo
+
+`agent-pipeline.mdc` and `workflow.mdc` are one text for every repository that takes the gate from gatelaw, so
+what is true only of this Next.js App Router repo is written here.
+
+- **Brain scan (Step 1):** `.cursor/brain/SKELETONS.md` is read for the custom webpack config, the RSC boundary, i18n, SEO, the frozen security surface and the protected template scaffolding. Find existing patterns in `app/`, `features/`, `entities/` and `shared/`.
+- **Adversarial pass (Step 2):** ask what breaks SEO, caching or an RSC boundary.
+- **Architecture:** direction `app` → `features` → `entities` → `shared`, `@/*` imports only; Server Components by default, `'use client'` only where hooks or browser APIs need it, no client stores in RSC files; Zustand for client-global state.
+- **Manual pass (Step 4.3):** RSC versus client boundaries for the touched files, and the SEO routes (`sitemap`, `robots`, metadata) when URLs or env changed.
+- **Anti-pattern:** a change to `next build` or the webpack behaviour without updating `DECISIONS.md` and `SKELETONS.md`.
+- **Security and scaffolding:** `AGENTS.md` invariants 7 and 8 and § Danger zones are the rule; SKELETONS "`proxy` composition" and "Template scaffolding" the detail. A security edit is a security review.
+- **Logging:** `logger.error` with context per `resilience.mdc`, never a bare `console.error(e)`.

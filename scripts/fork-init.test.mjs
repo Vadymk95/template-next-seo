@@ -184,9 +184,15 @@ describe('fork-init, one full run', () => {
     let dir = null;
     let result = null;
     let changed = null;
+    let pointerRules = null;
 
     beforeAll(() => {
         dir = makeCopy();
+        // The rule files that point into the template's decisions before the run: the only rule
+        // files the run may rewrite. Shared rules synced from gatelaw hold no such pointer.
+        pointerRules = git(dir, 'ls-files', '*.mdc')
+            .split('\n')
+            .filter((file) => file !== '' && /DECISIONS\.md`?\s*§/.test(read(dir, file)));
         result = run(dir, ['--name', NEW_NAME, '--title', NEW_TITLE, '--holder', NEW_HOLDER]);
         changed = status(dir)
             .split('\n')
@@ -259,7 +265,6 @@ describe('fork-init, one full run', () => {
             '.cursor/brain/PROJECT_CONTEXT.md': `# ${NEW_NAME} — Project Context`,
             '.cursor/brain/MAP.md': `# MAP — ${NEW_NAME}`,
             '.cursor/brain/SKELETONS.md': `# SKELETONS — danger zones (${NEW_NAME})`,
-            '.cursor/rules/global.mdc': `# Global Standards — ${NEW_NAME}`,
             'SECURITY_REQUIREMENTS.md': `# Security Requirements — ${NEW_NAME}`
         };
         for (const [file, line] of Object.entries(titleLines)) {
@@ -337,7 +342,6 @@ describe('fork-init, one full run', () => {
             '.cursor/brain/MAP.md',
             '.cursor/brain/PROJECT_CONTEXT.md',
             '.cursor/brain/SKELETONS.md',
-            '.cursor/rules/global.mdc',
             '.release-please-manifest.json',
             '.template-origin.json',
             'AGENTS.md',
@@ -360,9 +364,7 @@ describe('fork-init, one full run', () => {
             '.cursor/brain/EXTENSIONS.md',
             '.cursor/brain/READING_INDEX.md',
             '.cursor/brain/VERIFICATION.md',
-            '.cursor/rules/agent-pipeline.mdc',
-            '.cursor/rules/constants.mdc',
-            '.cursor/rules/resilience.mdc'
+            ...pointerRules
         ];
         const outside = changed.filter(
             (file) => !allowed.has(file) && !rewrittenPointers.includes(file)
@@ -617,15 +619,5 @@ describe('fork-init, the script itself', () => {
         for (const command of spawned) {
             expect(['process.execPath', "'git'"]).toContain(command);
         }
-    });
-});
-
-describe('fork-init, the list of harness tests a push may leave out', () => {
-    // A fork deletes this file. A list that named it would stay green here and turn the guard over
-    // the list red in every fork on its first day, so the rule lives in the file that goes.
-    it('never names this test file', () => {
-        const listed = readJson(ROOT, 'scripts/gate-tiers.json').selfTests?.files ?? [];
-
-        expect(listed).not.toContain(TEST_PATH);
     });
 });

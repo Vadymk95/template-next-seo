@@ -2,6 +2,7 @@
     "paths": [
         "scripts/**",
         "scripts/gate-files.json",
+        ".gatelaw.json",
         ".husky/**",
         ".github/**",
         ".claude/**",

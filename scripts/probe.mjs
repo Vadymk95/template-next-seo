@@ -13,22 +13,26 @@
  * guards that CAN refuse live in `e2e/layout-geometry.spec.ts` and `e2e/dev/content-stress.spec.ts`.
  *
  * Usage:
- *   npm run probe -- /en                      # default widths
- *   npm run probe -- /en/example-form 390 1440
- *   npm run probe -- /en --dev                # against the dev server (default: production build)
+ *   npm run probe -- /                        # default widths
+ *   npm run probe -- /login 390 1440
+ *   npm run probe -- / --dev                  # against the dev server (default: production build)
+ *   npm run probe -- /dashboard --signed-in   # as a signed-in visitor (a protected route lands on /login otherwise)
+ *   npm run probe -- /login --theme=dark      # in the light, dark or system theme (default: the app's own)
  *
- * Output: `.probe/<slug>-<width>.png` (gitignored) plus a table on stdout.
+ * Output: `.probe/<slug>-<width>.png` (gitignored) plus a table on stdout. When the page ends up on a
+ * different route than the one asked for, the table says so: the numbers then describe that page.
  *
  * The server it measures is its own: it starts on the first free port from PORT (3000 for `--dev`,
- * 3100 for the build), never on a port something already answers on, and its whole process group is
+ * 4273 for the build; `probe` in scripts/gate-tiers.json says what another stack serves with, and on
+ * which ports), never on a port something already answers on, and its whole process group is
  * stopped on every way out, signals included. A probe that attached to another checkout's server
- * measured the wrong tree, and one that left `next dev` running made the next probe do the same.
+ * measured the wrong tree, and one that left a dev server running made the next probe do the same.
  * A probe that is killed outright (SIGKILL, a power cut) cannot clean up, so it records the group in
  * `.probe/server.json`; the next run stops what is left of it, but only once the recorded start time
  * and command prove that it is the same server (`scripts/server-group.mjs`).
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,16 +53,125 @@ const OUT_DIR = '.probe';
 const GROUP_FILE = join(OUT_DIR, 'server.json');
 const DEFAULT_WIDTHS = [390, 768, 1440];
 const VIEWPORT_HEIGHT = 900;
+const THEMES = ['light', 'dark', 'system'];
+const THEME_FLAG = '--theme=';
+
+// The two localStorage keys the app reads, copied from `STORAGE_KEYS` in `src/store/keys.ts`: a script
+// cannot import TypeScript. `probe.test.mjs` reads that file and fails when these drift from it.
+export const USER_STORE_KEY = 'user-store';
+export const THEME_KEY = 'theme';
+
+/*
+ * How the stack serves itself, and who a signed-in visitor is, is data: `probe` in the
+ * `scripts/gate-tiers.json` beside this script, over the defaults here (a Vite app: `npm run dev` and
+ * `npm run preview` bound to the loopback with `--strictPort`, and the user store of the template).
+ *   dev, prod   { script, args, port }: the `npm run <script> -- <args>` that serves, the first port it
+ *               is tried on, and `{port}` in an argument standing for the port that was found free
+ *   userSeed    the state a `--signed-in` run writes into the user store, or null for a repository that
+ *               has none (the flag is then refused rather than ignored)
+ */
+const DEFAULT_SERVE_ARGS = ['--host', '127.0.0.1', '--port', '{port}', '--strictPort'];
+const DEFAULT_PROBE = {
+    dev: { script: 'dev', args: DEFAULT_SERVE_ARGS, port: 3000 },
+    prod: { script: 'preview', args: DEFAULT_SERVE_ARGS, port: 4273 },
+    userSeed: { isLoggedIn: true, username: 'probe', token: 'probe' }
+};
+
+const isPlainObject = (value) =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** One `dev` or `prod` entry over its default: { serve }, or { error } naming the key. */
+const readServe = (name, given, fallback) => {
+    if (given === undefined) return { serve: fallback };
+    const bad = (reason) => ({ error: `probe.${name}${reason}` });
+    if (!isPlainObject(given)) return bad(' must be an object');
+    const unknown = Object.keys(given).find((key) => !(key in fallback) && !key.startsWith('_'));
+    if (unknown)
+        return bad(
+            ` has the unknown key "${unknown}" (known: ${Object.keys(fallback).join(', ')})`
+        );
+    if (
+        given.script !== undefined &&
+        !(typeof given.script === 'string' && /^\w[\w:.-]*$/.test(given.script))
+    ) {
+        return bad('.script must be the name of an npm script');
+    }
+    if (
+        given.args !== undefined &&
+        !(Array.isArray(given.args) && given.args.every((a) => typeof a === 'string'))
+    ) {
+        return bad('.args must be a list of strings');
+    }
+    if (
+        given.port !== undefined &&
+        !(Number.isInteger(given.port) && given.port > 0 && given.port < 65_536)
+    ) {
+        return bad('.port must be a port number');
+    }
+    return { serve: { ...fallback, ...given } };
+};
+
+/**
+ * The `probe` key of the `gate-tiers.json` beside this script, over the defaults: { config }, or
+ * { error } for a file that is there but cannot be read and for a key it cannot use. A missing file
+ * or key is the default; a wrong one is never read as the default.
+ */
+export const readProbeConfig = (scriptsDir = SCRIPTS_DIR) => {
+    const file = join(scriptsDir, 'gate-tiers.json');
+    let given;
+    if (existsSync(file)) {
+        try {
+            given = JSON.parse(readFileSync(file, 'utf8'))?.probe;
+        } catch (error) {
+            return { error: `scripts/gate-tiers.json cannot be read: ${error.message}` };
+        }
+    }
+    if (given === undefined) return { config: DEFAULT_PROBE };
+
+    if (!isPlainObject(given)) return { error: 'scripts/gate-tiers.json: probe must be an object' };
+    const unknown = Object.keys(given).find(
+        (key) => !(key in DEFAULT_PROBE) && !key.startsWith('_')
+    );
+    if (unknown) {
+        return {
+            error: `scripts/gate-tiers.json: probe has the unknown key "${unknown}" (known: ${Object.keys(DEFAULT_PROBE).join(', ')})`
+        };
+    }
+    const config = { ...DEFAULT_PROBE };
+    for (const name of ['dev', 'prod']) {
+        const read = readServe(name, given[name], DEFAULT_PROBE[name]);
+        if (read.error) return { error: `scripts/gate-tiers.json: ${read.error}` };
+        config[name] = read.serve;
+    }
+    if (given.userSeed !== undefined) {
+        if (given.userSeed !== null && !isPlainObject(given.userSeed)) {
+            return { error: 'scripts/gate-tiers.json: probe.userSeed must be an object or null' };
+        }
+        config.userSeed = given.userSeed;
+    }
+    return { config };
+};
 
 export const parseProbeArgs = (argv) => {
     const useDev = argv.includes('--dev');
+    const signedIn = argv.includes('--signed-in');
+    if (argv.includes('--theme')) {
+        throw new Error(
+            `probe: --theme takes its value after an equals sign: ${THEME_FLAG}${THEMES.join('|')}`
+        );
+    }
+    const themeArgument = argv.find((argument) => argument.startsWith(THEME_FLAG));
+    const theme = themeArgument === undefined ? null : themeArgument.slice(THEME_FLAG.length);
+    if (theme !== null && !THEMES.includes(theme)) {
+        throw new Error(`probe: the theme must be one of ${THEMES.join(', ')}, got "${theme}"`);
+    }
     const positional = argv.filter((argument) => !argument.startsWith('--'));
     const [path = '/', ...widthArgs] = positional;
     const widths = widthArgs.length > 0 ? widthArgs.map(Number) : DEFAULT_WIDTHS;
     if (widths.some((width) => !Number.isFinite(width) || width <= 0)) {
         throw new Error(`probe: widths must be positive numbers, got "${widthArgs.join(' ')}"`);
     }
-    return { path, widths, useDev };
+    return { path, widths, useDev, signedIn, theme };
 };
 
 /** A file name a human can scan in a directory listing: `/en/example-form` -> `en-example-form`. */
@@ -67,11 +180,15 @@ export const slugForPath = (path) => path.replace(/^\/+|\/+$/g, '').replace(/\//
 /**
  * What the page reports about itself. Deliberately the same quantities the layout guards use, so a
  * probe reading and a guard failure describe the same world — a probe with its own metrics would be
- * a second opinion nobody asked for.
+ * a second opinion nobody asked for. Runs inside the browser, so it cannot use anything from this
+ * module's scope: the selectors are written out.
  */
 export const measureInPage = () => {
     const doc = document.documentElement;
-    const controls = [...document.querySelectorAll('button, a, [role="button"], summary')];
+    const controlSelector = 'button, a, [role="button"], summary';
+    const headingSelector = 'h1, h2, h3';
+    const controls = [...document.querySelectorAll(controlSelector)];
+    const main = document.querySelector('main, [role="main"]');
     const smallest = controls
         .map((element) => element.getBoundingClientRect())
         .filter((rect) => rect.width > 0 && rect.height > 0)
@@ -79,12 +196,20 @@ export const measureInPage = () => {
     return {
         documentScrollWidth: doc.scrollWidth,
         documentClientWidth: doc.clientWidth,
+        // Viewport minus the layout width: 15 where a classic scrollbar takes its gutter, 0 where the
+        // scrollbar is hidden or an overlay. A probe that prints 0 here saw no scrollbar at all.
+        scrollbarPx: Math.max(0, window.innerWidth - doc.clientWidth),
         horizontalOverflowPx: Math.max(0, doc.scrollWidth - doc.clientWidth),
         controls: controls.length,
         smallestControl: smallest
             ? `${Math.round(smallest.width)}x${Math.round(smallest.height)}`
             : 'none',
-        headings: document.querySelectorAll('h1, h2, h3').length,
+        headings: document.querySelectorAll(headingSelector).length,
+        // Inside the main landmark only. The shell (skip link, brand, navigation) mounts before a lazy
+        // route does, so the document-wide counts above are not zero while the route is still a
+        // skeleton, and these are.
+        mainControls: main ? main.querySelectorAll(controlSelector).length : 0,
+        mainHeadings: main ? main.querySelectorAll(headingSelector).length : 0,
         title: document.title
     };
 };
@@ -112,10 +237,12 @@ export const waitForServer = async (probeOnce, { attempts = 60, delayMs = 500 } 
  * A measurement of a page that has not rendered passes every eye and means nothing — the SPA sibling
  * reported "0 controls, 0 headings" at `load`, because `load` fires before the app mounts. So the
  * probe waits for CONTENT, and when none arrives it says so instead of printing zeros as if they
- * were data. Pure over an injected reader, so the give-up path is testable.
+ * were data. Content means the route inside `main`: the shell's own links are there from the first
+ * paint, so counting them would call a skeleton a page. Pure over an injected reader, so the give-up
+ * path is testable.
  */
 export const hasRenderedContent = (measurement) =>
-    measurement.controls > 0 || measurement.headings > 0;
+    measurement.mainControls > 0 || measurement.mainHeadings > 0;
 
 export const waitForContent = async (readMeasurement, { attempts = 20, delayMs = 250 } = {}) => {
     let measurement = await readMeasurement();
@@ -129,18 +256,88 @@ export const waitForContent = async (readMeasurement, { attempts = 20, delayMs =
 };
 
 /**
- * Playwright starts headless Chromium with `--hide-scrollbars`, so the default launch measures a
- * scrolling page as if scrollbars did not exist (measured on this repository's Chromium, 390 px
- * viewport: 0 px with the default launch, 15 px once the flag is dropped). A visitor on Windows or
- * Linux has that 15 px classic scrollbar, and a layout that needs those pixels passes a default-launch
- * probe and breaks on their screen. `scrollbar-gutter: stable` (see `app/globals.css`) reserves the
- * gutter on its own, so the page shows no difference while it holds; the launch matters for whatever
- * the gutter does not cover, such as an inner scroll container or a `100vw` element. A Mac with
- * overlay scrollbars sees the default. The e2e guards keep Playwright's defaults and assert the CSS
- * that decides the gutter instead.
+ * Playwright starts headless Chromium with `--hide-scrollbars`, so the default launch measures every
+ * page as if scrollbars did not exist. A desktop visitor on Windows or Linux has a 15 px classic one,
+ * and `scrollbar-gutter: stable` (see `src/index.css`) reserves it on every route, so a layout that
+ * needs those 15 px passes a default-launch probe and breaks on the visitor's screen. Dropping the
+ * flag shows the page the way that visitor sees it; a Mac with overlay scrollbars sees the default.
  */
 export const launchProbeBrowser = (chromium) =>
     chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+
+const withoutTrailingSlash = (pathname) => pathname.replace(/\/+$/, '') || '/';
+
+/**
+ * Where the page ended up, when that is not where it was asked to go. A protected route sends a
+ * visitor who is not signed in to the login page, and a probe that does not say so measures the login
+ * page, prints plausible numbers and looks as if it did its job. Null when the route is the one asked
+ * for; a trailing slash is the same route and the hash is ignored, because it never reaches the server.
+ */
+export const describeLanding = (requestedPath, finalUrl) => {
+    const requested = new URL(`http://localhost${requestedPath}`);
+    const landed = new URL(finalUrl);
+    const sameRoute =
+        withoutTrailingSlash(requested.pathname) === withoutTrailingSlash(landed.pathname) &&
+        requested.search === landed.search;
+    return sameRoute
+        ? null
+        : `requested ${requested.pathname}${requested.search}, landed on ${landed.pathname}${landed.search}`;
+};
+
+/**
+ * A route that fetches its data after it mounts has nothing to measure when `load` fires. Waits for
+ * the network to go quiet, bounded, and never fails: a page that polls or streams never goes idle,
+ * and the content wait that follows is the check that decides.
+ */
+export const waitForQuiet = (page, timeoutMs = 5000) =>
+    page.waitForLoadState('networkidle', { timeout: timeoutMs }).then(
+        () => true,
+        () => false
+    );
+
+/**
+ * What the page's localStorage has to hold before its own scripts run, for the probe to be a signed-in
+ * visitor, or to see one theme. The signed-in entry is what zustand's `persist` writes for the user
+ * store: the state wrapped as `{ state, version }`, version 0 when the store sets none, with the
+ * demo token the store keeps (`probe.test.mjs` checks the fields against `src/store/user/userStore.ts`).
+ * The theme is stored as the plain string `useTheme` reads. No entry for what was not asked for.
+ */
+export const buildStorageSeed = ({ signedIn, theme, userSeed = DEFAULT_PROBE.userSeed }) => {
+    const seed = {};
+    if (signedIn) {
+        if (userSeed === null) {
+            throw new Error(
+                'probe: --signed-in has no state to seed: this repository sets no "probe.userSeed" in scripts/gate-tiers.json'
+            );
+        }
+        seed[USER_STORE_KEY] = JSON.stringify({ state: userSeed, version: 0 });
+    }
+    if (theme !== null) {
+        seed[THEME_KEY] = theme;
+    }
+    return seed;
+};
+
+/**
+ * Runs in the page before any of its scripts, on every navigation of the context, so it is written
+ * out like `measureInPage`. An opaque origin (`about:blank`) has no storage and throws on access.
+ */
+export const seedStorage = (entries) => {
+    for (const [key, value] of Object.entries(entries)) {
+        try {
+            window.localStorage.setItem(key, value);
+        } catch {
+            // no storage on this document: nothing to seed
+        }
+    }
+};
+
+/**
+ * The OS preference to emulate for a theme. `light` and `dark` name one; `system` and no theme leave
+ * the browser's own default, which is what a visitor who never chose gets.
+ */
+export const colorSchemeFor = (theme) =>
+    theme === 'light' || theme === 'dark' ? theme : undefined;
 
 /**
  * Removes the screenshots of the last run. The folder also holds the record of the server group a
@@ -171,8 +368,8 @@ const GROUP_LEFT = new Set(['terminated', 'killed', 'gone']);
 
 /**
  * Stops the server's whole process group: SIGTERM, a bounded wait, then SIGKILL (`stopGroup`). `npm
- * run dev` starts `next dev`, which starts workers, so signalling the npm wrapper alone (all
- * `child.kill()` does) leaves them listening on the port. The group exists because the server is
+ * run dev` starts vite, which can start workers, so signalling the npm wrapper alone (all
+ * `child.kill()` does) can leave them listening on the port. The group exists because the server is
  * spawned `detached`, and a negative pid addresses it. Where it cannot be addressed, or is not there,
  * the wrapper itself is signalled: that is all a platform without process groups has (Windows reports
  * a negative pid as no such process).
@@ -229,6 +426,7 @@ export const withServer = async (
     {
         useDev,
         basePort,
+        serve = useDev ? DEFAULT_PROBE.dev : DEFAULT_PROBE.prod,
         environment = process.env,
         findPort = findFreePort,
         spawnServer = spawn,
@@ -244,7 +442,15 @@ export const withServer = async (
     await reapStaleGroup({ file: groupFile, log, ...group });
 
     const port = await findPort(basePort);
-    const args = ['run', useDev ? 'dev' : 'start', '--', '--port', String(port)];
+    // Vite reads neither PORT nor PLAYWRIGHT_BASE_URL, so the port goes in as an argument — the same
+    // reason the Playwright config passes it to its own webServer command. `--strictPort` makes a
+    // port that was taken in the meantime an error instead of a silent move to the next one.
+    const args = [
+        'run',
+        serve.script,
+        '--',
+        ...serve.args.map((argument) => argument.replaceAll('{port}', String(port)))
+    ];
     const server = spawnServer('npm', args, {
         stdio: 'ignore',
         shell: false,
@@ -295,7 +501,16 @@ export const withServer = async (
 };
 
 const run = async () => {
-    const { path, widths, useDev } = parseProbeArgs(process.argv.slice(2));
+    const { path, widths, useDev, signedIn, theme } = parseProbeArgs(process.argv.slice(2));
+    const loaded = readProbeConfig();
+    if (loaded.error) {
+        console.error(`✖ probe: ${loaded.error}`);
+        process.exit(2);
+    }
+    const { config } = loaded;
+    // Before the build: a flag this repository cannot honour must not cost a build first.
+    const storageSeed = buildStorageSeed({ signedIn, theme, userSeed: config.userSeed });
+    const serve = useDev ? config.dev : config.prod;
 
     if (!useDev) {
         const build = spawnSync('npm', ['run', 'build'], { stdio: 'inherit', shell: false });
@@ -308,10 +523,10 @@ const run = async () => {
     clearScreenshots();
 
     const { chromium } = await import('@playwright/test');
-    const basePort = Number(process.env.PORT ?? (useDev ? 3000 : 3100));
+    const basePort = Number(process.env.PORT ?? serve.port);
     const rows = [];
 
-    await withServer({ useDev, basePort }, async ({ server, port }) => {
+    await withServer({ useDev, basePort, serve }, async ({ server, port }) => {
         if (port !== basePort) {
             console.log(
                 `probe: port ${String(basePort)} is busy, so the server runs on ${String(port)}.`
@@ -331,37 +546,52 @@ const run = async () => {
                 })
             );
 
-            const context = await browser.newContext();
+            const context = await browser.newContext({ colorScheme: colorSchemeFor(theme) });
+            if (Object.keys(storageSeed).length > 0) {
+                await context.addInitScript(seedStorage, storageSeed);
+            }
             const page = await context.newPage();
             await page.goto(`${baseUrl}${path}`, { waitUntil: 'load', timeout: 60_000 });
 
             for (const width of widths) {
                 await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
                 await page.goto(`${baseUrl}${path}`, { waitUntil: 'load' });
+                await waitForQuiet(page);
                 const { measurement, rendered } = await waitForContent(() =>
                     page.evaluate(measureInPage)
                 );
+                const landing = describeLanding(path, page.url());
                 const file = join(OUT_DIR, `${slugForPath(path)}-${String(width)}.png`);
                 await page.screenshot({ path: file, fullPage: true });
-                rows.push({ width, file, rendered, ...measurement });
+                rows.push({ width, file, rendered, landing, ...measurement });
             }
         } finally {
             await browser.close();
         }
     });
 
-    console.log(`\nProbe of ${path} (${useDev ? 'dev' : 'production'} server)\n`);
+    const state = [
+        `${useDev ? 'dev' : 'production'} server`,
+        signedIn ? 'signed in' : null,
+        theme === null ? null : `${theme} theme`
+    ].filter(Boolean);
+    console.log(`\nProbe of ${path} (${state.join(', ')})\n`);
     for (const row of rows) {
         console.log(`  ${String(row.width)}px  →  ${row.file}`);
         console.log(
-            `      overflow ${String(row.horizontalOverflowPx)}px · controls ${String(row.controls)} · smallest ${row.smallestControl} · headings ${String(row.headings)}`
+            `      overflow ${String(row.horizontalOverflowPx)}px · scrollbar ${String(row.scrollbarPx)}px · controls ${String(row.controls)} (in main ${String(row.mainControls)}) · smallest ${row.smallestControl} · headings ${String(row.headings)} (in main ${String(row.mainHeadings)})`
         );
+        if (row.landing !== null) {
+            console.log(
+                `      ⚠ ${row.landing}: the numbers above describe the page it landed on.`
+            );
+        }
         if (!row.rendered) {
             console.log(
-                '      ⚠ NOTHING RENDERED — no control and no heading. Either the route is genuinely'
+                '      ⚠ NOTHING RENDERED — no control and no heading inside main. Either the route is'
             );
             console.log(
-                '        empty, or the app had not mounted. Read the PNG before believing the numbers.'
+                '        genuinely empty, or the app had not mounted. Read the PNG before believing the numbers.'
             );
         }
     }

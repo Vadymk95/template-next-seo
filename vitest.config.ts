@@ -63,7 +63,7 @@ export default defineConfig({
             // text-summary: the four totals in the terminal, not a row per file
             reporter: ['text-summary', 'json'],
             // `scripts/` is gate tooling, not application code. Its DECISION logic
-            // is unit-tested (`audit-gate.test.mjs`, `ensure-playwright.test.mjs`);
+            // is unit-tested in gatelaw (`audit-gate.test.mjs`, `ensure-playwright.test.mjs`);
             // what stays uncovered is the `main()` I/O that spawns npm and writes to
             // the console, which a unit test cannot meaningfully reach. Counting it
             // toward the app thresholds moved statements from 196 to 331 and dropped
